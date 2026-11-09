@@ -20,6 +20,7 @@ import ru.mcs.spi.ui.StatusBarTask;
 /**
  * Действия, панели и провайдер редакторов объявлены в plugin.yml; здесь они создаются по запросу хоста
  * (после первого использования). В start() остаётся то, чего в манифесте нет: состояние, сервис, виджет.
+ * Все тексты — через {@code ctx.i18n()} (messages*.properties в jar плагина).
  */
 public final class HelloPlugin implements Plugin {
 
@@ -30,13 +31,14 @@ public final class HelloPlugin implements Plugin {
     public void start(PluginContext context) {
         this.ctx = context;
         ctx.state().register("counter", Scope.APPLICATION, state);
-        ctx.services().register(HelloGreeter.class, new HelloGreeter());
+        ctx.services().register(HelloGreeter.class, new HelloGreeter(ctx.i18n()));
 
-        ActiveFileWidget widget = new ActiveFileWidget(ctx.editors().getSelectedFile().orElse(null));
+        ActiveFileWidget widget = new ActiveFileWidget(ctx.editors().getSelectedFile().orElse(null),
+                ctx.i18n().get("widget.nofile"));
         ctx.statusBar().addWidget(widget);
         ctx.messageBus().subscribeOnEdt(EditorTopics.EDITOR, widget);
 
-        ctx.notifications().info("Hello", "Plugin activated (lazy)");
+        ctx.notifications().info(ctx.i18n().get("activated.title"), ctx.i18n().get("activated.message"));
         ctx.log("started");
     }
 
@@ -55,8 +57,8 @@ public final class HelloPlugin implements Plugin {
     public JComponent createToolWindowContent(String id) {
         return switch (id) {
             case "hello.panel" -> infoPanel();
-            case "hello.log" -> new JLabel("  Bottom tool window from the plugin", SwingConstants.LEFT);
-            case "hello.info" -> new JLabel("Right tool window", SwingConstants.CENTER);
+            case "hello.log" -> new JLabel(ctx.i18n().get("log.text"), SwingConstants.LEFT);
+            case "hello.info" -> new JLabel(ctx.i18n().get("info.text"), SwingConstants.CENTER);
             default -> null;
         };
     }
@@ -68,27 +70,27 @@ public final class HelloPlugin implements Plugin {
 
     private JComponent infoPanel() {
         Module m = HelloPlugin.class.getModule();
-        String layer = m.getLayer() == ModuleLayer.boot() ? "boot layer" : "plugin layer";
+        String layer = ctx.i18n().get(m.getLayer() == ModuleLayer.boot() ? "panel.layer.boot" : "panel.layer.plugin");
         JPanel panel = new JPanel(new BorderLayout());
-        panel.add(new JLabel("<html>Plugin: " + ctx.pluginId()
-                + "<br>Module: " + m.getName()
-                + "<br>Loaded in: " + layer + "</html>", SwingConstants.CENTER), BorderLayout.CENTER);
+        panel.add(new JLabel(ctx.i18n().get("panel.text", ctx.pluginId(), m.getName(), layer),
+                SwingConstants.CENTER), BorderLayout.CENTER);
         return panel;
     }
 
     private AnAction sayAction() {
-        return new AnAction("Say hello") {
+        return new AnAction(ctx.i18n().get("action.say")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                String file = String.valueOf(e.getData(EditorDataKeys.ACTIVE_FILE));
-                String greeting = ctx.services().get(HelloGreeter.class).greet("place: " + e.getPlace());
-                JOptionPane.showMessageDialog(null, greeting + "\nactive file: " + file);
+                String file = ctx.i18n().get("say.file", String.valueOf(e.getData(EditorDataKeys.ACTIVE_FILE)));
+                String greeting = ctx.services().get(HelloGreeter.class)
+                        .greet(ctx.i18n().get("say.place", e.getPlace()));
+                JOptionPane.showMessageDialog(null, greeting + "\n" + file);
             }
         };
     }
 
     private AnAction counterAction() {
-        return new AnAction("Counter") {
+        return new AnAction(ctx.i18n().get("action.counter")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
                 state.increment();
@@ -96,31 +98,32 @@ public final class HelloPlugin implements Plugin {
 
             @Override
             public void update(AnActionEvent e) {
-                e.getPresentation().setText("Clicked " + state.clicks() + " times (saved)");
+                e.getPresentation().setText(ctx.i18n().get("counter.text", state.clicks()));
             }
         };
     }
 
     private AnAction notifyAction() {
-        return new AnAction("Show notifications") {
+        return new AnAction(ctx.i18n().get("action.notify")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                ctx.notifications().info("Hello", "Informational message");
-                ctx.notifications().warn("Hello", "Warning message");
-                ctx.notifications().error("Hello", "Error message (click to dismiss)");
+                String title = ctx.i18n().get("activated.title");
+                ctx.notifications().info(title, ctx.i18n().get("notify.info"));
+                ctx.notifications().warn(title, ctx.i18n().get("notify.warn"));
+                ctx.notifications().error(title, ctx.i18n().get("notify.error"));
             }
         };
     }
 
     private AnAction taskAction() {
-        return new AnAction("Run background task (3 s)") {
+        return new AnAction(ctx.i18n().get("action.task")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                StatusBarTask task = ctx.statusBar().startTask("Hello task");
-                ctx.statusBar().setMessage("Hello task started");
+                StatusBarTask task = ctx.statusBar().startTask(ctx.i18n().get("task.title"));
+                ctx.statusBar().setMessage(ctx.i18n().get("task.started"));
                 Timer timer = new Timer(3000, ev -> {
                     task.finish();
-                    ctx.notifications().info("Hello task", "Finished");
+                    ctx.notifications().info(ctx.i18n().get("task.title"), ctx.i18n().get("task.finished"));
                 });
                 timer.setRepeats(false);
                 timer.start();

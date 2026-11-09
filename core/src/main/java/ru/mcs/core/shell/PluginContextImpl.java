@@ -4,6 +4,7 @@ import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.editor.FileEditorManager;
 import ru.mcs.spi.event.MessageBus;
+import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.ServiceRegistry;
 import ru.mcs.spi.service.StateManager;
 import ru.mcs.spi.ui.NotificationManager;
@@ -23,10 +24,11 @@ public final class PluginContextImpl implements PluginContext {
     private final MessageBus messageBus;
     private final ServiceRegistry services;
     private final StateManager state;
+    private final I18n i18n;
 
     public PluginContextImpl(String pluginId, ActionManager actions, ToolWindowManager toolWindows,
                              FileEditorManager editors, StatusBar statusBar, NotificationManager notifications,
-                             MessageBus messageBus, ServiceRegistry services, StateManager state) {
+                             MessageBus messageBus, ServiceRegistry services, StateManager state, I18n i18n) {
         this.pluginId = pluginId;
         this.actions = actions;
         this.toolWindows = toolWindows;
@@ -36,6 +38,15 @@ public final class PluginContextImpl implements PluginContext {
         this.messageBus = messageBus;
         this.services = services;
         this.state = state;
+        this.i18n = i18n;
+    }
+
+    /** Без локализации (ключи возвращаются как есть) — для тестов. */
+    public PluginContextImpl(String pluginId, ActionManager actions, ToolWindowManager toolWindows,
+                             FileEditorManager editors, StatusBar statusBar, NotificationManager notifications,
+                             MessageBus messageBus, ServiceRegistry services, StateManager state) {
+        this(pluginId, actions, toolWindows, editors, statusBar, notifications, messageBus, services, state,
+                I18n.passthrough());
     }
 
     @Override
@@ -86,5 +97,10 @@ public final class PluginContextImpl implements PluginContext {
     @Override
     public StateManager state() {
         return state;
+    }
+
+    @Override
+    public I18n i18n() {
+        return i18n;
     }
 }

@@ -14,6 +14,7 @@ import ru.mcs.spi.ui.ToolWindowSpec;
  * Регистрирует вклады из plugin.yml через контекст плагина, не загружая его код:
  * действия и группы попадают в меню/тулбар, панели — на stripes, провайдеры редакторов — в реестр.
  * Всё регистрируется на имя плагина, поэтому снимается обычной очисткой при его выгрузке.
+ * Тексты вида {@code "%ключ"} переводятся через {@code ctx.i18n()}; {@code "%%текст"} — литерал, начинающийся с «%».
  */
 public final class ContributionRegistrar {
 
@@ -30,18 +31,19 @@ public final class ContributionRegistrar {
 
         // Сначала создаём все группы, потом связываем: группы могут ссылаться друг на друга в любом порядке.
         for (Contributions.ActionGroupDecl g : c.actionGroups()) {
-            actions.registerAction(g.id(), new DefaultActionGroup(g.text(), g.popup()));
+            actions.registerAction(g.id(), new DefaultActionGroup(text(ctx, g.text()), g.popup()));
         }
         for (Contributions.ActionGroupDecl g : c.actionGroups()) {
             addTo(actions, g.groups(), g.id());
         }
         for (Contributions.ActionDecl a : c.actions()) {
-            actions.registerAction(a.id(), new ProxyAction(a.text(), pluginId, a.id(), activator));
+            actions.registerAction(a.id(), new ProxyAction(text(ctx, a.text()), pluginId, a.id(), activator));
             addTo(actions, a.groups(), a.id());
         }
         for (Contributions.ToolWindowDecl t : c.toolWindows()) {
             ToolWindowSpec spec = ToolWindowSpec
-                    .of(t.id(), t.title(), t.anchor(), () -> toolWindowContent(activator, pluginId, t.id()))
+                    .of(t.id(), text(ctx, t.title()), t.anchor(),
+                            () -> toolWindowContent(activator, pluginId, t.id()))
                     .withShowByDefault(t.showByDefault());
             ctx.toolWindows().register(spec);
         }
@@ -49,6 +51,16 @@ public final class ContributionRegistrar {
             ctx.editors().registerProvider(
                     new ProxyFileEditorProvider(pluginId, e.id(), e.priority(), e.patterns(), activator));
         }
+    }
+
+    static String text(PluginContext ctx, String raw) {
+        if (raw.startsWith("%%")) {
+            return raw.substring(1);
+        }
+        if (raw.startsWith("%") && raw.length() > 1) {
+            return ctx.i18n().get(raw.substring(1));
+        }
+        return raw;
     }
 
     private static void addTo(ActionManager actions, Iterable<String> parents, String actionId) {

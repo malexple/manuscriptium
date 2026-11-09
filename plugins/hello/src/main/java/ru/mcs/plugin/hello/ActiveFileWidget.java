@@ -9,11 +9,13 @@ import ru.mcs.spi.ui.StatusBarWidget;
 /** Показывает имя активного файла. Обновляется по сообщениям шины (подписка на EDT). */
 final class ActiveFileWidget implements StatusBarWidget, FileEditorListener {
 
+    private final String noFileText;
     private JLabel label;
     private Path current;
 
-    ActiveFileWidget(Path initial) {
+    ActiveFileWidget(Path initial, String noFileText) {
         this.current = initial;
+        this.noFileText = noFileText;
     }
 
     @Override
@@ -41,6 +43,6 @@ final class ActiveFileWidget implements StatusBarWidget, FileEditorListener {
     }
 
     private String text() {
-        return current == null ? "No file" : current.getFileName().toString();
+        return current == null ? noFileText : current.getFileName().toString();
     }
 }

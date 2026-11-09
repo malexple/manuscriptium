@@ -8,9 +8,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.editor.EditorActions;
+import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.notification.NotificationLayer;
 import ru.mcs.core.notification.NotificationsPanel;
 import ru.mcs.core.plugin.PluginManager;
+import ru.mcs.core.settings.LanguageActions;
 import ru.mcs.core.shell.ShellFrame;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.ui.NotificationType;
@@ -46,23 +48,25 @@ public final class CoreBootstrap {
         NotificationLayer.install(frame, s.notifications);
         EditorActions.register(s.actions, s.editors, frame);
         CoreActions.registerShellActions(s.actions, frame);
-        s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", "Notifications",
+        LanguageActions.register(s.actions, frame, s.settings);
+        s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", Messages.get("notifications.title"),
                 ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications)));
 
         PluginManager pm = s.newPluginManager(home);
-        pm.setFailureListener((id, reason) ->
-                s.notifications.notify("core", "Plugin failed: " + id, reason, NotificationType.ERROR));
+        pm.setFailureListener((id, reason) -> s.notifications.notify("core",
+                Messages.get("plugin.failed.title", id), reason, NotificationType.ERROR));
         frame.setVisible(true);
         try {
             pm.loadAll();
         } catch (Exception e) {
-            s.notifications.notify("core", "Plugins", "Plugin loading failed: " + e, NotificationType.ERROR);
+            s.notifications.notify("core", Messages.get("plugins.loading.failed.title"),
+                    Messages.get("plugins.loading.failed", e.toString()), NotificationType.ERROR);
         }
 
         // Вклады объявлены — провайдеры на месте (для onDemand-плагинов это заглушки): восстанавливаем вкладки.
         s.editors.restoreSession(s.sessionStore.loaded());
         s.sessionStore.activate(s.editors::currentSession);
-        s.statusBar.setMessage("Plugins: " + pm.declaredIds() + ", active: " + pm.loadedIds());
+        s.statusBar.setMessage(Messages.get("plugins.status", pm.declaredIds(), pm.loadedIds()));
 
         Timer autosave = new Timer(AUTOSAVE_MS, e -> s.state.saveChanged());
         autosave.start();
@@ -83,6 +87,7 @@ public final class CoreBootstrap {
             pm.activateAll();
             System.out.println("MCS_SMOKE plugins=" + pm.loadedIds()
                     + " lazy=" + lazy
+                    + " locale=" + Messages.locale()
                     + " actions=" + s.actions.pluginActionIds()
                     + " tools=" + s.actions.childIds(ActionIds.TOOLS_MENU)
                     + " view=" + s.actions.childIds(ActionIds.VIEW_MENU)

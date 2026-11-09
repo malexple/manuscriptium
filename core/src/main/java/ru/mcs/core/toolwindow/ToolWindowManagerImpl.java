@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import ru.mcs.core.action.ActionManagerImpl;
+import ru.mcs.core.i18n.Messages;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.action.AnAction;
@@ -91,7 +92,7 @@ public final class ToolWindowManagerImpl {
     private void registerToggleAction(String owner, ToolWindowImpl tw) {
         ActionManager scoped = actions.scopedFor(owner);
         String actionId = toggleActionId(tw);
-        scoped.registerAction(actionId, new AnAction("Tool Window: " + tw.getTitle()) {
+        scoped.registerAction(actionId, new AnAction(Messages.get("toolwindow.action", tw.getTitle())) {
             @Override
             public void actionPerformed(AnActionEvent e) {
                 tw.toggle();
@@ -99,7 +100,8 @@ public final class ToolWindowManagerImpl {
 
             @Override
             public void update(AnActionEvent e) {
-                e.getPresentation().setText((tw.isVisible() ? "Hide " : "Show ") + tw.getTitle());
+                e.getPresentation().setText(
+                        Messages.get(tw.isVisible() ? "toolwindow.hide" : "toolwindow.show", tw.getTitle()));
             }
         });
         scoped.addToGroup(ActionIds.VIEW_MENU, actionId, Constraints.LAST);

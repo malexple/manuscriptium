@@ -16,6 +16,7 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import ru.mcs.core.i18n.Messages;
 import ru.mcs.spi.ui.NotificationType;
 
 /**
@@ -115,7 +116,7 @@ public final class NotificationLayer extends JPanel {
         JLabel text = new JLabel("<html><body style='width:240px'><b>" + escape(notice.title()) + "</b><br>"
                 + escape(notice.content()) + "</body></html>");
         balloon.add(text, BorderLayout.CENTER);
-        balloon.setToolTipText("Click to dismiss");
+        balloon.setToolTipText(Messages.get("notifications.dismiss"));
         MouseAdapter click = new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {

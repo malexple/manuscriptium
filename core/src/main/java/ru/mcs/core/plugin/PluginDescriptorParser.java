@@ -34,6 +34,7 @@ public final class PluginDescriptorParser {
             throw new IllegalArgumentException("plugin.yml must be a YAML mapping");
         }
         String id = required(map, "id");
+        String i18n = optional(map, "i18n", "");
         return new PluginDescriptor(
                 id,
                 optional(map, "name", id),
@@ -44,7 +45,8 @@ public final class PluginDescriptorParser {
                 list(map, "permissions"),
                 directory,
                 activation(map),
-                contributions(map));
+                contributions(map),
+                i18n.isBlank() ? null : i18n);
     }
 
     private static Activation activation(Map<?, ?> map) {

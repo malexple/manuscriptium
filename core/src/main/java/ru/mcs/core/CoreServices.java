@@ -8,10 +8,13 @@ import ru.mcs.core.editor.EditorEventsBridge;
 import ru.mcs.core.editor.FileEditorManagerImpl;
 import ru.mcs.core.editor.SessionStore;
 import ru.mcs.core.editor.TextFileEditorProvider;
+import ru.mcs.core.i18n.Messages;
+import ru.mcs.core.i18n.PluginMessages;
 import ru.mcs.core.notification.NotificationManagerImpl;
 import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.core.plugin.PluginManager;
 import ru.mcs.core.service.ServiceRegistryImpl;
+import ru.mcs.core.settings.AppSettings;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.shell.WindowState;
 import ru.mcs.core.state.StateManagerImpl;
@@ -24,12 +27,14 @@ import ru.mcs.spi.service.Scope;
 /**
  * Корневой набор сервисов приложения (application-level). Состояние: {@code <home>/state/*.yml};
  * VAULT-состояние пока временно в {@code <home>/workspace/state} (в Фазе 4 переедет в vault).
+ * Язык интерфейса читается из настроек до создания любых UI-сервисов и дальше не меняется.
  */
 final class CoreServices {
 
     private static final System.Logger LOG = System.getLogger(CoreServices.class.getName());
 
     final StateManagerImpl state;
+    final AppSettings settings = new AppSettings();
     final ServiceRegistryImpl services = new ServiceRegistryImpl();
     final ActionManagerImpl actions = new ActionManagerImpl();
     final ToolWindowManagerImpl toolWindows;
@@ -42,6 +47,9 @@ final class CoreServices {
 
     CoreServices(Path home, boolean persist) {
         state = new StateManagerImpl(home.resolve("state"), home.resolve("workspace").resolve("state"), persist);
+        state.register("core", "core.settings", Scope.APPLICATION, settings);
+        Messages.init(settings.resolveLocale());
+
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);
         state.register("core", "core.session", Scope.APPLICATION, sessionStore);
@@ -61,7 +69,7 @@ final class CoreServices {
         String id = d.id();
         return new PluginContextImpl(id, actions.scopedFor(id), toolWindows.scopedFor(id), editors.scopedFor(id),
                 statusBar.scopedFor(id), notifications.scopedFor(id), bus.scopedFor(id),
-                services.scopedFor(id), state.scopedFor(id));
+                services.scopedFor(id), state.scopedFor(id), PluginMessages.create(d, Messages.locale()));
     }
 
     /** Снять всё, что плагин зарегистрировал. Каждый шаг независим: сбой одного не мешает остальным. */

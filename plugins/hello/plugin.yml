@@ -1,7 +1,7 @@
 id: ru.mcs.plugin.hello
 name: Hello (test plugin)
 version: 0.1.0
-sdk-version: "0.7"
+sdk-version: "0.8"
 module: ru.mcs.plugin.hello
 depends-on: []
 permissions: []
@@ -9,34 +9,38 @@ permissions: []
 # onDemand: код плагина загружается при первом использовании любого из вкладов ниже.
 activation: onDemand
 
+# База имени переводов внутри jar: messages.properties (en) и messages_ru.properties.
+# Значения вида "%ключ" в text/title берутся из этих файлов.
+i18n: ru/mcs/plugin/hello/messages
+
 contributions:
   actionGroups:
     - id: hello.group
-      text: Hello
+      text: "%group.hello"
       popup: true
       groups: [MainMenu.Tools]
   actions:
     - id: hello.say
-      text: Say hello
+      text: "%action.say"
       groups: [hello.group, MainToolbar, EditorTabPopup]
     - id: hello.counter
-      text: Counter
+      text: "%action.counter"
       groups: [hello.group]
     - id: hello.notify
-      text: Show notifications
+      text: "%action.notify"
       groups: [hello.group]
     - id: hello.task
-      text: Run background task (3 s)
+      text: "%action.task"
       groups: [hello.group]
   toolWindows:
     - id: hello.panel
-      title: Hello
+      title: "%toolwindow.panel"
       anchor: left
     - id: hello.log
-      title: Hello Log
+      title: "%toolwindow.log"
       anchor: bottom
     - id: hello.info
-      title: Hello Info
+      title: "%toolwindow.info"
       anchor: right
   fileEditors:
     - id: hello.editor

@@ -12,6 +12,7 @@ import ru.mcs.core.action.ActionMenuBar;
 import ru.mcs.core.action.ActionToolbar;
 import ru.mcs.core.editor.EditorTabs;
 import ru.mcs.core.editor.FileEditorManagerImpl;
+import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.statusbar.StatusBarModel;
 import ru.mcs.core.statusbar.StatusBarPanel;
 import ru.mcs.core.toolwindow.DockingPanel;
@@ -46,8 +47,8 @@ public final class ShellFrame extends JFrame {
 
         editors.setCloseConfirmer(this::askAboutUnsaved);
         editors.setErrorReporter((path, ex) -> SwingUtilities.invokeLater(() ->
-                JOptionPane.showMessageDialog(this, "Save failed: " + path + "\n" + ex.getMessage(),
-                        "Save", JOptionPane.ERROR_MESSAGE)));
+                JOptionPane.showMessageDialog(this, Messages.get("save.error.detail", path, ex.getMessage()),
+                        Messages.get("save.error.title"), JOptionPane.ERROR_MESSAGE)));
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -62,9 +63,10 @@ public final class ShellFrame extends JFrame {
     }
 
     private FileEditorManagerImpl.CloseDecision askAboutUnsaved(FileEditor editor) {
-        Object[] options = {"Save", "Don't Save", "Cancel"};
-        int answer = JOptionPane.showOptionDialog(this, "Save changes to " + editor.getName() + "?",
-                "Unsaved changes", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
+        Object[] options = {Messages.get("unsaved.save"), Messages.get("unsaved.dontSave"),
+                Messages.get("unsaved.cancel")};
+        int answer = JOptionPane.showOptionDialog(this, Messages.get("unsaved.message", editor.getName()),
+                Messages.get("unsaved.title"), JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
                 null, options, options[0]);
         return switch (answer) {
             case 0 -> FileEditorManagerImpl.CloseDecision.SAVE;

@@ -23,6 +23,7 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.ActionMenus;
+import ru.mcs.core.i18n.Messages;
 import ru.mcs.spi.action.ActionGroup;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionPlaces;
@@ -46,7 +47,7 @@ public final class EditorTabs extends JPanel {
         this.actions = actions;
         this.ctx = ctx;
         setLayout(cards);
-        add(new JLabel("Open a file: File \u2192 Open File\u2026", SwingConstants.CENTER), "empty");
+        add(new JLabel(Messages.get("editor.empty"), SwingConstants.CENTER), "empty");
         add(tabs, "tabs");
 
         tabs.addChangeListener(e -> {
@@ -135,7 +136,7 @@ public final class EditorTabs extends JPanel {
             super(new FlowLayout(FlowLayout.LEFT, 4, 0));
             setOpaque(false);
             close.setFocusable(false);
-            close.setToolTipText("Close");
+            close.setToolTipText(Messages.get("tab.close.tooltip"));
             close.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
             close.addActionListener(e -> manager.closeFile(file));
             add(label);
