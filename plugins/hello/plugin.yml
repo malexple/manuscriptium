@@ -1,0 +1,7 @@
+id: ru.mcs.plugin.hello
+name: Hello (Phase 0 test plugin)
+version: 0.1.0
+sdk-version: "0.1"
+module: ru.mcs.plugin.hello
+depends-on: []
+permissions: []

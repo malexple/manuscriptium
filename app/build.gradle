@@ -1,0 +1,41 @@
+plugins {
+    id 'application'
+    id 'org.beryx.jlink' version '4.2.0'
+}
+
+evaluationDependsOn(':plugins:hello')
+
+dependencies {
+    implementation project(':core')
+}
+
+application {
+    mainModule = 'ru.mcs.app'
+    mainClass = 'ru.mcs.app.ManuscriptiumApp'
+}
+
+// Песочница данных для разработки: build/dev-home/plugins/<plugin>/{plugin.yml,*.jar}
+def devHomeDir = layout.buildDirectory.dir('dev-home')
+
+tasks.register('devHome', Copy) {
+    def hello = project(':plugins:hello')
+    dependsOn hello.tasks.named('jar')
+    from(hello.tasks.named('jar')) { into 'plugins/hello' }
+    from(hello.file('plugin.yml')) { into 'plugins/hello' }
+    into devHomeDir
+}
+
+tasks.named('run') {
+    dependsOn 'devHome'
+    args "--home=${devHomeDir.get().asFile}"
+    jvmArgs '-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8'
+}
+
+jlink {
+    options = ['--strip-debug', '--compress', 'zip-6', '--no-header-files', '--no-man-pages']
+    launcher {
+        name = 'manuscriptium'
+    }
+    // Если сборка жалуется на merged module: ./gradlew :app:suggestMergedModuleInfo
+    // и скопируйте блок mergedModule { ... } сюда.
+}

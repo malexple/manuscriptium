@@ -1,0 +1,4 @@
+dependencies {
+    // SDK предоставляется приложением, в jar плагина не попадает.
+    compileOnly project(':spi')
+}

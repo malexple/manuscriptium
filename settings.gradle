@@ -1,2 +1,3 @@
 rootProject.name = 'manuscriptium'
 
+include 'spi', 'core', 'app', 'plugins:hello'
