@@ -5,7 +5,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.function.Supplier;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import ru.mcs.core.action.ActionManagerImpl;
@@ -13,6 +12,8 @@ import ru.mcs.core.action.ActionMenuBar;
 import ru.mcs.core.action.ActionToolbar;
 import ru.mcs.core.editor.EditorTabs;
 import ru.mcs.core.editor.FileEditorManagerImpl;
+import ru.mcs.core.statusbar.StatusBarModel;
+import ru.mcs.core.statusbar.StatusBarPanel;
 import ru.mcs.core.toolwindow.DockingPanel;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.spi.action.ActionIds;
@@ -20,17 +21,18 @@ import ru.mcs.spi.action.ActionPlaces;
 import ru.mcs.spi.action.DataContext;
 import ru.mcs.spi.editor.FileEditor;
 
-/** Оболочка: меню и тулбар из ActionManager, панели с stripes, область редактора с вкладками. */
+/** Оболочка: меню и тулбар, панели со stripes, вкладки редактора, статус-бар. */
 public final class ShellFrame extends JFrame {
 
-    private final JLabel status = new JLabel(" ");
     private final DockingPanel docking;
     private final FileEditorManagerImpl editors;
+    private final StatusBarModel statusModel;
 
     public ShellFrame(String title, ActionManagerImpl actions, ToolWindowManagerImpl toolWindows,
-                      FileEditorManagerImpl editors) {
+                      FileEditorManagerImpl editors, StatusBarModel statusModel) {
         super(title);
         this.editors = editors;
+        this.statusModel = statusModel;
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         Supplier<DataContext> ctx = () -> new ShellDataContext(editors);
 
@@ -40,7 +42,7 @@ public final class ShellFrame extends JFrame {
         docking = new DockingPanel(toolWindows);
         docking.setCenter(new EditorTabs(editors, actions, ctx));
         add(docking, BorderLayout.CENTER);
-        add(status, BorderLayout.SOUTH);
+        add(new StatusBarPanel(statusModel), BorderLayout.SOUTH);
 
         editors.setCloseConfirmer(this::askAboutUnsaved);
         editors.setErrorReporter((path, ex) -> SwingUtilities.invokeLater(() ->
@@ -80,10 +82,6 @@ public final class ShellFrame extends JFrame {
     }
 
     public void setStatus(String text) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            status.setText(" " + text);
-        } else {
-            SwingUtilities.invokeLater(() -> status.setText(" " + text));
-        }
+        statusModel.setMessage(text);
     }
 }
