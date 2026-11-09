@@ -6,25 +6,15 @@ import java.util.function.Supplier;
 import javax.swing.JComponent;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 
-/** Хост без UI: запоминает регистрации (smoke-тест в CI и юнит-тесты). Фабрики компонентов не вызываются. */
+/** Хост без UI: запоминает регистрации (smoke-тест в CI). Фабрики компонентов не вызываются. */
 public final class HeadlessHost implements UiHost {
 
-    private final List<String> actions = new ArrayList<>();
     private final List<String> toolWindows = new ArrayList<>();
-
-    @Override
-    public void addAction(String pluginId, String id, String text, Runnable handler) {
-        actions.add(id);
-    }
 
     @Override
     public void addToolWindow(String pluginId, String id, String title, ToolWindowAnchor anchor,
                               Supplier<JComponent> factory) {
         toolWindows.add(id);
-    }
-
-    public List<String> actions() {
-        return List.copyOf(actions);
     }
 
     public List<String> toolWindows() {

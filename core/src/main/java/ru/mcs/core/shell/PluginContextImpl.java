@@ -3,6 +3,7 @@ package ru.mcs.core.shell;
 import java.util.function.Supplier;
 import javax.swing.JComponent;
 import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 
 public final class PluginContextImpl implements PluginContext {
@@ -11,10 +12,12 @@ public final class PluginContextImpl implements PluginContext {
 
     private final String pluginId;
     private final UiHost host;
+    private final ActionManager actions;
 
-    public PluginContextImpl(String pluginId, UiHost host) {
+    public PluginContextImpl(String pluginId, UiHost host, ActionManager scopedActions) {
         this.pluginId = pluginId;
         this.host = host;
+        this.actions = scopedActions;
     }
 
     @Override
@@ -28,8 +31,8 @@ public final class PluginContextImpl implements PluginContext {
     }
 
     @Override
-    public void registerAction(String id, String text, Runnable handler) {
-        host.addAction(pluginId, id, text, handler);
+    public ActionManager actions() {
+        return actions;
     }
 
     @Override

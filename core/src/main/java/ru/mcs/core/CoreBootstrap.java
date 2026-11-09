@@ -3,10 +3,13 @@ package ru.mcs.core;
 import java.nio.file.Path;
 import java.util.Arrays;
 import javax.swing.SwingUtilities;
+import ru.mcs.core.action.ActionManagerImpl;
+import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.plugin.PluginManager;
 import ru.mcs.core.shell.HeadlessHost;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.shell.ShellFrame;
+import ru.mcs.spi.action.ActionIds;
 
 /**
  * Запуск ядра. Аргументы: {@code --home=PATH} (каталог данных), {@code --smoke} (без UI:
@@ -28,9 +31,14 @@ public final class CoreBootstrap {
 
     private static void startUi(Path home) {
         LafInstaller.install();
-        ShellFrame frame = new ShellFrame("Manuscriptium");
+        ActionManagerImpl actions = new ActionManagerImpl();
+        CoreActions.registerStandardGroups(actions);
+        ShellFrame frame = new ShellFrame("Manuscriptium", actions);
+        CoreActions.registerShellActions(actions, frame);
+
         PluginManager pm = new PluginManager(HomeDirs.pluginsDir(home),
-                d -> new PluginContextImpl(d.id(), frame));
+                d -> new PluginContextImpl(d.id(), frame, actions.scopedFor(d.id())),
+                d -> actions.unregisterAll(d.id()));
         frame.setVisible(true);
         try {
             pm.loadAll();
@@ -43,14 +51,19 @@ public final class CoreBootstrap {
     }
 
     private static void runSmoke(Path home) {
+        ActionManagerImpl actions = new ActionManagerImpl();
+        CoreActions.registerStandardGroups(actions);
         HeadlessHost host = new HeadlessHost();
         PluginManager pm = new PluginManager(HomeDirs.pluginsDir(home),
-                d -> new PluginContextImpl(d.id(), host));
+                d -> new PluginContextImpl(d.id(), host, actions.scopedFor(d.id())),
+                d -> actions.unregisterAll(d.id()));
         int code = 1;
         try {
             pm.loadAll();
             System.out.println("MCS_SMOKE plugins=" + pm.loadedIds()
-                    + " actions=" + host.actions()
+                    + " actions=" + actions.pluginActionIds()
+                    + " tools=" + actions.childIds(ActionIds.TOOLS_MENU)
+                    + " toolbar=" + actions.childIds(ActionIds.MAIN_TOOLBAR)
                     + " toolWindows=" + host.toolWindows()
                     + " failures=" + pm.failures());
             code = pm.failures().isEmpty() && !pm.loadedIds().isEmpty() ? 0 : 1;

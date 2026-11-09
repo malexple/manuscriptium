@@ -7,6 +7,12 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import ru.mcs.spi.Plugin;
 import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.action.ActionIds;
+import ru.mcs.spi.action.ActionManager;
+import ru.mcs.spi.action.AnAction;
+import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.action.Constraints;
+import ru.mcs.spi.action.DefaultActionGroup;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 
 public final class HelloPlugin implements Plugin {
@@ -22,8 +28,36 @@ public final class HelloPlugin implements Plugin {
                     + "<br>Loaded in: " + layer + "</html>", SwingConstants.CENTER), BorderLayout.CENTER);
             return panel;
         });
-        ctx.registerAction("hello.say", "Say hello",
-                () -> JOptionPane.showMessageDialog(null, "Hello from a ModuleLayer plugin!"));
+
+        ActionManager am = ctx.actions();
+
+        am.registerAction("hello.say", new AnAction("Say hello") {
+            @Override
+            public void actionPerformed(AnActionEvent e) {
+                JOptionPane.showMessageDialog(null, "Hello from a ModuleLayer plugin! (place: " + e.getPlace() + ")");
+            }
+        });
+
+        am.registerAction("hello.counter", new AnAction("Clicked 0 times") {
+            private int clicks;
+
+            @Override
+            public void actionPerformed(AnActionEvent e) {
+                clicks++;
+            }
+
+            @Override
+            public void update(AnActionEvent e) {
+                e.getPresentation().setText("Clicked " + clicks + " times");
+            }
+        });
+
+        am.registerAction("hello.group", new DefaultActionGroup("Hello", true));
+        am.addToGroup("hello.group", "hello.say", Constraints.LAST);
+        am.addToGroup("hello.group", "hello.counter", Constraints.LAST);
+        am.addToGroup(ActionIds.TOOLS_MENU, "hello.group", Constraints.LAST);
+        am.addToGroup(ActionIds.MAIN_TOOLBAR, "hello.say", Constraints.LAST);
+
         ctx.log("started");
     }
 }

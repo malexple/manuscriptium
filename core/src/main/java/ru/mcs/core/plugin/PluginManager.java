@@ -6,10 +6,12 @@ import java.lang.module.ModuleFinder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import ru.mcs.spi.McsSdk;
@@ -19,7 +21,8 @@ import ru.mcs.spi.PluginContext;
 /**
  * Загружает плагины из {@code <pluginsDir>/<plugin>/plugin.yml + *.jar}.
  * Каждый плагин получает собственный {@link ModuleLayer}; родитель — boot-слой (spi, core)
- * и слои плагинов из depends-on.
+ * и слои плагинов из depends-on. {@code afterStop} вызывается после остановки (или неудачного старта)
+ * плагина — там снимаются его регистрации.
  */
 public final class PluginManager {
 
@@ -30,12 +33,19 @@ public final class PluginManager {
 
     private final Path pluginsDir;
     private final Function<PluginDescriptor, PluginContext> contextFactory;
+    private final Consumer<PluginDescriptor> afterStop;
     private final Map<String, Loaded> loaded = new LinkedHashMap<>();
     private final Map<String, String> failures = new LinkedHashMap<>();
 
     public PluginManager(Path pluginsDir, Function<PluginDescriptor, PluginContext> contextFactory) {
+        this(pluginsDir, contextFactory, d -> { });
+    }
+
+    public PluginManager(Path pluginsDir, Function<PluginDescriptor, PluginContext> contextFactory,
+                         Consumer<PluginDescriptor> afterStop) {
         this.pluginsDir = pluginsDir;
         this.contextFactory = contextFactory;
+        this.afterStop = afterStop;
     }
 
     public List<PluginDescriptor> discover() throws IOException {
@@ -72,6 +82,7 @@ public final class PluginManager {
             } catch (Throwable t) {
                 failures.put(d.id(), t.toString());
                 LOG.log(System.Logger.Level.ERROR, "Plugin failed: " + d.id(), t);
+                runAfterStop(d);
             }
         }
     }
@@ -116,15 +127,24 @@ public final class PluginManager {
 
     public void stopAll() {
         List<Loaded> reversed = new ArrayList<>(loaded.values());
-        java.util.Collections.reverse(reversed);
+        Collections.reverse(reversed);
         for (Loaded l : reversed) {
             try {
                 l.plugin().stop();
             } catch (Throwable t) {
                 LOG.log(System.Logger.Level.WARNING, "Plugin stop failed: " + l.descriptor().id(), t);
             }
+            runAfterStop(l.descriptor());
         }
         loaded.clear();
+    }
+
+    private void runAfterStop(PluginDescriptor d) {
+        try {
+            afterStop.accept(d);
+        } catch (Throwable t) {
+            LOG.log(System.Logger.Level.WARNING, "afterStop failed: " + d.id(), t);
+        }
     }
 
     public List<String> loadedIds() {

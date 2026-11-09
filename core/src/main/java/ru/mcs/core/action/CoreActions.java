@@ -1,0 +1,51 @@
+package ru.mcs.core.action;
+
+import java.awt.event.WindowEvent;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import ru.mcs.spi.McsSdk;
+import ru.mcs.spi.action.ActionIds;
+import ru.mcs.spi.action.ActionManager;
+import ru.mcs.spi.action.AnAction;
+import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.action.Constraints;
+import ru.mcs.spi.action.DefaultActionGroup;
+
+/** Стандартные группы и встроенные действия ядра. Тексты пока литералами; i18n — в Фазе 2. */
+public final class CoreActions {
+
+    private CoreActions() {
+    }
+
+    public static void registerStandardGroups(ActionManager am) {
+        am.registerAction(ActionIds.MAIN_MENU, new DefaultActionGroup("", false));
+        menu(am, ActionIds.FILE_MENU, "File");
+        menu(am, ActionIds.VIEW_MENU, "View");
+        menu(am, ActionIds.TOOLS_MENU, "Tools");
+        menu(am, ActionIds.HELP_MENU, "Help");
+        am.registerAction(ActionIds.MAIN_TOOLBAR, new DefaultActionGroup("", false));
+    }
+
+    public static void registerShellActions(ActionManager am, JFrame frame) {
+        am.registerAction("core.exit", new AnAction("Exit") {
+            @Override
+            public void actionPerformed(AnActionEvent e) {
+                frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
+            }
+        });
+        am.addToGroup(ActionIds.FILE_MENU, "core.exit", Constraints.LAST);
+
+        am.registerAction("core.about", new AnAction("About Manuscriptium") {
+            @Override
+            public void actionPerformed(AnActionEvent e) {
+                JOptionPane.showMessageDialog(frame, "Manuscriptium\nSDK " + McsSdk.VERSION);
+            }
+        });
+        am.addToGroup(ActionIds.HELP_MENU, "core.about", Constraints.LAST);
+    }
+
+    private static void menu(ActionManager am, String id, String text) {
+        am.registerAction(id, new DefaultActionGroup(text, true));
+        am.addToGroup(ActionIds.MAIN_MENU, id, Constraints.LAST);
+    }
+}
