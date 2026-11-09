@@ -3,5 +3,6 @@ module ru.mcs.spi {
 
     exports ru.mcs.spi;
     exports ru.mcs.spi.action;
+    exports ru.mcs.spi.editor;
     exports ru.mcs.spi.ui;
 }

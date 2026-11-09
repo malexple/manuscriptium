@@ -24,8 +24,10 @@ public final class CoreActions {
         menu(am, ActionIds.TOOLS_MENU, "Tools");
         menu(am, ActionIds.HELP_MENU, "Help");
         am.registerAction(ActionIds.MAIN_TOOLBAR, new DefaultActionGroup("", false));
+        am.registerAction(ActionIds.EDITOR_TAB_POPUP, new DefaultActionGroup("", false));
     }
 
+    /** Exit и About; регистрировать после действий File, чтобы Exit оказался последним. */
     public static void registerShellActions(ActionManager am, JFrame frame) {
         am.registerAction("core.exit", new AnAction("Exit") {
             @Override

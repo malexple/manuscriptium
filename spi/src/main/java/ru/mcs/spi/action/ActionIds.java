@@ -8,6 +8,7 @@ public final class ActionIds {
     public static final String TOOLS_MENU = "MainMenu.Tools";
     public static final String HELP_MENU = "MainMenu.Help";
     public static final String MAIN_TOOLBAR = "MainToolbar";
+    public static final String EDITOR_TAB_POPUP = "EditorTabPopup";
 
     private ActionIds() {
     }

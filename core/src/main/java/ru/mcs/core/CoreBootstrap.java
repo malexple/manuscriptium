@@ -5,6 +5,10 @@ import java.util.Arrays;
 import javax.swing.SwingUtilities;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
+import ru.mcs.core.editor.EditorActions;
+import ru.mcs.core.editor.FileEditorManagerImpl;
+import ru.mcs.core.editor.SessionStore;
+import ru.mcs.core.editor.TextFileEditorProvider;
 import ru.mcs.core.plugin.PluginManager;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.shell.ShellFrame;
@@ -30,10 +34,13 @@ public final class CoreBootstrap {
         }
     }
 
-    private static PluginManager pluginManager(Path home, ActionManagerImpl actions, ToolWindowManagerImpl tw) {
+    private static PluginManager pluginManager(Path home, ActionManagerImpl actions, ToolWindowManagerImpl tw,
+                                               FileEditorManagerImpl editors) {
         return new PluginManager(HomeDirs.pluginsDir(home),
-                d -> new PluginContextImpl(d.id(), actions.scopedFor(d.id()), tw.scopedFor(d.id())),
+                d -> new PluginContextImpl(d.id(), actions.scopedFor(d.id()), tw.scopedFor(d.id()),
+                        editors.scopedFor(d.id())),
                 d -> {
+                    editors.unregisterOwner(d.id());
                     tw.unregisterOwner(d.id());
                     actions.unregisterAll(d.id());
                 });
@@ -43,20 +50,28 @@ public final class CoreBootstrap {
         LafInstaller.install();
         ActionManagerImpl actions = new ActionManagerImpl();
         CoreActions.registerStandardGroups(actions);
-        ToolWindowManagerImpl toolWindows = new ToolWindowManagerImpl(actions, LayoutStore.at(home.resolve("layout.properties")));
-        ShellFrame frame = new ShellFrame("Manuscriptium", actions, toolWindows);
+        ToolWindowManagerImpl toolWindows = new ToolWindowManagerImpl(actions,
+                LayoutStore.at(home.resolve("layout.properties")));
+        FileEditorManagerImpl editors = new FileEditorManagerImpl();
+        editors.registerProvider(new TextFileEditorProvider());
+        SessionStore session = SessionStore.at(home.resolve("session.properties"));
+
+        ShellFrame frame = new ShellFrame("Manuscriptium", actions, toolWindows, editors);
+        EditorActions.register(actions, editors, frame);
         CoreActions.registerShellActions(actions, frame);
 
-        PluginManager pm = pluginManager(home, actions, toolWindows);
+        PluginManager pm = pluginManager(home, actions, toolWindows, editors);
         frame.setVisible(true);
         try {
             pm.loadAll();
         } catch (Exception e) {
             frame.setStatus("Ошибка загрузки плагинов: " + e);
         }
+        editors.restoreSession(session);
         frame.setStatus("Плагины: " + pm.loadedIds()
                 + (pm.failures().isEmpty() ? "" : "; ошибки: " + pm.failures()));
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            editors.saveSession(session);
             toolWindows.save();
             pm.stopAll();
         }));
@@ -66,7 +81,9 @@ public final class CoreBootstrap {
         ActionManagerImpl actions = new ActionManagerImpl();
         CoreActions.registerStandardGroups(actions);
         ToolWindowManagerImpl toolWindows = new ToolWindowManagerImpl(actions, LayoutStore.inMemory());
-        PluginManager pm = pluginManager(home, actions, toolWindows);
+        FileEditorManagerImpl editors = new FileEditorManagerImpl();
+        editors.registerProvider(new TextFileEditorProvider());
+        PluginManager pm = pluginManager(home, actions, toolWindows, editors);
         int code = 1;
         try {
             pm.loadAll();
@@ -76,6 +93,7 @@ public final class CoreBootstrap {
                     + " view=" + actions.childIds(ActionIds.VIEW_MENU)
                     + " toolbar=" + actions.childIds(ActionIds.MAIN_TOOLBAR)
                     + " toolWindows=" + toolWindows.ids()
+                    + " editorProviders=" + editors.providerIds()
                     + " failures=" + pm.failures());
             code = pm.failures().isEmpty() && !pm.loadedIds().isEmpty() ? 0 : 1;
         } catch (Exception e) {

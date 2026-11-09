@@ -13,6 +13,7 @@ import ru.mcs.spi.action.AnAction;
 import ru.mcs.spi.action.AnActionEvent;
 import ru.mcs.spi.action.Constraints;
 import ru.mcs.spi.action.DefaultActionGroup;
+import ru.mcs.spi.editor.EditorDataKeys;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.ui.ToolWindowSpec;
 
@@ -36,12 +37,16 @@ public final class HelloPlugin implements Plugin {
         ctx.toolWindows().register(ToolWindowSpec.of("hello.info", "Hello Info", ToolWindowAnchor.RIGHT,
                 () -> new JLabel("Right tool window", SwingConstants.CENTER)));
 
+        ctx.editors().registerProvider(new HelloEditorProvider());
+
         ActionManager am = ctx.actions();
 
         am.registerAction("hello.say", new AnAction("Say hello") {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                JOptionPane.showMessageDialog(null, "Hello from a ModuleLayer plugin! (place: " + e.getPlace() + ")");
+                String file = String.valueOf(e.getData(EditorDataKeys.ACTIVE_FILE));
+                JOptionPane.showMessageDialog(null, "Hello from a ModuleLayer plugin!\nplace: " + e.getPlace()
+                        + "\nactive file: " + file);
             }
         });
 
@@ -64,6 +69,7 @@ public final class HelloPlugin implements Plugin {
         am.addToGroup("hello.group", "hello.counter", Constraints.LAST);
         am.addToGroup(ActionIds.TOOLS_MENU, "hello.group", Constraints.LAST);
         am.addToGroup(ActionIds.MAIN_TOOLBAR, "hello.say", Constraints.LAST);
+        am.addToGroup(ActionIds.EDITOR_TAB_POPUP, "hello.say", Constraints.LAST);
 
         ctx.log("started");
     }

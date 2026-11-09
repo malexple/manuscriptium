@@ -2,6 +2,7 @@ package ru.mcs.core.shell;
 
 import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.action.ActionManager;
+import ru.mcs.spi.editor.FileEditorManager;
 import ru.mcs.spi.ui.ToolWindowManager;
 
 public final class PluginContextImpl implements PluginContext {
@@ -11,11 +12,14 @@ public final class PluginContextImpl implements PluginContext {
     private final String pluginId;
     private final ActionManager actions;
     private final ToolWindowManager toolWindows;
+    private final FileEditorManager editors;
 
-    public PluginContextImpl(String pluginId, ActionManager scopedActions, ToolWindowManager scopedToolWindows) {
+    public PluginContextImpl(String pluginId, ActionManager actions, ToolWindowManager toolWindows,
+                             FileEditorManager editors) {
         this.pluginId = pluginId;
-        this.actions = scopedActions;
-        this.toolWindows = scopedToolWindows;
+        this.actions = actions;
+        this.toolWindows = toolWindows;
+        this.editors = editors;
     }
 
     @Override
@@ -36,5 +40,10 @@ public final class PluginContextImpl implements PluginContext {
     @Override
     public ToolWindowManager toolWindows() {
         return toolWindows;
+    }
+
+    @Override
+    public FileEditorManager editors() {
+        return editors;
     }
 }
