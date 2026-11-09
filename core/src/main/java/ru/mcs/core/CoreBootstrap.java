@@ -6,9 +6,10 @@ import javax.swing.SwingUtilities;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.plugin.PluginManager;
-import ru.mcs.core.shell.HeadlessHost;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.shell.ShellFrame;
+import ru.mcs.core.toolwindow.LayoutStore;
+import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.spi.action.ActionIds;
 
 /**
@@ -29,16 +30,24 @@ public final class CoreBootstrap {
         }
     }
 
+    private static PluginManager pluginManager(Path home, ActionManagerImpl actions, ToolWindowManagerImpl tw) {
+        return new PluginManager(HomeDirs.pluginsDir(home),
+                d -> new PluginContextImpl(d.id(), actions.scopedFor(d.id()), tw.scopedFor(d.id())),
+                d -> {
+                    tw.unregisterOwner(d.id());
+                    actions.unregisterAll(d.id());
+                });
+    }
+
     private static void startUi(Path home) {
         LafInstaller.install();
         ActionManagerImpl actions = new ActionManagerImpl();
         CoreActions.registerStandardGroups(actions);
-        ShellFrame frame = new ShellFrame("Manuscriptium", actions);
+        ToolWindowManagerImpl toolWindows = new ToolWindowManagerImpl(actions, LayoutStore.at(home.resolve("layout.properties")));
+        ShellFrame frame = new ShellFrame("Manuscriptium", actions, toolWindows);
         CoreActions.registerShellActions(actions, frame);
 
-        PluginManager pm = new PluginManager(HomeDirs.pluginsDir(home),
-                d -> new PluginContextImpl(d.id(), frame, actions.scopedFor(d.id())),
-                d -> actions.unregisterAll(d.id()));
+        PluginManager pm = pluginManager(home, actions, toolWindows);
         frame.setVisible(true);
         try {
             pm.loadAll();
@@ -47,24 +56,26 @@ public final class CoreBootstrap {
         }
         frame.setStatus("Плагины: " + pm.loadedIds()
                 + (pm.failures().isEmpty() ? "" : "; ошибки: " + pm.failures()));
-        Runtime.getRuntime().addShutdownHook(new Thread(pm::stopAll));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            toolWindows.save();
+            pm.stopAll();
+        }));
     }
 
     private static void runSmoke(Path home) {
         ActionManagerImpl actions = new ActionManagerImpl();
         CoreActions.registerStandardGroups(actions);
-        HeadlessHost host = new HeadlessHost();
-        PluginManager pm = new PluginManager(HomeDirs.pluginsDir(home),
-                d -> new PluginContextImpl(d.id(), host, actions.scopedFor(d.id())),
-                d -> actions.unregisterAll(d.id()));
+        ToolWindowManagerImpl toolWindows = new ToolWindowManagerImpl(actions, LayoutStore.inMemory());
+        PluginManager pm = pluginManager(home, actions, toolWindows);
         int code = 1;
         try {
             pm.loadAll();
             System.out.println("MCS_SMOKE plugins=" + pm.loadedIds()
                     + " actions=" + actions.pluginActionIds()
                     + " tools=" + actions.childIds(ActionIds.TOOLS_MENU)
+                    + " view=" + actions.childIds(ActionIds.VIEW_MENU)
                     + " toolbar=" + actions.childIds(ActionIds.MAIN_TOOLBAR)
-                    + " toolWindows=" + host.toolWindows()
+                    + " toolWindows=" + toolWindows.ids()
                     + " failures=" + pm.failures());
             code = pm.failures().isEmpty() && !pm.loadedIds().isEmpty() ? 0 : 1;
         } catch (Exception e) {

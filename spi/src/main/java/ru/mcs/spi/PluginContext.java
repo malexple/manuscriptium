@@ -1,9 +1,7 @@
 package ru.mcs.spi;
 
-import java.util.function.Supplier;
-import javax.swing.JComponent;
 import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.ui.ToolWindowAnchor;
+import ru.mcs.spi.ui.ToolWindowManager;
 
 /** Единственный канал взаимодействия плагина с приложением (capability-модель). */
 public interface PluginContext {
@@ -12,12 +10,9 @@ public interface PluginContext {
 
     void log(String message);
 
-    /**
-     * Менеджер действий, привязанный к плагину: всё, что плагин зарегистрировал,
-     * автоматически снимается при остановке плагина.
-     */
+    /** Менеджер действий, привязанный к плагину: регистрации снимаются при остановке плагина. */
     ActionManager actions();
 
-    /** Фаза 1 (срез 1): временная регистрация. В срезе 2 заменится на ToolWindowManager. */
-    void registerToolWindow(String id, String title, ToolWindowAnchor anchor, Supplier<JComponent> factory);
+    /** Менеджер панелей, привязанный к плагину: регистрации снимаются при остановке плагина. */
+    ToolWindowManager toolWindows();
 }

@@ -1,23 +1,21 @@
 package ru.mcs.core.shell;
 
-import java.util.function.Supplier;
-import javax.swing.JComponent;
 import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.ui.ToolWindowAnchor;
+import ru.mcs.spi.ui.ToolWindowManager;
 
 public final class PluginContextImpl implements PluginContext {
 
     private static final System.Logger LOG = System.getLogger("ru.mcs.plugin");
 
     private final String pluginId;
-    private final UiHost host;
     private final ActionManager actions;
+    private final ToolWindowManager toolWindows;
 
-    public PluginContextImpl(String pluginId, UiHost host, ActionManager scopedActions) {
+    public PluginContextImpl(String pluginId, ActionManager scopedActions, ToolWindowManager scopedToolWindows) {
         this.pluginId = pluginId;
-        this.host = host;
         this.actions = scopedActions;
+        this.toolWindows = scopedToolWindows;
     }
 
     @Override
@@ -36,8 +34,7 @@ public final class PluginContextImpl implements PluginContext {
     }
 
     @Override
-    public void registerToolWindow(String id, String title, ToolWindowAnchor anchor,
-                                   Supplier<JComponent> factory) {
-        host.addToolWindow(pluginId, id, title, anchor, factory);
+    public ToolWindowManager toolWindows() {
+        return toolWindows;
     }
 }

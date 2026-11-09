@@ -14,12 +14,13 @@ import ru.mcs.spi.action.AnActionEvent;
 import ru.mcs.spi.action.Constraints;
 import ru.mcs.spi.action.DefaultActionGroup;
 import ru.mcs.spi.ui.ToolWindowAnchor;
+import ru.mcs.spi.ui.ToolWindowSpec;
 
 public final class HelloPlugin implements Plugin {
 
     @Override
     public void start(PluginContext ctx) {
-        ctx.registerToolWindow("hello.panel", "Hello", ToolWindowAnchor.LEFT, () -> {
+        ctx.toolWindows().register(ToolWindowSpec.of("hello.panel", "Hello", ToolWindowAnchor.LEFT, () -> {
             Module m = HelloPlugin.class.getModule();
             String layer = m.getLayer() == ModuleLayer.boot() ? "boot layer" : "plugin layer";
             JPanel panel = new JPanel(new BorderLayout());
@@ -27,7 +28,13 @@ public final class HelloPlugin implements Plugin {
                     + "<br>Module: " + m.getName()
                     + "<br>Loaded in: " + layer + "</html>", SwingConstants.CENTER), BorderLayout.CENTER);
             return panel;
-        });
+        }).withShowByDefault(true));
+
+        ctx.toolWindows().register(ToolWindowSpec.of("hello.log", "Hello Log", ToolWindowAnchor.BOTTOM,
+                () -> new JLabel("  Bottom tool window from the plugin", SwingConstants.LEFT)));
+
+        ctx.toolWindows().register(ToolWindowSpec.of("hello.info", "Hello Info", ToolWindowAnchor.RIGHT,
+                () -> new JLabel("Right tool window", SwingConstants.CENTER)));
 
         ActionManager am = ctx.actions();
 
