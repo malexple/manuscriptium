@@ -11,31 +11,47 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import ru.mcs.core.plugin.contrib.ContributionRegistrar;
 import ru.mcs.spi.McsSdk;
 import ru.mcs.spi.Plugin;
 import ru.mcs.spi.PluginContext;
 
 /**
- * Загружает плагины из {@code <pluginsDir>/<plugin>/plugin.yml + *.jar}.
- * Каждый плагин получает собственный {@link ModuleLayer}; родитель — boot-слой (spi, core)
- * и слои плагинов из depends-on. {@code afterStop} вызывается после остановки (или неудачного старта)
- * плагина — там снимаются его регистрации.
+ * Находит плагины в {@code <pluginsDir>/<plugin>/plugin.yml + *.jar}, объявляет их вклады и загружает (активирует).
+ * Активация: плагин с {@code activation: onStartup} (по умолчанию) загружается в {@link #loadAll()}; плагин с
+ * {@code onDemand} — при первом использовании своего вклада (или явно через {@link #activate}).
+ * Каждый плагин получает собственный {@link ModuleLayer}; родитель — boot-слой (spi, core) и слои плагинов
+ * из depends-on. {@code afterStop} вызывается после остановки, неудачного объявления или неудачного старта
+ * плагина — там снимаются все его регистрации (включая заглушки вкладов).
  */
 public final class PluginManager {
 
     private static final System.Logger LOG = System.getLogger(PluginManager.class.getName());
 
-    private record Loaded(PluginDescriptor descriptor, ModuleLayer layer, Plugin plugin) {
+    private static final class Declared {
+        final PluginDescriptor descriptor;
+        final PluginContext context;
+        ModuleLayer layer;
+        Plugin plugin;
+        Throwable failure;
+
+        Declared(PluginDescriptor descriptor, PluginContext context) {
+            this.descriptor = descriptor;
+            this.context = context;
+        }
     }
 
     private final Path pluginsDir;
     private final Function<PluginDescriptor, PluginContext> contextFactory;
     private final Consumer<PluginDescriptor> afterStop;
-    private final Map<String, Loaded> loaded = new LinkedHashMap<>();
+    private final Map<String, Declared> declared = new LinkedHashMap<>();
+    private final Map<String, Declared> started = new LinkedHashMap<>();
     private final Map<String, String> failures = new LinkedHashMap<>();
+    private volatile BiConsumer<String, String> failureListener = (id, reason) -> { };
 
     public PluginManager(Path pluginsDir, Function<PluginDescriptor, PluginContext> contextFactory) {
         this(pluginsDir, contextFactory, d -> { });
@@ -48,7 +64,12 @@ public final class PluginManager {
         this.afterStop = afterStop;
     }
 
-    public List<PluginDescriptor> discover() throws IOException {
+    /** Вызывается при любой ошибке плагина (манифест, объявление вкладов, загрузка): (pluginId, причина). */
+    public void setFailureListener(BiConsumer<String, String> listener) {
+        this.failureListener = listener;
+    }
+
+    public synchronized List<PluginDescriptor> discover() throws IOException {
         if (!Files.isDirectory(pluginsDir)) {
             return List.of();
         }
@@ -65,29 +86,94 @@ public final class PluginManager {
             try {
                 result.add(PluginDescriptorParser.parse(yml));
             } catch (Exception e) {
-                failures.put(dir.getFileName().toString(), "bad plugin.yml: " + e.getMessage());
+                fail(dir.getFileName().toString(), "bad plugin.yml: " + e.getMessage());
                 LOG.log(System.Logger.Level.WARNING, "Bad plugin.yml in " + dir, e);
             }
         }
         return result;
     }
 
-    public void loadAll() throws IOException {
+    /** Объявляет вклады всех плагинов и загружает те, что с activation=onStartup. */
+    public synchronized void loadAll() throws IOException {
         PluginOrdering.OrderResult order = PluginOrdering.sort(discover());
-        failures.putAll(order.errors());
+        order.errors().forEach(this::fail);
         for (PluginDescriptor d : order.ordered()) {
-            try {
-                loaded.put(d.id(), load(d));
-                LOG.log(System.Logger.Level.INFO, "Plugin started: " + d.id() + " " + d.version());
-            } catch (Throwable t) {
-                failures.put(d.id(), t.toString());
-                LOG.log(System.Logger.Level.ERROR, "Plugin failed: " + d.id(), t);
-                runAfterStop(d);
+            declare(d);
+        }
+        for (PluginDescriptor d : order.ordered()) {
+            Declared dc = declared.get(d.id());
+            if (dc != null && dc.failure == null && d.activation() == Activation.ON_STARTUP) {
+                try {
+                    activate(d.id());
+                } catch (Exception ignored) {
+                    // ошибка уже записана в failures и передана слушателю
+                }
             }
         }
     }
 
-    private Loaded load(PluginDescriptor d) throws Exception {
+    private void declare(PluginDescriptor d) {
+        try {
+            PluginContext ctx = contextFactory.apply(d);
+            declared.put(d.id(), new Declared(d, ctx));
+            ContributionRegistrar.register(d, ctx, this::activate);
+        } catch (Throwable t) {
+            declared.remove(d.id());
+            fail(d.id(), "cannot register contributions: " + t);
+            LOG.log(System.Logger.Level.ERROR, "Plugin declaration failed: " + d.id(), t);
+            runAfterStop(d);
+        }
+    }
+
+    /**
+     * Загружает плагин вместе с его зависимостями, если он ещё не загружен. Вызывать на EDT: start() обычно
+     * создаёт UI. Повторный вход во время старта (плагин сам использует свой вклад) возвращает тот же экземпляр.
+     */
+    public synchronized Plugin activate(String id) throws Exception {
+        Declared dc = declared.get(id);
+        if (dc == null) {
+            throw new IllegalStateException("Unknown plugin: " + id);
+        }
+        if (dc.failure != null) {
+            throw new IllegalStateException("Plugin failed earlier: " + id + " (" + dc.failure + ")");
+        }
+        if (dc.plugin != null) {
+            return dc.plugin;
+        }
+        try {
+            for (String dep : dc.descriptor.dependsOn()) {
+                activate(dep);
+            }
+            start(dc);
+            LOG.log(System.Logger.Level.INFO, "Plugin started: " + id + " " + dc.descriptor.version());
+            return dc.plugin;
+        } catch (Throwable t) {
+            dc.failure = t;
+            dc.plugin = null;
+            started.remove(id);
+            fail(id, t.toString());
+            LOG.log(System.Logger.Level.ERROR, "Plugin failed: " + id, t);
+            runAfterStop(dc.descriptor);
+            if (t instanceof Exception e) {
+                throw e;
+            }
+            throw new IllegalStateException(t);
+        }
+    }
+
+    /** Загружает все объявленные плагины (smoke-проверка образа проверяет и ленивые). */
+    public synchronized void activateAll() {
+        for (String id : new ArrayList<>(declared.keySet())) {
+            try {
+                activate(id);
+            } catch (Exception ignored) {
+                // записано в failures
+            }
+        }
+    }
+
+    private void start(Declared dc) throws Exception {
+        PluginDescriptor d = dc.descriptor;
         if (!SdkCompatibility.isCompatible(d.sdkVersion())) {
             throw new IllegalStateException("Plugin requires SDK " + d.sdkVersion()
                     + ", application provides " + McsSdk.VERSION);
@@ -101,12 +187,12 @@ public final class PluginManager {
         }
         List<ModuleLayer> parents = new ArrayList<>();
         parents.add(ModuleLayer.boot());
-        for (String dep : d.dependsOn()) {
-            Loaded depLoaded = loaded.get(dep);
-            if (depLoaded == null) {
-                throw new IllegalStateException("Dependency not loaded: " + dep);
+        for (String depId : d.dependsOn()) {
+            Declared dep = declared.get(depId);
+            if (dep == null || dep.layer == null) {
+                throw new IllegalStateException("Dependency not loaded: " + depId);
             }
-            parents.add(depLoaded.layer());
+            parents.add(dep.layer);
         }
         ModuleFinder finder = ModuleFinder.of(jars.toArray(Path[]::new));
         List<Configuration> parentConfigs = parents.stream().map(ModuleLayer::configuration).toList();
@@ -121,22 +207,40 @@ public final class PluginManager {
                 .orElseThrow(() -> new IllegalStateException(
                         "Module " + d.module() + " does not provide ru.mcs.spi.Plugin"))
                 .get();
-        plugin.start(contextFactory.apply(d));
-        return new Loaded(d, layer, plugin);
+        dc.layer = layer;
+        dc.plugin = plugin;
+        plugin.start(dc.context);
+        started.put(d.id(), dc);
     }
 
-    public void stopAll() {
-        List<Loaded> reversed = new ArrayList<>(loaded.values());
+    public synchronized void stopAll() {
+        List<Declared> reversed = new ArrayList<>(started.values());
         Collections.reverse(reversed);
-        for (Loaded l : reversed) {
+        for (Declared dc : reversed) {
             try {
-                l.plugin().stop();
+                dc.plugin.stop();
             } catch (Throwable t) {
-                LOG.log(System.Logger.Level.WARNING, "Plugin stop failed: " + l.descriptor().id(), t);
+                LOG.log(System.Logger.Level.WARNING, "Plugin stop failed: " + dc.descriptor.id(), t);
             }
-            runAfterStop(l.descriptor());
+            runAfterStop(dc.descriptor);
         }
-        loaded.clear();
+        // Объявленные, но так и не загруженные плагины: снять заглушки вкладов.
+        for (Declared dc : declared.values()) {
+            if (dc.failure == null && !started.containsKey(dc.descriptor.id())) {
+                runAfterStop(dc.descriptor);
+            }
+        }
+        started.clear();
+        declared.clear();
+    }
+
+    private void fail(String id, String reason) {
+        failures.put(id, reason);
+        try {
+            failureListener.accept(id, reason);
+        } catch (Throwable t) {
+            LOG.log(System.Logger.Level.WARNING, "Failure listener failed", t);
+        }
     }
 
     private void runAfterStop(PluginDescriptor d) {
@@ -147,11 +251,17 @@ public final class PluginManager {
         }
     }
 
-    public List<String> loadedIds() {
-        return List.copyOf(loaded.keySet());
+    /** Плагины, код которых загружен и запущен. */
+    public synchronized List<String> loadedIds() {
+        return List.copyOf(started.keySet());
     }
 
-    public Map<String, String> failures() {
+    /** Все плагины с успешно объявленными вкладами (включая ещё не загруженные). */
+    public synchronized List<String> declaredIds() {
+        return List.copyOf(declared.keySet());
+    }
+
+    public synchronized Map<String, String> failures() {
         return Map.copyOf(failures);
     }
 }

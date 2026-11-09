@@ -1,7 +1,44 @@
 id: ru.mcs.plugin.hello
 name: Hello (test plugin)
 version: 0.1.0
-sdk-version: "0.6"
+sdk-version: "0.7"
 module: ru.mcs.plugin.hello
 depends-on: []
 permissions: []
+
+# onDemand: код плагина загружается при первом использовании любого из вкладов ниже.
+activation: onDemand
+
+contributions:
+  actionGroups:
+    - id: hello.group
+      text: Hello
+      popup: true
+      groups: [MainMenu.Tools]
+  actions:
+    - id: hello.say
+      text: Say hello
+      groups: [hello.group, MainToolbar, EditorTabPopup]
+    - id: hello.counter
+      text: Counter
+      groups: [hello.group]
+    - id: hello.notify
+      text: Show notifications
+      groups: [hello.group]
+    - id: hello.task
+      text: Run background task (3 s)
+      groups: [hello.group]
+  toolWindows:
+    - id: hello.panel
+      title: Hello
+      anchor: left
+    - id: hello.log
+      title: Hello Log
+      anchor: bottom
+    - id: hello.info
+      title: Hello Info
+      anchor: right
+  fileEditors:
+    - id: hello.editor
+      patterns: ["*.hello"]
+      priority: 10

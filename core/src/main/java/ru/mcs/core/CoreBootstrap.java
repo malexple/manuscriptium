@@ -1,7 +1,9 @@
 package ru.mcs.core;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import ru.mcs.core.action.CoreActions;
@@ -17,7 +19,7 @@ import ru.mcs.spi.ui.ToolWindowSpec;
 
 /**
  * Запуск ядра. Аргументы: {@code --home=PATH} (каталог данных), {@code --smoke} (без UI и без записи на диск:
- * загрузить плагины, напечатать итог, выйти с кодом 0/1 — для CI).
+ * загрузить и активировать все плагины, напечатать итог, выйти с кодом 0/1 — для CI).
  */
 public final class CoreBootstrap {
 
@@ -48,19 +50,19 @@ public final class CoreBootstrap {
                 ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications)));
 
         PluginManager pm = s.newPluginManager(home);
+        pm.setFailureListener((id, reason) ->
+                s.notifications.notify("core", "Plugin failed: " + id, reason, NotificationType.ERROR));
         frame.setVisible(true);
         try {
             pm.loadAll();
         } catch (Exception e) {
             s.notifications.notify("core", "Plugins", "Plugin loading failed: " + e, NotificationType.ERROR);
         }
-        pm.failures().forEach((id, reason) ->
-                s.notifications.notify("core", "Plugin failed: " + id, reason, NotificationType.ERROR));
 
-        // Плагины загружены — провайдеры на месте: восстанавливаем вкладки и включаем «живое» состояние сессии.
+        // Вклады объявлены — провайдеры на месте (для onDemand-плагинов это заглушки): восстанавливаем вкладки.
         s.editors.restoreSession(s.sessionStore.loaded());
         s.sessionStore.activate(s.editors::currentSession);
-        s.statusBar.setMessage("Plugins: " + pm.loadedIds());
+        s.statusBar.setMessage("Plugins: " + pm.declaredIds() + ", active: " + pm.loadedIds());
 
         Timer autosave = new Timer(AUTOSAVE_MS, e -> s.state.saveChanged());
         autosave.start();
@@ -76,7 +78,11 @@ public final class CoreBootstrap {
         int code = 1;
         try {
             pm.loadAll();
+            List<String> lazy = new ArrayList<>(pm.declaredIds());
+            lazy.removeAll(pm.loadedIds());
+            pm.activateAll();
             System.out.println("MCS_SMOKE plugins=" + pm.loadedIds()
+                    + " lazy=" + lazy
                     + " actions=" + s.actions.pluginActionIds()
                     + " tools=" + s.actions.childIds(ActionIds.TOOLS_MENU)
                     + " view=" + s.actions.childIds(ActionIds.VIEW_MENU)

@@ -10,6 +10,11 @@ import ru.mcs.spi.ui.StatusBarWidget;
 final class ActiveFileWidget implements StatusBarWidget, FileEditorListener {
 
     private JLabel label;
+    private Path current;
+
+    ActiveFileWidget(Path initial) {
+        this.current = initial;
+    }
 
     @Override
     public String getId() {
@@ -23,14 +28,19 @@ final class ActiveFileWidget implements StatusBarWidget, FileEditorListener {
 
     @Override
     public JComponent createComponent() {
-        label = new JLabel("No file");
+        label = new JLabel(text());
         return label;
     }
 
     @Override
     public void activeFileChanged(Path file) {
+        current = file;
         if (label != null) {
-            label.setText(file == null ? "No file" : file.getFileName().toString());
+            label.setText(text());
         }
+    }
+
+    private String text() {
+        return current == null ? "No file" : current.getFileName().toString();
     }
 }
