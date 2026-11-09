@@ -4,6 +4,8 @@ import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.editor.FileEditorManager;
 import ru.mcs.spi.event.MessageBus;
+import ru.mcs.spi.service.ServiceRegistry;
+import ru.mcs.spi.service.StateManager;
 import ru.mcs.spi.ui.NotificationManager;
 import ru.mcs.spi.ui.StatusBar;
 import ru.mcs.spi.ui.ToolWindowManager;
@@ -19,10 +21,12 @@ public final class PluginContextImpl implements PluginContext {
     private final StatusBar statusBar;
     private final NotificationManager notifications;
     private final MessageBus messageBus;
+    private final ServiceRegistry services;
+    private final StateManager state;
 
     public PluginContextImpl(String pluginId, ActionManager actions, ToolWindowManager toolWindows,
                              FileEditorManager editors, StatusBar statusBar, NotificationManager notifications,
-                             MessageBus messageBus) {
+                             MessageBus messageBus, ServiceRegistry services, StateManager state) {
         this.pluginId = pluginId;
         this.actions = actions;
         this.toolWindows = toolWindows;
@@ -30,6 +34,8 @@ public final class PluginContextImpl implements PluginContext {
         this.statusBar = statusBar;
         this.notifications = notifications;
         this.messageBus = messageBus;
+        this.services = services;
+        this.state = state;
     }
 
     @Override
@@ -70,5 +76,15 @@ public final class PluginContextImpl implements PluginContext {
     @Override
     public MessageBus messageBus() {
         return messageBus;
+    }
+
+    @Override
+    public ServiceRegistry services() {
+        return services;
+    }
+
+    @Override
+    public StateManager state() {
+        return state;
     }
 }

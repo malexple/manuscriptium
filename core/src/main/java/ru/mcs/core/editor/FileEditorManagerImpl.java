@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -99,7 +100,7 @@ public final class FileEditorManagerImpl implements FileEditorManager {
 
     /** Выгрузка плагина: снять его провайдеры и закрыть их редакторы без подтверждения. */
     public synchronized void unregisterOwner(String owner) {
-        Set<FileEditorProvider> removed = new java.util.HashSet<>();
+        Set<FileEditorProvider> removed = new HashSet<>();
         for (Iterator<ProviderEntry> it = providers.iterator(); it.hasNext(); ) {
             ProviderEntry e = it.next();
             if (e.owner().equals(owner)) {
@@ -337,16 +338,15 @@ public final class FileEditorManagerImpl implements FileEditorManager {
 
     // ---------- сессия ----------
 
-    public synchronized void saveSession(SessionStore store) {
+    public synchronized SessionStore.Session currentSession() {
         List<SessionStore.Tab> tabs = entries.stream()
                 .map(e -> new SessionStore.Tab(e.file, e.pinned))
                 .toList();
-        store.save(new SessionStore.Session(tabs, selected));
+        return new SessionStore.Session(tabs, selected);
     }
 
     /** Открывает сохранённые файлы, которые ещё существуют и для которых есть провайдер. */
-    public synchronized void restoreSession(SessionStore store) {
-        SessionStore.Session session = store.load();
+    public synchronized void restoreSession(SessionStore.Session session) {
         for (SessionStore.Tab tab : session.tabs()) {
             if (Files.isRegularFile(tab.file()) && openFile(tab.file()) && tab.pinned()) {
                 setPinned(tab.file(), true);

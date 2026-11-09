@@ -3,21 +3,17 @@ package ru.mcs.core.toolwindow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.nio.file.Path;
 import javax.swing.JLabel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
+import ru.mcs.core.state.StateYaml;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.ui.ToolWindowSpec;
 
 class ToolWindowManagerImplTest {
-
-    @TempDir
-    Path tmp;
 
     private ActionManagerImpl actions;
     private ToolWindowManagerImpl m;
@@ -26,7 +22,7 @@ class ToolWindowManagerImplTest {
     void setUp() {
         actions = new ActionManagerImpl();
         CoreActions.registerStandardGroups(actions);
-        m = new ToolWindowManagerImpl(actions, LayoutStore.inMemory());
+        m = new ToolWindowManagerImpl(actions, new LayoutStore());
     }
 
     private static ToolWindowSpec spec(String id, ToolWindowAnchor anchor, boolean shown) {
@@ -83,22 +79,36 @@ class ToolWindowManagerImplTest {
     }
 
     @Test
-    void layoutIsRestoredFromFile() {
-        Path file = tmp.resolve("layout.properties");
-        ToolWindowManagerImpl first = new ToolWindowManagerImpl(actions, LayoutStore.at(file));
+    void layoutSurvivesYamlRoundTrip() {
+        LayoutStore firstStore = new LayoutStore();
+        ToolWindowManagerImpl first = new ToolWindowManagerImpl(actions, firstStore);
         ToolWindowImpl a = first.register("p", spec("a", ToolWindowAnchor.LEFT, true));
         a.hide();
         first.setSize(ToolWindowAnchor.LEFT, 333);
-        first.save();
+
+        LayoutStore secondStore = new LayoutStore();
+        secondStore.loadState(StateYaml.parse(StateYaml.dump(firstStore.getState())));
 
         ActionManagerImpl otherActions = new ActionManagerImpl();
         CoreActions.registerStandardGroups(otherActions);
-        ToolWindowManagerImpl second = new ToolWindowManagerImpl(otherActions, LayoutStore.at(file));
+        ToolWindowManagerImpl second = new ToolWindowManagerImpl(otherActions, secondStore);
         ToolWindowImpl restored = second.register("p", spec("a", ToolWindowAnchor.LEFT, true));
 
         assertThat(restored.isVisible()).as("saved 'hidden' wins over showByDefault").isFalse();
         assertThat(second.size(ToolWindowAnchor.LEFT)).isEqualTo(333);
         assertThat(second.size(ToolWindowAnchor.BOTTOM)).isEqualTo(200);
+    }
+
+    @Test
+    void layoutStoreIgnoresGarbage() {
+        LayoutStore store = new LayoutStore();
+        store.loadState(java.util.Map.of(
+                "visible", java.util.Map.of("a", "yes", "b", true),
+                "sizes", java.util.Map.of("LEFT", -5, "NOWHERE", 100, "RIGHT", 250)));
+        assertThat(store.visible("a")).isEmpty();
+        assertThat(store.visible("b")).contains(true);
+        assertThat(store.size(ToolWindowAnchor.LEFT, 280)).isEqualTo(280);
+        assertThat(store.size(ToolWindowAnchor.RIGHT, 280)).isEqualTo(250);
     }
 
     @Test
@@ -113,8 +123,7 @@ class ToolWindowManagerImplTest {
 
     @Test
     void unregisterOwnerKeepsSavedVisibility() {
-        Path file = tmp.resolve("layout.properties");
-        LayoutStore store = LayoutStore.at(file);
+        LayoutStore store = new LayoutStore();
         ToolWindowManagerImpl mgr = new ToolWindowManagerImpl(actions, store);
         ToolWindowImpl a = mgr.register("p", spec("a", ToolWindowAnchor.LEFT, false));
         a.show();

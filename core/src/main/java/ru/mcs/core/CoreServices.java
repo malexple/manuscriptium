@@ -6,29 +6,47 @@ import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.bus.MessageBusImpl;
 import ru.mcs.core.editor.EditorEventsBridge;
 import ru.mcs.core.editor.FileEditorManagerImpl;
+import ru.mcs.core.editor.SessionStore;
 import ru.mcs.core.editor.TextFileEditorProvider;
 import ru.mcs.core.notification.NotificationManagerImpl;
 import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.core.plugin.PluginManager;
+import ru.mcs.core.service.ServiceRegistryImpl;
 import ru.mcs.core.shell.PluginContextImpl;
+import ru.mcs.core.shell.WindowState;
+import ru.mcs.core.state.StateManagerImpl;
 import ru.mcs.core.statusbar.StatusBarModel;
 import ru.mcs.core.toolwindow.LayoutStore;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.service.Scope;
 
-/** Корневой набор сервисов приложения (application-level). Позже станет ServiceRegistry. */
+/**
+ * Корневой набор сервисов приложения (application-level). Состояние: {@code <home>/state/*.yml};
+ * VAULT-состояние пока временно в {@code <home>/workspace/state} (в Фазе 4 переедет в vault).
+ */
 final class CoreServices {
 
     private static final System.Logger LOG = System.getLogger(CoreServices.class.getName());
 
+    final StateManagerImpl state;
+    final ServiceRegistryImpl services = new ServiceRegistryImpl();
     final ActionManagerImpl actions = new ActionManagerImpl();
     final ToolWindowManagerImpl toolWindows;
     final FileEditorManagerImpl editors = new FileEditorManagerImpl();
     final MessageBusImpl bus = new MessageBusImpl();
     final StatusBarModel statusBar = new StatusBarModel();
     final NotificationManagerImpl notifications = new NotificationManagerImpl();
+    final SessionStore sessionStore = new SessionStore();
+    final WindowState windowState = new WindowState();
 
-    CoreServices(LayoutStore layout) {
+    CoreServices(Path home, boolean persist) {
+        state = new StateManagerImpl(home.resolve("state"), home.resolve("workspace").resolve("state"), persist);
+        LayoutStore layout = new LayoutStore();
+        state.register("core", "core.layout", Scope.APPLICATION, layout);
+        state.register("core", "core.session", Scope.APPLICATION, sessionStore);
+        state.register("core", "core.window", Scope.APPLICATION, windowState);
+
         CoreActions.registerStandardGroups(actions);
         toolWindows = new ToolWindowManagerImpl(actions, layout);
         editors.registerProvider(new TextFileEditorProvider());
@@ -42,16 +60,19 @@ final class CoreServices {
     private PluginContext contextFor(PluginDescriptor d) {
         String id = d.id();
         return new PluginContextImpl(id, actions.scopedFor(id), toolWindows.scopedFor(id), editors.scopedFor(id),
-                statusBar.scopedFor(id), notifications.scopedFor(id), bus.scopedFor(id));
+                statusBar.scopedFor(id), notifications.scopedFor(id), bus.scopedFor(id),
+                services.scopedFor(id), state.scopedFor(id));
     }
 
     /** Снять всё, что плагин зарегистрировал. Каждый шаг независим: сбой одного не мешает остальным. */
     private void release(PluginDescriptor d) {
         String id = d.id();
+        safely(id, () -> state.unregisterOwner(id));
         safely(id, () -> editors.unregisterOwner(id));
         safely(id, () -> toolWindows.unregisterOwner(id));
         safely(id, () -> statusBar.removeOwner(id));
         safely(id, () -> bus.unsubscribeOwner(id));
+        safely(id, () -> services.unregisterOwner(id));
         safely(id, () -> actions.unregisterAll(id));
     }
 

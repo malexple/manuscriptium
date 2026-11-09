@@ -16,6 +16,7 @@ import ru.mcs.spi.action.Constraints;
 import ru.mcs.spi.action.DefaultActionGroup;
 import ru.mcs.spi.editor.EditorDataKeys;
 import ru.mcs.spi.editor.EditorTopics;
+import ru.mcs.spi.service.Scope;
 import ru.mcs.spi.ui.StatusBarTask;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.ui.ToolWindowSpec;
@@ -24,6 +25,10 @@ public final class HelloPlugin implements Plugin {
 
     @Override
     public void start(PluginContext ctx) {
+        HelloState state = new HelloState();
+        ctx.state().register("counter", Scope.APPLICATION, state);
+        ctx.services().register(HelloGreeter.class, new HelloGreeter());
+
         ctx.toolWindows().register(ToolWindowSpec.of("hello.panel", "Hello", ToolWindowAnchor.LEFT, () -> {
             Module m = HelloPlugin.class.getModule();
             String layer = m.getLayer() == ModuleLayer.boot() ? "boot layer" : "plugin layer";
@@ -52,22 +57,20 @@ public final class HelloPlugin implements Plugin {
             @Override
             public void actionPerformed(AnActionEvent e) {
                 String file = String.valueOf(e.getData(EditorDataKeys.ACTIVE_FILE));
-                JOptionPane.showMessageDialog(null, "Hello from a ModuleLayer plugin!\nplace: " + e.getPlace()
-                        + "\nactive file: " + file);
+                String greeting = ctx.services().get(HelloGreeter.class).greet("place: " + e.getPlace());
+                JOptionPane.showMessageDialog(null, greeting + "\nactive file: " + file);
             }
         });
 
         am.registerAction("hello.counter", new AnAction("Clicked 0 times") {
-            private int clicks;
-
             @Override
             public void actionPerformed(AnActionEvent e) {
-                clicks++;
+                state.increment();
             }
 
             @Override
             public void update(AnActionEvent e) {
-                e.getPresentation().setText("Clicked " + clicks + " times");
+                e.getPresentation().setText("Clicked " + state.clicks() + " times (saved)");
             }
         });
 

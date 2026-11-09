@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ru.mcs.core.state.StateYaml;
 
 class FileEditorManagerImplTest {
 
@@ -195,17 +196,20 @@ class FileEditorManagerImplTest {
     }
 
     @Test
-    void sessionRoundTrip() throws IOException {
+    void sessionSurvivesPersistenceRoundTrip() {
         em.openFile(a);
         em.openFile(b);
         em.setPinned(a, true);
         em.selectFile(a);
-        SessionStore store = SessionStore.inMemory();
-        em.saveSession(store);
+
+        SessionStore saver = new SessionStore();
+        saver.activate(em::currentSession);
+        SessionStore loader = new SessionStore();
+        loader.loadState(StateYaml.parse(StateYaml.dump(saver.getState())));
 
         FileEditorManagerImpl restored = new FileEditorManagerImpl();
         restored.registerProvider(FakeProvider.any("fake"));
-        restored.restoreSession(store);
+        restored.restoreSession(loader.loaded());
 
         assertThat(restored.getOpenFiles()).containsExactly(a, b);
         assertThat(restored.isPinned(a)).isTrue();
@@ -213,16 +217,15 @@ class FileEditorManagerImplTest {
     }
 
     @Test
-    void sessionFileRoundTripSkipsMissingFiles() throws IOException {
-        Path sessionFile = tmp.resolve("session.properties");
+    void restoreSkipsMissingFiles() throws IOException {
         em.openFile(a);
         em.openFile(b);
-        em.saveSession(SessionStore.at(sessionFile));
+        SessionStore.Session session = em.currentSession();
         Files.delete(b);
 
         FileEditorManagerImpl restored = new FileEditorManagerImpl();
         restored.registerProvider(FakeProvider.any("fake"));
-        restored.restoreSession(SessionStore.at(sessionFile));
+        restored.restoreSession(session);
 
         assertThat(restored.getOpenFiles()).containsExactly(a);
     }

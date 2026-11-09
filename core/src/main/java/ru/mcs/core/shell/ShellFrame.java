@@ -29,7 +29,7 @@ public final class ShellFrame extends JFrame {
     private final StatusBarModel statusModel;
 
     public ShellFrame(String title, ActionManagerImpl actions, ToolWindowManagerImpl toolWindows,
-                      FileEditorManagerImpl editors, StatusBarModel statusModel) {
+                      FileEditorManagerImpl editors, StatusBarModel statusModel, WindowState windowState) {
         super(title);
         this.editors = editors;
         this.statusModel = statusModel;
@@ -57,8 +57,8 @@ public final class ShellFrame extends JFrame {
             }
         });
 
-        setSize(1200, 800);
-        setLocationRelativeTo(null);
+        windowState.applyTo(this);
+        windowState.track(this);
     }
 
     private FileEditorManagerImpl.CloseDecision askAboutUnsaved(FileEditor editor) {

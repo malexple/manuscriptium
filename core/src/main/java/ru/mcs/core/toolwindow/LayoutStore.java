@@ -1,86 +1,66 @@
 package ru.mcs.core.toolwindow;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
+import java.util.TreeMap;
+import ru.mcs.spi.service.PersistentStateComponent;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 
-/**
- * Простое хранилище раскладки (видимость панелей и размеры сторон) в .properties.
- * В срезе 5 заменится на PersistentStateComponent.
- */
-public final class LayoutStore {
+/** Раскладка: видимость панелей и размеры сторон. Сохраняется через StateManager (id core.layout). */
+public final class LayoutStore implements PersistentStateComponent {
 
-    private static final System.Logger LOG = System.getLogger(LayoutStore.class.getName());
-
-    private final Path file;
-    private final Properties props = new Properties();
-
-    private LayoutStore(Path file) {
-        this.file = file;
-    }
-
-    public static LayoutStore inMemory() {
-        return new LayoutStore(null);
-    }
-
-    public static LayoutStore at(Path file) {
-        LayoutStore store = new LayoutStore(file);
-        store.load();
-        return store;
-    }
-
-    private void load() {
-        if (file == null || !Files.isRegularFile(file)) {
-            return;
-        }
-        try (InputStream in = Files.newInputStream(file)) {
-            props.load(in);
-        } catch (IOException e) {
-            LOG.log(System.Logger.Level.WARNING, "Cannot read layout: " + file, e);
-        }
-    }
+    private final Map<String, Boolean> visibility = new TreeMap<>();
+    private final Map<ToolWindowAnchor, Integer> sizes = new EnumMap<>(ToolWindowAnchor.class);
 
     public synchronized Optional<Boolean> visible(String id) {
-        String v = props.getProperty("tw." + id + ".visible");
-        return v == null ? Optional.empty() : Optional.of(Boolean.parseBoolean(v));
+        return Optional.ofNullable(visibility.get(id));
     }
 
     public synchronized void setVisible(String id, boolean visible) {
-        props.setProperty("tw." + id + ".visible", String.valueOf(visible));
+        visibility.put(id, visible);
     }
 
     public synchronized int size(ToolWindowAnchor anchor, int fallback) {
-        try {
-            return Integer.parseInt(props.getProperty("size." + anchor.name(), String.valueOf(fallback)));
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
+        return sizes.getOrDefault(anchor, fallback);
     }
 
     public synchronized void setSize(ToolWindowAnchor anchor, int size) {
-        props.setProperty("size." + anchor.name(), String.valueOf(size));
+        sizes.put(anchor, size);
     }
 
-    public synchronized void save() {
-        if (file == null) {
-            return;
-        }
-        try {
-            Path parent = file.toAbsolutePath().getParent();
-            Files.createDirectories(parent);
-            Path tmp = parent.resolve(file.getFileName() + ".tmp");
-            try (OutputStream out = Files.newOutputStream(tmp)) {
-                props.store(out, "Manuscriptium layout");
+    @Override
+    public synchronized Map<String, Object> getState() {
+        Map<String, Object> sizeState = new LinkedHashMap<>();
+        sizes.forEach((anchor, size) -> sizeState.put(anchor.name(), size));
+        Map<String, Object> state = new LinkedHashMap<>();
+        state.put("visible", new LinkedHashMap<String, Object>(visibility));
+        state.put("sizes", sizeState);
+        return state;
+    }
+
+    @Override
+    public synchronized void loadState(Map<String, Object> state) {
+        visibility.clear();
+        sizes.clear();
+        if (state.get("visible") instanceof Map<?, ?> v) {
+            for (Map.Entry<?, ?> e : v.entrySet()) {
+                if (e.getKey() instanceof String id && e.getValue() instanceof Boolean b) {
+                    visibility.put(id, b);
+                }
             }
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            LOG.log(System.Logger.Level.WARNING, "Cannot save layout: " + file, e);
+        }
+        if (state.get("sizes") instanceof Map<?, ?> s) {
+            for (Map.Entry<?, ?> e : s.entrySet()) {
+                if (e.getKey() instanceof String name && e.getValue() instanceof Number n && n.intValue() > 0) {
+                    try {
+                        sizes.put(ToolWindowAnchor.valueOf(name), n.intValue());
+                    } catch (IllegalArgumentException ignored) {
+                        // неизвестная сторона из другой версии — пропускаем
+                    }
+                }
+            }
         }
     }
 }

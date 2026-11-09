@@ -3,6 +3,8 @@ package ru.mcs.spi;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.editor.FileEditorManager;
 import ru.mcs.spi.event.MessageBus;
+import ru.mcs.spi.service.ServiceRegistry;
+import ru.mcs.spi.service.StateManager;
 import ru.mcs.spi.ui.NotificationManager;
 import ru.mcs.spi.ui.StatusBar;
 import ru.mcs.spi.ui.ToolWindowManager;
@@ -28,4 +30,10 @@ public interface PluginContext {
     NotificationManager notifications();
 
     MessageBus messageBus();
+
+    /** Реестр сервисов приложения: плагины публикуют и находят сервисы друг друга. */
+    ServiceRegistry services();
+
+    /** Сохранение состояния плагина между запусками. */
+    StateManager state();
 }

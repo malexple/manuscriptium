@@ -18,9 +18,8 @@ import ru.mcs.spi.ui.ToolWindowManager;
 import ru.mcs.spi.ui.ToolWindowSpec;
 
 /**
- * Модель панелей: реестр, активная панель на каждой стороне, размеры, сохранение.
- * Не содержит Swing-компонентов (кроме ленивых фабрик содержимого) — поэтому работает и в headless-режиме.
- * Рассчитана на вызовы из EDT (в smoke-режиме — из главного потока).
+ * Модель панелей: реестр, активная панель на каждой стороне, размеры. Сохранение — через {@link LayoutStore}
+ * (он зарегистрирован в StateManager). Не содержит Swing-компонентов (кроме ленивых фабрик содержимого).
  */
 public final class ToolWindowManagerImpl {
 
@@ -145,10 +144,6 @@ public final class ToolWindowManagerImpl {
 
     public void setSize(ToolWindowAnchor anchor, int size) {
         store.setSize(anchor, size);
-    }
-
-    public void save() {
-        store.save();
     }
 
     public List<String> ids() {
