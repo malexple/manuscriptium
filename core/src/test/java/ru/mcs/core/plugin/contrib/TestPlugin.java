@@ -11,11 +11,27 @@ import ru.mcs.spi.Plugin;
 import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.editor.FileEditor;
 import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.settings.Configurable;
 
 final class TestPlugin implements Plugin {
 
     final JLabel content = new JLabel("content");
     final List<Path> editedFiles = new ArrayList<>();
+    final Configurable configurable = new Configurable() {
+        @Override
+        public JComponent createComponent() {
+            return new JLabel("settings");
+        }
+
+        @Override
+        public boolean isModified() {
+            return false;
+        }
+
+        @Override
+        public void apply() {
+        }
+    };
 
     private final FileEditorProvider provider = new FileEditorProvider() {
         @Override
@@ -76,5 +92,10 @@ final class TestPlugin implements Plugin {
     @Override
     public FileEditorProvider createFileEditorProvider(String id) {
         return provider;
+    }
+
+    @Override
+    public Configurable createConfigurable(String id) {
+        return configurable;
     }
 }

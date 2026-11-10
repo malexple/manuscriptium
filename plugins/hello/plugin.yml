@@ -1,7 +1,7 @@
 id: ru.mcs.plugin.hello
 name: Hello (test plugin)
 version: 0.1.0
-sdk-version: "0.8"
+sdk-version: "0.9"
 module: ru.mcs.plugin.hello
 depends-on: []
 permissions: []
@@ -46,3 +46,6 @@ contributions:
     - id: hello.editor
       patterns: ["*.hello"]
       priority: 10
+  settings:
+    - id: hello.settings
+      title: "%settings.title"

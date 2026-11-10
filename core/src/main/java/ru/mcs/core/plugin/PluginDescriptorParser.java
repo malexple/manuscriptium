@@ -108,7 +108,14 @@ public final class PluginDescriptorParser {
             }
             editors.add(new Contributions.EditorDecl(id, patterns, integer(m, "priority", 0)));
         }
-        return new Contributions(groups, actions, toolWindows, editors);
+        seen = new HashSet<>();
+        List<Contributions.SettingsDecl> settings = new ArrayList<>();
+        for (Map<?, ?> m : maps(c, "settings")) {
+            String parentId = optional(m, "parent-id", "");
+            settings.add(new Contributions.SettingsDecl(uniqueId(m, seen, "settings"),
+                    required(m, "title"), parentId.isBlank() ? null : parentId));
+        }
+        return new Contributions(groups, actions, toolWindows, editors, settings);
     }
 
     private static String uniqueId(Map<?, ?> map, Set<String> seen, String kind) {

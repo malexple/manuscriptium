@@ -12,7 +12,7 @@ import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.notification.NotificationLayer;
 import ru.mcs.core.notification.NotificationsPanel;
 import ru.mcs.core.plugin.PluginManager;
-import ru.mcs.core.settings.LanguageActions;
+import ru.mcs.core.settings.SettingsActions;
 import ru.mcs.core.shell.ShellFrame;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.ui.NotificationType;
@@ -55,7 +55,7 @@ public final class CoreBootstrap {
                 s.actions,
                 () -> new ShellDataContext(s.editors)
         );
-        LanguageActions.register(s.actions, frame, s.settings);
+        SettingsActions.register(s.actions, frame, s.configurables, s.state::saveChanged);
         s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", Messages.get("notifications.title"),
                 ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications)));
 
@@ -101,6 +101,8 @@ public final class CoreBootstrap {
                     + " toolbar=" + s.actions.childIds(ActionIds.MAIN_TOOLBAR)
                     + " toolWindows=" + s.toolWindows.ids()
                     + " editorProviders=" + s.editors.providerIds()
+                    + " settings=" + s.configurables.getProviders().stream()
+                            .map(p -> p.getId()).toList()
                     + " statusWidgets=" + s.statusBar.widgetIds()
                     + " state=" + s.state.ids()
                     + " failures=" + pm.failures());

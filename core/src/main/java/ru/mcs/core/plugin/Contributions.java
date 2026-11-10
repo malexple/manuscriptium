@@ -8,12 +8,14 @@ public record Contributions(
         List<ActionGroupDecl> actionGroups,
         List<ActionDecl> actions,
         List<ToolWindowDecl> toolWindows,
-        List<EditorDecl> fileEditors) {
+        List<EditorDecl> fileEditors,
+        List<SettingsDecl> settings) {
 
-    public static final Contributions NONE = new Contributions(List.of(), List.of(), List.of(), List.of());
+    public static final Contributions NONE = new Contributions(List.of(), List.of(), List.of(), List.of(), List.of());
 
     public boolean isEmpty() {
-        return actionGroups.isEmpty() && actions.isEmpty() && toolWindows.isEmpty() && fileEditors.isEmpty();
+        return actionGroups.isEmpty() && actions.isEmpty() && toolWindows.isEmpty() && fileEditors.isEmpty()
+                && settings.isEmpty();
     }
 
     public record ActionGroupDecl(String id, String text, boolean popup, List<String> groups) {
@@ -26,5 +28,8 @@ public record Contributions(
     }
 
     public record EditorDecl(String id, List<String> patterns, int priority) {
+    }
+
+    public record SettingsDecl(String id, String title, String parentId) {
     }
 }

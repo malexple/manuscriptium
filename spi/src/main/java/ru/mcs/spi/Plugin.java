@@ -3,6 +3,7 @@ package ru.mcs.spi;
 import javax.swing.JComponent;
 import ru.mcs.spi.action.AnAction;
 import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.settings.Configurable;
 
 /**
  * Точка входа плагина. Реализация объявляется в module-info плагина:
@@ -32,6 +33,11 @@ public interface Plugin {
 
     /** Создаёт провайдер редакторов, объявленный в plugin.yml (contributions.fileEditors). */
     default FileEditorProvider createFileEditorProvider(String id) {
+        return null;
+    }
+
+    /** Создаёт страницу настроек, объявленную в plugin.yml (contributions.settings). */
+    default Configurable createConfigurable(String id) {
         return null;
     }
 }

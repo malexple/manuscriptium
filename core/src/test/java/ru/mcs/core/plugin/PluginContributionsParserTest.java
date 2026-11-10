@@ -47,6 +47,10 @@ class PluginContributionsParserTest {
                     - id: p.editor
                       patterns: ["*.hello", "*.hi"]
                       priority: 10
+                  settings:
+                    - id: p.settings
+                      title: Settings
+                      parent-id: core.settings.general
                 """);
 
         assertThat(d.activation()).isEqualTo(Activation.ON_DEMAND);
@@ -59,6 +63,8 @@ class PluginContributionsParserTest {
                 new Contributions.ToolWindowDecl("p.tool", "Tool", ToolWindowAnchor.BOTTOM, true));
         assertThat(c.fileEditors()).containsExactly(
                 new Contributions.EditorDecl("p.editor", List.of("*.hello", "*.hi"), 10));
+        assertThat(c.settings()).containsExactly(
+                new Contributions.SettingsDecl("p.settings", "Settings", "core.settings.general"));
     }
 
     @Test
@@ -73,6 +79,8 @@ class PluginContributionsParserTest {
                     - {id: t, title: T, anchor: left}
                   fileEditors:
                     - {id: e, patterns: ["*.x"]}
+                  settings:
+                    - {id: s, title: S}
                 """);
         Contributions c = d.contributions();
         assertThat(c.actionGroups().get(0).popup()).isTrue();
@@ -80,6 +88,7 @@ class PluginContributionsParserTest {
         assertThat(c.actions().get(0).groups()).isEmpty();
         assertThat(c.toolWindows().get(0).showByDefault()).isFalse();
         assertThat(c.fileEditors().get(0).priority()).isZero();
+        assertThat(c.settings().get(0).parentId()).isNull();
     }
 
     @Test

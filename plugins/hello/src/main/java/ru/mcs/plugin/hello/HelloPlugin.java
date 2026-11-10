@@ -15,6 +15,7 @@ import ru.mcs.spi.editor.EditorDataKeys;
 import ru.mcs.spi.editor.EditorTopics;
 import ru.mcs.spi.editor.FileEditorProvider;
 import ru.mcs.spi.service.Scope;
+import ru.mcs.spi.settings.Configurable;
 import ru.mcs.spi.ui.StatusBarTask;
 
 /**
@@ -66,6 +67,11 @@ public final class HelloPlugin implements Plugin {
     @Override
     public FileEditorProvider createFileEditorProvider(String id) {
         return "hello.editor".equals(id) ? new HelloEditorProvider() : null;
+    }
+
+    @Override
+    public Configurable createConfigurable(String id) {
+        return "hello.settings".equals(id) ? new HelloConfigurable(state, ctx.i18n()) : null;
     }
 
     private JComponent infoPanel() {

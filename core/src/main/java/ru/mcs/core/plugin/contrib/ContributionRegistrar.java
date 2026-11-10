@@ -51,6 +51,10 @@ public final class ContributionRegistrar {
             ctx.editors().registerProvider(
                     new ProxyFileEditorProvider(pluginId, e.id(), e.priority(), e.patterns(), activator));
         }
+        for (Contributions.SettingsDecl s : c.settings()) {
+            ctx.settings().register(new ProxyConfigurableProvider(pluginId, s.id(), text(ctx, s.title()),
+                    s.parentId(), activator));
+        }
     }
 
     static String text(PluginContext ctx, String raw) {

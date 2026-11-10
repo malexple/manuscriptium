@@ -6,6 +6,7 @@ import ru.mcs.spi.event.MessageBus;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.ServiceRegistry;
 import ru.mcs.spi.service.StateManager;
+import ru.mcs.spi.settings.SettingsManager;
 import ru.mcs.spi.ui.NotificationManager;
 import ru.mcs.spi.ui.StatusBar;
 import ru.mcs.spi.ui.ToolWindowManager;
@@ -37,6 +38,9 @@ public interface PluginContext {
 
     /** Сохранение состояния плагина между запусками. */
     StateManager state();
+
+    /** Реестр страниц настроек плагина. */
+    SettingsManager settings();
 
     /** Локализованные строки плагина. */
     I18n i18n();

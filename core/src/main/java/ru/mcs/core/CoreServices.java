@@ -15,6 +15,8 @@ import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.core.plugin.PluginManager;
 import ru.mcs.core.service.ServiceRegistryImpl;
 import ru.mcs.core.settings.AppSettings;
+import ru.mcs.core.settings.GeneralSettingsProvider;
+import ru.mcs.core.settings.SettingsManagerImpl;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.shell.WindowState;
 import ru.mcs.core.state.StateManagerImpl;
@@ -35,6 +37,7 @@ final class CoreServices {
 
     final StateManagerImpl state;
     final AppSettings settings = new AppSettings();
+    final SettingsManagerImpl configurables = new SettingsManagerImpl();
     final ServiceRegistryImpl services = new ServiceRegistryImpl();
     final ActionManagerImpl actions = new ActionManagerImpl();
     final ToolWindowManagerImpl toolWindows;
@@ -49,6 +52,7 @@ final class CoreServices {
         state = new StateManagerImpl(home.resolve("state"), home.resolve("workspace").resolve("state"), persist);
         state.register("core", "core.settings", Scope.APPLICATION, settings);
         Messages.init(settings.resolveLocale());
+        configurables.register(new GeneralSettingsProvider(settings));
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);
@@ -69,7 +73,8 @@ final class CoreServices {
         String id = d.id();
         return new PluginContextImpl(id, actions.scopedFor(id), toolWindows.scopedFor(id), editors.scopedFor(id),
                 statusBar.scopedFor(id), notifications.scopedFor(id), bus.scopedFor(id),
-                services.scopedFor(id), state.scopedFor(id), PluginMessages.create(d, Messages.locale()));
+                services.scopedFor(id), state.scopedFor(id), configurables.scopedFor(id),
+                PluginMessages.create(d, Messages.locale()));
     }
 
     /** Снять всё, что плагин зарегистрировал. Каждый шаг независим: сбой одного не мешает остальным. */
@@ -82,6 +87,7 @@ final class CoreServices {
         safely(id, () -> bus.unsubscribeOwner(id));
         safely(id, () -> services.unregisterOwner(id));
         safely(id, () -> actions.unregisterAll(id));
+        safely(id, () -> configurables.unregisterAll(id));
     }
 
     private static void safely(String pluginId, Runnable step) {

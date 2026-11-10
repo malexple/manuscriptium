@@ -14,6 +14,7 @@ import ru.mcs.core.editor.FileEditorManagerImpl;
 import ru.mcs.core.plugin.PluginActivator;
 import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.core.plugin.PluginDescriptorParser;
+import ru.mcs.core.settings.SettingsManagerImpl;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.toolwindow.LayoutStore;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
@@ -48,11 +49,16 @@ class ContributionRegistrarTest {
                 - id: p.editor
                   patterns: ["*.hello"]
                   priority: 10
+              settings:
+                - id: p.settings
+                  title: Settings
+                  parent-id: core.settings.general
             """;
 
     private ActionManagerImpl actions;
     private ToolWindowManagerImpl toolWindows;
     private FileEditorManagerImpl editors;
+    private SettingsManagerImpl settings;
     private PluginDescriptor descriptor;
     private PluginContext ctx;
     private TestPlugin plugin;
@@ -65,9 +71,10 @@ class ContributionRegistrarTest {
         CoreActions.registerStandardGroups(actions);
         toolWindows = new ToolWindowManagerImpl(actions, new LayoutStore());
         editors = new FileEditorManagerImpl();
+        settings = new SettingsManagerImpl();
         descriptor = PluginDescriptorParser.parse(new StringReader(YML), Path.of("."));
         ctx = new PluginContextImpl("p", actions.scopedFor("p"), toolWindows.scopedFor("p"),
-                editors.scopedFor("p"), null, null, null, null, null);
+                editors.scopedFor("p"), null, null, null, null, null, settings.scopedFor("p"));
         plugin = new TestPlugin();
         activator = id -> {
             activations.incrementAndGet();
@@ -106,14 +113,28 @@ class ContributionRegistrarTest {
     }
 
     @Test
+    void settingsMetadataIsLazyAndPageCreationActivatesPlugin() throws Exception {
+        assertThat(settings.getProviders()).singleElement().satisfies(provider -> {
+            assertThat(provider.getId()).isEqualTo("p.settings");
+            assertThat(provider.getParentId()).isEqualTo("core.settings.general");
+        });
+        assertThat(activations.get()).isZero();
+
+        assertThat(settings.getProviders().get(0).createConfigurable()).isSameAs(plugin.configurable);
+        assertThat(activations.get()).isEqualTo(1);
+    }
+
+    @Test
     void cleanupRemovesEveryStub() {
         actions.unregisterAll("p");
         toolWindows.unregisterOwner("p");
         editors.unregisterOwner("p");
+        settings.unregisterAll("p");
 
         assertThat(actions.childIds(ActionIds.TOOLS_MENU)).isEmpty();
         assertThat(actions.childIds(ActionIds.MAIN_TOOLBAR)).isEmpty();
         assertThat(toolWindows.ids()).isEmpty();
         assertThat(editors.providerIds()).isEmpty();
+        assertThat(settings.getProviders()).isEmpty();
     }
 }
