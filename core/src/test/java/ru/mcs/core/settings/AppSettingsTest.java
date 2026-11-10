@@ -29,9 +29,11 @@ class AppSettingsTest {
     void stateSurvivesYamlRoundTrip() {
         AppSettings first = new AppSettings();
         first.setLanguage(AppSettings.RU);
+        first.setTheme("dark");
         AppSettings second = new AppSettings();
         second.loadState(StateYaml.parse(StateYaml.dump(first.getState())));
         assertThat(second.language()).isEqualTo(AppSettings.RU);
+        assertThat(second.theme()).isEqualTo("dark");
     }
 
     @Test
@@ -42,5 +44,8 @@ class AppSettingsTest {
         assertThat(settings.language()).isEqualTo(AppSettings.AUTO);
         settings.loadState(Map.of("language", 5));
         assertThat(settings.language()).isEqualTo(AppSettings.AUTO);
+        assertThatThrownBy(() -> settings.setTheme(" ")).isInstanceOf(IllegalArgumentException.class);
+        settings.loadState(Map.of("theme", " "));
+        assertThat(settings.theme()).isEqualTo(AppSettings.SYSTEM_THEME);
     }
 }

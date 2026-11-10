@@ -44,6 +44,7 @@ public final class CoreBootstrap {
     private static void startUi(Path home) {
         LafInstaller.install();
         CoreServices s = new CoreServices(home, true);
+        s.themes.start();
 
         ShellFrame frame = new ShellFrame("Manuscriptium", s.actions, s.toolWindows, s.editors, s.statusBar,
                 s.windowState);
@@ -78,6 +79,7 @@ public final class CoreBootstrap {
         Timer autosave = new Timer(AUTOSAVE_MS, e -> s.state.saveChanged());
         autosave.start();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            s.themes.close();
             s.state.saveChanged();
             pm.stopAll();
         }));

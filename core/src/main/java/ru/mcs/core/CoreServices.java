@@ -15,12 +15,14 @@ import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.core.plugin.PluginManager;
 import ru.mcs.core.service.ServiceRegistryImpl;
 import ru.mcs.core.settings.AppSettings;
+import ru.mcs.core.settings.AppearanceSettingsProvider;
 import ru.mcs.core.settings.GeneralSettingsProvider;
 import ru.mcs.core.settings.SettingsManagerImpl;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.shell.WindowState;
 import ru.mcs.core.state.StateManagerImpl;
 import ru.mcs.core.statusbar.StatusBarModel;
+import ru.mcs.core.theme.McsThemeManager;
 import ru.mcs.core.toolwindow.LayoutStore;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.spi.PluginContext;
@@ -37,6 +39,7 @@ final class CoreServices {
 
     final StateManagerImpl state;
     final AppSettings settings = new AppSettings();
+    final McsThemeManager themes;
     final SettingsManagerImpl configurables = new SettingsManagerImpl();
     final ServiceRegistryImpl services = new ServiceRegistryImpl();
     final ActionManagerImpl actions = new ActionManagerImpl();
@@ -52,7 +55,9 @@ final class CoreServices {
         state = new StateManagerImpl(home.resolve("state"), home.resolve("workspace").resolve("state"), persist);
         state.register("core", "core.settings", Scope.APPLICATION, settings);
         Messages.init(settings.resolveLocale());
+        themes = new McsThemeManager(settings, home.resolve("themes"));
         configurables.register(new GeneralSettingsProvider(settings));
+        configurables.register(new AppearanceSettingsProvider(themes));
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);

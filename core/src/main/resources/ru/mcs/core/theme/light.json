@@ -1,0 +1,12 @@
+{
+  "id": "light",
+  "name": "Light",
+  "dark": false,
+  "tokens": {
+    "Component.focusColor": "#3574F0",
+    "Component.focusedBorderColor": "#3574F0",
+    "Component.linkColor": "#2470B3",
+    "Tree.selectionBackground": "#D6E4F7",
+    "Tree.selectionForeground": "#1F1F1F"
+  }
+}
