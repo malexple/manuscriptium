@@ -5,6 +5,7 @@ public final class ActionPlaces {
     public static final String MAIN_MENU = "MainMenu";
     public static final String MAIN_TOOLBAR = "MainToolbar";
     public static final String POPUP = "Popup";
+    public static final String COMMAND_PALETTE = "CommandPalette";
 
     private ActionPlaces() {
     }

@@ -18,6 +18,8 @@ import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.ui.NotificationType;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.ui.ToolWindowSpec;
+import ru.mcs.core.action.CommandPalette;
+import ru.mcs.core.shell.ShellDataContext;
 
 /**
  * Запуск ядра. Аргументы: {@code --home=PATH} (каталог данных), {@code --smoke} (без UI и без записи на диск:
@@ -48,6 +50,11 @@ public final class CoreBootstrap {
         NotificationLayer.install(frame, s.notifications);
         EditorActions.register(s.actions, s.editors, frame);
         CoreActions.registerShellActions(s.actions, frame);
+        CommandPalette.install(
+                frame,
+                s.actions,
+                () -> new ShellDataContext(s.editors)
+        );
         LanguageActions.register(s.actions, frame, s.settings);
         s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", Messages.get("notifications.title"),
                 ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications)));
