@@ -19,11 +19,13 @@ public final class PluginOrdering {
 
     public static OrderResult sort(Collection<PluginDescriptor> all) {
         Map<String, PluginDescriptor> byId = new LinkedHashMap<>();
+        Map<String, String> errors = new LinkedHashMap<>();
         for (PluginDescriptor d : all) {
-            byId.putIfAbsent(d.id(), d);
+            if (byId.putIfAbsent(d.id(), d) != null) {
+                errors.put(d.id(), "duplicate plugin id");
+            }
         }
         List<PluginDescriptor> ordered = new ArrayList<>();
-        Map<String, String> errors = new LinkedHashMap<>();
         Set<String> done = new HashSet<>();
         Set<String> stack = new HashSet<>();
         for (PluginDescriptor d : byId.values()) {
@@ -48,7 +50,7 @@ public final class PluginOrdering {
         for (String dep : d.dependsOn()) {
             PluginDescriptor dd = byId.get(dep);
             if (dd == null) {
-                errors.putIfAbsent(d.id(), "missing dependency: " + dep);
+                errors.putIfAbsent(d.id(), "missing dependency (absent, disabled or incompatible): " + dep);
                 ok = false;
                 break;
             }

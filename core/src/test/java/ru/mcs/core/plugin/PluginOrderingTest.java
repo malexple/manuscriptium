@@ -33,4 +33,14 @@ class PluginOrderingTest {
         assertThat(r.ordered()).isEmpty();
         assertThat(r.errors()).containsKeys("a", "b");
     }
+
+    @Test
+    void duplicateIdsAndTheirDependentsAreRejected() {
+        var r = PluginOrdering.sort(List.of(p("a"), p("a"), p("b", "a"), p("ok")));
+
+        assertThat(r.ordered()).extracting(PluginDescriptor::id).containsExactly("ok");
+        assertThat(r.errors()).containsKeys("a", "b");
+        assertThat(r.errors().get("a")).contains("duplicate plugin id");
+        assertThat(r.errors().get("b")).contains("dependency failed: a");
+    }
 }

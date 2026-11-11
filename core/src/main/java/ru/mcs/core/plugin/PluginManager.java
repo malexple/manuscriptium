@@ -32,6 +32,7 @@ import ru.mcs.spi.PluginContext;
 public final class PluginManager {
 
     private static final System.Logger LOG = System.getLogger(PluginManager.class.getName());
+    static final String SDK_INCOMPATIBLE_FAILURE = "incompatible SDK:";
 
     private static final class Declared {
         final PluginDescriptor descriptor;
@@ -96,8 +97,11 @@ public final class PluginManager {
             try {
                 result.add(PluginDescriptorParser.parse(yml));
             } catch (Exception e) {
-                fail(dir.getFileName().toString(), "bad plugin.yml: " + e.getMessage());
+                String id = dir.getFileName().toString();
+                fail(id, "bad plugin.yml: " + e.getMessage());
                 LOG.log(System.Logger.Level.WARNING, "Bad plugin.yml in " + dir, e);
+                // Сохраняем повреждённый плагин в реестре, чтобы Settings показал ошибку, а не скрыл его.
+                result.add(new PluginDescriptor(id, id, "—", "—", "—", List.of(), List.of(), dir));
             }
         }
         return result;
@@ -107,6 +111,8 @@ public final class PluginManager {
     public synchronized void loadAll() throws IOException {
         List<PluginDescriptor> enabledPlugins = discover().stream()
                 .filter(d -> enabled.test(d.id()))
+                .filter(d -> !failures.containsKey(d.id()))
+                .filter(this::validateSdk)
                 .toList();
         PluginOrdering.OrderResult order = PluginOrdering.sort(enabledPlugins);
         order.errors().forEach(this::fail);
@@ -123,6 +129,20 @@ public final class PluginManager {
                 }
             }
         }
+    }
+
+    private boolean validateSdk(PluginDescriptor d) {
+        try {
+            if (SdkCompatibility.isCompatible(d.sdkVersion())) {
+                return true;
+            }
+        } catch (IllegalArgumentException e) {
+            fail(d.id(), "invalid sdk-version '" + d.sdkVersion() + "': " + e.getMessage());
+            return false;
+        }
+        fail(d.id(), SDK_INCOMPATIBLE_FAILURE + " required " + d.sdkVersion()
+                + ", application " + McsSdk.VERSION);
+        return false;
     }
 
     private void declare(PluginDescriptor d) {
@@ -248,7 +268,9 @@ public final class PluginManager {
     }
 
     private void fail(String id, String reason) {
-        failures.put(id, reason);
+        if (reason.equals(failures.put(id, reason))) {
+            return;
+        }
         try {
             failureListener.accept(id, reason);
         } catch (Throwable t) {

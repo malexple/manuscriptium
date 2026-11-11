@@ -123,8 +123,10 @@ final class PluginTableModel extends AbstractTableModel {
 
     private String status(PluginDescriptor descriptor) {
         String id = descriptor.id();
-        if (failures.containsKey(id)) {
-            return Messages.get("plugins.status.error");
+        String failure = failures.get(id);
+        if (failure != null) {
+            return failure.startsWith(PluginManager.SDK_INCOMPATIBLE_FAILURE)
+                    ? Messages.get("plugins.status.incompatible") : Messages.get("plugins.status.error");
         }
         if (!isCompatible(descriptor.sdkVersion())) {
             return Messages.get("plugins.status.incompatible");

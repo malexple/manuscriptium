@@ -48,4 +48,27 @@ class PluginTableModelTest {
 
         assertThat(model.getValueAt(0, 5)).isEqualTo("Incompatible SDK");
     }
+
+    @Test
+    void incompatibleSdkFailureKeepsSpecificStatusAndDetailedReason() {
+        PluginTableModel model = new PluginTableModel(new PluginState());
+        PluginDescriptor descriptor = new PluginDescriptor("old", "Old", "1.0", "0.8", "old",
+                List.of(), List.of(), Path.of("/old"));
+        String failure = "incompatible SDK: required 0.8, application 0.9";
+        model.refresh(List.of(descriptor), Set.of(), java.util.Map.of("old", failure));
+
+        assertThat(model.getValueAt(0, 5)).isEqualTo("Incompatible SDK");
+        assertThat(model.failureAt(0)).isEqualTo(failure);
+    }
+
+    @Test
+    void malformedManifestIsShownAsErrorRatherThanHiddenOrMislabeledAsSdkIssue() {
+        PluginTableModel model = new PluginTableModel(new PluginState());
+        PluginDescriptor placeholder = new PluginDescriptor("broken", "broken", "—", "—", "—",
+                List.of(), List.of(), Path.of("/broken"));
+        model.refresh(List.of(placeholder), Set.of(), java.util.Map.of("broken", "bad plugin.yml: missing id"));
+
+        assertThat(model.getValueAt(0, 5)).isEqualTo("Error");
+        assertThat(model.failureAt(0)).contains("missing id");
+    }
 }
