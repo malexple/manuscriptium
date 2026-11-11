@@ -14,21 +14,42 @@ application {
     mainClass = 'ru.mcs.app.ManuscriptiumApp'
 }
 
-// Песочница данных для разработки: build/dev-home/plugins/<plugin>/{plugin.yml,*.jar}
+// Внешние плагины: build/dev-home/plugins; bundled: build/system-plugins и image/system-plugins.
 def devHomeDir = layout.buildDirectory.dir('dev-home')
+def systemPluginsDir = layout.buildDirectory.dir('system-plugins')
 
-tasks.register('devHome', Copy) {
+tasks.register('systemPlugins', Sync) {
     def hello = project(':plugins:hello')
     dependsOn hello.tasks.named('jar')
-    from(hello.tasks.named('jar')) { into 'plugins/hello' }
-    from(hello.file('plugin.yml')) { into 'plugins/hello' }
-    into devHomeDir
+    from(hello.tasks.named('jar')) { into 'hello' }
+    from(hello.file('plugin.yml')) { into 'hello' }
+    into systemPluginsDir
+}
+
+tasks.register('devHome') {
+    dependsOn 'systemPlugins'
+    doLast {
+        // До появления system-plugins демо Hello копировался во внешний каталог dev-home.
+        devHomeDir.get().dir('plugins/hello').asFile.deleteDir()
+        devHomeDir.get().asFile.mkdirs()
+    }
+}
+
+tasks.register('imageSystemPlugins', Sync) {
+    dependsOn 'systemPlugins'
+    from systemPluginsDir
+    into layout.buildDirectory.dir('image/system-plugins')
 }
 
 tasks.named('run') {
     dependsOn 'devHome'
-    args "--home=${devHomeDir.get().asFile}"
+    systemProperty 'manuscriptium.home', devHomeDir.get().asFile.absolutePath
+    systemProperty 'manuscriptium.systemPlugins', systemPluginsDir.get().asFile.absolutePath
     jvmArgs '-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8'
+}
+
+tasks.named('jlink') {
+    finalizedBy 'imageSystemPlugins'
 }
 
 jlink {

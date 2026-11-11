@@ -22,7 +22,8 @@ import ru.mcs.spi.Plugin;
 import ru.mcs.spi.PluginContext;
 
 /**
- * Находит плагины в {@code <pluginsDir>/<plugin>/plugin.yml + *.jar}, объявляет их вклады и загружает (активирует).
+ * Находит плагины в {@code <pluginsDir>/<plugin>/plugin.yml + *.jar} каждого переданного каталога,
+ * объединяет их в один реестр, объявляет вклады и загружает (активирует).
  * Активация: плагин с {@code activation: onStartup} (по умолчанию) загружается в {@link #loadAll()}; плагин с
  * {@code onDemand} — при первом использовании своего вклада (или явно через {@link #activate}).
  * Каждый плагин получает собственный {@link ModuleLayer}; родитель — boot-слой (spi, core) и слои плагинов
@@ -47,7 +48,7 @@ public final class PluginManager {
         }
     }
 
-    private final Path pluginsDir;
+    private final List<Path> pluginsDirs;
     private final Function<PluginDescriptor, PluginContext> contextFactory;
     private final Consumer<PluginDescriptor> afterStop;
     private final Predicate<String> enabled;
@@ -67,7 +68,12 @@ public final class PluginManager {
 
     public PluginManager(Path pluginsDir, Function<PluginDescriptor, PluginContext> contextFactory,
                          Consumer<PluginDescriptor> afterStop, Predicate<String> enabled) {
-        this.pluginsDir = pluginsDir;
+        this(List.of(pluginsDir), contextFactory, afterStop, enabled);
+    }
+
+    public PluginManager(List<Path> pluginsDirs, Function<PluginDescriptor, PluginContext> contextFactory,
+                         Consumer<PluginDescriptor> afterStop, Predicate<String> enabled) {
+        this.pluginsDirs = List.copyOf(pluginsDirs);
         this.contextFactory = contextFactory;
         this.afterStop = afterStop;
         this.enabled = enabled;
@@ -79,10 +85,17 @@ public final class PluginManager {
     }
 
     public synchronized List<PluginDescriptor> discover() throws IOException {
-        if (!Files.isDirectory(pluginsDir)) {
-            return List.of();
-        }
         List<PluginDescriptor> result = new ArrayList<>();
+        for (Path pluginsDir : pluginsDirs) {
+            discover(pluginsDir, result);
+        }
+        return result;
+    }
+
+    private void discover(Path pluginsDir, List<PluginDescriptor> result) throws IOException {
+        if (!Files.isDirectory(pluginsDir)) {
+            return;
+        }
         List<Path> dirs;
         try (Stream<Path> s = Files.list(pluginsDir)) {
             dirs = s.filter(Files::isDirectory)
@@ -104,7 +117,6 @@ public final class PluginManager {
                 result.add(new PluginDescriptor(id, id, "—", "—", "—", List.of(), List.of(), dir));
             }
         }
-        return result;
     }
 
     /** Объявляет вклады включённых плагинов и загружает те, что с activation=onStartup. */

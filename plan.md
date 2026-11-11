@@ -42,6 +42,7 @@ Manuscriptium — кроссплатформенное (Windows, Linux, macOS) �
 | macOS | `apple.laf.useScreenMenuBar`, `apple.awt.application.name`, `apple.awt.application.appearance=system`; unified toolbar через `apple.awt.fullWindowContent` + `apple.awt.transparentTitleBar` (+ отступ ~70 px под кнопки окна) |
 | Поставка | jlink/jpackage (плагин beryx); немодульные зависимости — merged-модуль; Win MSI/ZIP, Linux DEB, macOS DMG; без подписи на MVP |
 | Распространение плагинов | Основной формат — JAR с `plugin.yml` в корне. Папка и ZIP остаются источниками локальной установки; сетевой каталог и сервис загрузки реализуются отдельным поздним этапом |
+| Источники плагинов | Bundled — `<installation>/system-plugins/`; внешние — `<home>/plugins/` (`.manuscriptium/plugins/`). Единый реестр и граф; установка и обновления изменяют только внешний каталог |
 | Тесты | JUnit 5 + AssertJ, headless-логика (ActionManager, резолвер слоёв, манифесты); без UI-тестов Swing |
 | CI | GitHub/Forgejo Actions: Windows, Ubuntu, macOS — build, test, jlink |
 | Лицензия | MIT |
@@ -128,7 +129,7 @@ Settings → Plugins показывает метаданные, зависимо
 
 ### Фаза 3. Плагины (полный цикл)
 - [x] Граф зависимостей (`depends-on`), проверка `sdk-version`, ошибки загрузки в UI.
-- [ ] Bundled-плагины в `system-plugins/`, внешние — `.manuscriptium/plugins/`.
+- [x] Bundled-плагины в `system-plugins/`, внешние — `.manuscriptium/plugins/`.
 - [ ] Документация SDK и шаблон проекта плагина.
 
 Архитектура проверки плагинов: `PluginManager.loadAll()` отбрасывает повреждённые манифесты и некорректные либо
@@ -137,6 +138,13 @@ Settings → Plugins показывает метаданные, зависимо
 Повреждённый `plugin.yml` представлен в реестре служебной строкой, поэтому Settings → Plugins не скрывает ошибку и
 показывает статус Error либо Incompatible SDK с исходной причиной в деталях. Код и вклады отклонённых плагинов не
 активируются. SPI остаётся `0.9.0`.
+
+Архитектура источников плагинов: `PluginManager` принимает список каталогов и строит по ним единый реестр и граф,
+поэтому зависимости работают между bundled и внешними плагинами, а duplicate ID между источниками отклоняется. Образ
+содержит Hello в `image/system-plugins/`; runtime определяет этот каталог через `java.home`. Внешние плагины остаются в
+`<home>/plugins/`; только там работают установка и pending-обновления. Для Gradle run и нестандартных launcher есть
+`manuscriptium.systemPlugins`, а `manuscriptium.home` заменяет dev-аргумент `--home`, чтобы абсолютный путь сборочной
+машины не попадал в launcher образа. SPI остаётся `0.9.0`.
 
 ### Фаза 4. Vault и иерархия
 - Vault: `.md` как источник истины; FileWatcher (WatchService); SQLite как кэш (пересобираемый); Lucene — позже в этой фазе.

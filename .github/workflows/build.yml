@@ -24,10 +24,22 @@ jobs:
       - name: Build runtime image
         run: ./gradlew :app:jlink
         shell: bash
-      - name: Smoke test of the runtime image (external plugin via ModuleLayer)
+      - name: Smoke test of the runtime image (bundled plugin via ModuleLayer)
         shell: bash
         run: |
+          test -f app/build/image/system-plugins/hello/plugin.yml
           EXE=app/build/image/bin/manuscriptium
           if [ "$RUNNER_OS" = "Windows" ]; then EXE=$EXE.bat; fi
           "$EXE" --smoke --home=app/build/dev-home | tee smoke.log
           grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello\]" smoke.log
+      - name: Smoke test of the runtime image (external plugin via ModuleLayer)
+        shell: bash
+        run: |
+          mkdir -p app/build/external-home/plugins app/build/empty-system-plugins
+          cp -R app/build/image/system-plugins/hello app/build/external-home/plugins/hello
+          JAVA=app/build/image/bin/java
+          if [ "$RUNNER_OS" = "Windows" ]; then JAVA=$JAVA.exe; fi
+          "$JAVA" -Dmanuscriptium.systemPlugins=app/build/empty-system-plugins \
+            -m ru.mcs.app/ru.mcs.app.ManuscriptiumApp \
+            --smoke --home=app/build/external-home | tee external-smoke.log
+          grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello\]" external-smoke.log

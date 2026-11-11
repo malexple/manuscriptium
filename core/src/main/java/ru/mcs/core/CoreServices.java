@@ -1,6 +1,7 @@
 package ru.mcs.core;
 
 import java.nio.file.Path;
+import java.util.List;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.bus.MessageBusImpl;
@@ -74,7 +75,8 @@ final class CoreServices {
     }
 
     PluginManager newPluginManager(Path home) {
-        return new PluginManager(HomeDirs.pluginsDir(home), this::contextFor, this::release, plugins::isEnabled);
+        return new PluginManager(List.of(HomeDirs.systemPluginsDir(), HomeDirs.pluginsDir(home)),
+                this::contextFor, this::release, plugins::isEnabled);
     }
 
     private PluginContext contextFor(PluginDescriptor d) {
