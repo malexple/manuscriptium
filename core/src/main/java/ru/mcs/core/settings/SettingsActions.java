@@ -1,6 +1,7 @@
 package ru.mcs.core.settings;
 
 import javax.swing.JFrame;
+import ru.mcs.core.MacOsSupport;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.action.ActionIds;
@@ -18,14 +19,25 @@ public final class SettingsActions {
     }
 
     public static void register(ActionManager actions, JFrame frame, SettingsManager settings, Runnable saveState) {
+        register(actions, frame, settings, saveState, MacOsSupport.isMacOs());
+    }
+
+    static void register(ActionManager actions, JFrame frame, SettingsManager settings, Runnable saveState,
+                         boolean macOs) {
         actions.registerAction(ACTION_ID, new AnAction(Messages.get("settings.action"), null, Icons.lucide("settings")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                if (SettingsDialog.showDialog(frame, settings)) {
-                    saveState.run();
-                }
+                open(frame, settings, saveState);
             }
         });
-        actions.addToGroup(ActionIds.FILE_MENU, ACTION_ID, Constraints.before("core.exit"));
+        if (!macOs) {
+            actions.addToGroup(ActionIds.FILE_MENU, ACTION_ID, Constraints.before("core.exit"));
+        }
+    }
+
+    public static void open(JFrame frame, SettingsManager settings, Runnable saveState) {
+        if (SettingsDialog.showDialog(frame, settings)) {
+            saveState.run();
+        }
     }
 }

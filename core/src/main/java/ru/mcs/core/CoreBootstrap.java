@@ -58,6 +58,11 @@ public final class CoreBootstrap {
                 () -> new ShellDataContext(s.editors)
         );
         SettingsActions.register(s.actions, frame, s.configurables, s.state::saveChanged);
+        MacOsSupport.installApplicationMenu(
+                () -> CoreActions.showAbout(frame),
+                () -> SettingsActions.open(frame, s.configurables, s.state::saveChanged),
+                () -> CoreActions.requestQuit(frame)
+        );
         s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", Messages.get("notifications.title"),
                         ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications))
                 .withIcon(Icons.lucide("bell")));

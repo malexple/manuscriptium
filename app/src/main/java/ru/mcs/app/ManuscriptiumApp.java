@@ -1,7 +1,7 @@
 package ru.mcs.app;
 
-import java.util.Locale;
 import ru.mcs.core.CoreBootstrap;
+import ru.mcs.core.MacOsSupport;
 
 public final class ManuscriptiumApp {
 
@@ -10,11 +10,7 @@ public final class ManuscriptiumApp {
 
     public static void main(String[] args) {
         // Свойства macOS должны быть заданы до инициализации AWT.
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
-            System.setProperty("apple.laf.useScreenMenuBar", "true");
-            System.setProperty("apple.awt.application.name", "Manuscriptium");
-            System.setProperty("apple.awt.application.appearance", "system");
-        }
+        MacOsSupport.installEarly();
         CoreBootstrap.start(args);
     }
 }

@@ -3,6 +3,7 @@ package ru.mcs.core.action;
 import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import ru.mcs.core.MacOsSupport;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.McsSdk;
@@ -31,21 +32,37 @@ public final class CoreActions {
 
     /** Exit и About; регистрировать после действий File, чтобы Exit оказался последним. */
     public static void registerShellActions(ActionManager am, JFrame frame) {
+        registerShellActions(am, frame, MacOsSupport.isMacOs());
+    }
+
+    static void registerShellActions(ActionManager am, JFrame frame, boolean macOs) {
         am.registerAction("core.exit", new AnAction(Messages.get("action.exit"), null, Icons.lucide("log-out")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
+                requestQuit(frame);
             }
         });
-        am.addToGroup(ActionIds.FILE_MENU, "core.exit", Constraints.LAST);
-
         am.registerAction("core.about", new AnAction(Messages.get("action.about"), null, Icons.lucide("circle-question-mark")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                JOptionPane.showMessageDialog(frame, Messages.get("about.text", McsSdk.VERSION));
+                showAbout(frame);
             }
         });
-        am.addToGroup(ActionIds.HELP_MENU, "core.about", Constraints.LAST);
+
+        // На macOS эти команды уже находятся в нативном меню приложения.
+        // Сами действия остаются зарегистрированными и доступными в палитре команд.
+        if (!macOs) {
+            am.addToGroup(ActionIds.FILE_MENU, "core.exit", Constraints.LAST);
+            am.addToGroup(ActionIds.HELP_MENU, "core.about", Constraints.LAST);
+        }
+    }
+
+    public static void showAbout(JFrame frame) {
+        JOptionPane.showMessageDialog(frame, Messages.get("about.text", McsSdk.VERSION));
+    }
+
+    public static void requestQuit(JFrame frame) {
+        frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
     }
 
     private static void menu(ActionManager am, String id, String text) {

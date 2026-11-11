@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import ru.mcs.core.MacOsSupport;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.ActionMenuBar;
 import ru.mcs.core.action.ActionToolbar;
@@ -38,7 +39,8 @@ public final class ShellFrame extends JFrame {
         Supplier<DataContext> ctx = () -> new ShellDataContext(editors);
 
         setJMenuBar(new ActionMenuBar(actions, ctx));
-        add(new ActionToolbar(actions, ActionIds.MAIN_TOOLBAR, ActionPlaces.MAIN_TOOLBAR, ctx), BorderLayout.NORTH);
+        ActionToolbar toolbar = new ActionToolbar(actions, ActionIds.MAIN_TOOLBAR, ActionPlaces.MAIN_TOOLBAR, ctx);
+        add(MacOsSupport.unifiedToolbar(this, toolbar), BorderLayout.NORTH);
 
         docking = new DockingPanel(toolWindows);
         docking.setCenter(new EditorTabs(editors, actions, ctx));
