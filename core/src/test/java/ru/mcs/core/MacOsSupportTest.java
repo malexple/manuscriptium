@@ -14,6 +14,9 @@ import javax.swing.JPanel;
 import javax.swing.JRootPane;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 class MacOsSupportTest {
 
@@ -84,26 +87,35 @@ class MacOsSupportTest {
         AtomicBoolean cancelled = new AtomicBoolean();
         AtomicBoolean quitOnEdt = new AtomicBoolean();
         AtomicInteger quitCalls = new AtomicInteger();
+        List<String> events = Collections.synchronizedList(new ArrayList<>());
+
         QuitResponse response = new QuitResponse() {
             @Override
             public void performQuit() {
-                throw new AssertionError("Нативный Quit не должен обходить проверку редакторов");
+                throw new AssertionError(
+                        "Нативный Quit не должен обходить проверку редакторов"
+                );
             }
 
             @Override
             public void cancelQuit() {
+                events.add("cancelQuit");
                 cancelled.set(true);
             }
         };
 
         MacOsSupport.quitHandler(() -> {
+            events.add("quit");
             quitOnEdt.set(SwingUtilities.isEventDispatchThread());
             quitCalls.incrementAndGet();
         }).handleQuitRequestWith(null, response);
 
         assertThat(cancelled).isTrue();
-        assertThat(quitCalls).hasValue(0);
+
+        // Ждём выполнения ранее поставленного в EDT обратного вызова.
         SwingUtilities.invokeAndWait(() -> { });
+
+        assertThat(events).containsExactly("cancelQuit", "quit");
         assertThat(quitCalls).hasValue(1);
         assertThat(quitOnEdt).isTrue();
     }

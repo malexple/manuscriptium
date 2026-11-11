@@ -62,7 +62,11 @@ public final class PluginInstaller {
         return findInstalledDirectory(pluginId) != null;
     }
 
-    /** Устанавливает через staging; при обновлении старая версия сохраняется до успешного перемещения новой. */
+    /**
+     * Новый плагин устанавливается сразу. Обновление существующего подготавливается в скрытый pending-каталог:
+     * текущие JAR могут быть заблокированы загрузчиком, особенно на Windows, поэтому их замена откладывается
+     * до {@link #applyPending()} при следующем запуске.
+     */
     public PluginDescriptor install(Inspection confirmed) throws IOException {
         Inspection current = inspect(confirmed.source());
         if (!current.descriptor().id().equals(confirmed.descriptor().id())) {
@@ -71,10 +75,7 @@ public final class PluginInstaller {
         String id = current.descriptor().id();
         Files.createDirectories(pluginsDir);
         Path existing = findInstalledDirectory(id);
-        Path target = existing != null ? existing : pluginsDir.resolve(id);
         Path staging = pluginsDir.resolve("." + id + ".installing-" + UUID.randomUUID());
-        Path backup = pluginsDir.resolve("." + id + ".backup-" + UUID.randomUUID());
-        boolean backedUp = false;
         try {
             copyPackage(current, staging);
             PluginDescriptor staged = PluginDescriptorParser.parse(staging.resolve("plugin.yml"));
@@ -82,13 +83,52 @@ public final class PluginInstaller {
             if (!staged.id().equals(id)) {
                 throw new IllegalArgumentException("Plugin id changed while installing");
             }
+            Path target = existing != null ? pendingPath(id) : pluginsDir.resolve(id);
+            replaceDirectory(staging, target);
+            return PluginDescriptorParser.parse(target.resolve("plugin.yml"));
+        } finally {
+            deleteQuietly(staging);
+        }
+    }
+
+    /** Применяет подготовленные обновления до того, как PluginManager откроет JAR текущих версий. */
+    public void applyPending() throws IOException {
+        if (!Files.isDirectory(pluginsDir)) {
+            return;
+        }
+        List<Path> pending;
+        try (Stream<Path> paths = Files.list(pluginsDir)) {
+            pending = paths.filter(Files::isDirectory)
+                    .filter(path -> path.getFileName().toString().endsWith(".pending"))
+                    .sorted().toList();
+        }
+        for (Path source : pending) {
+            PluginDescriptor descriptor = PluginDescriptorParser.parse(source.resolve("plugin.yml"));
+            String id = descriptor.id();
+            validateId(id);
+            if (!source.equals(pendingPath(id))) {
+                throw new IOException("Pending plugin id does not match its directory: " + id);
+            }
+            Path existing = findInstalledDirectory(id);
+            Path target = existing != null ? existing : pluginsDir.resolve(id);
+            replaceDirectory(source, target);
+        }
+    }
+
+    private Path pendingPath(String pluginId) {
+        return pluginsDir.resolve("." + pluginId + ".pending");
+    }
+
+    private static void replaceDirectory(Path source, Path target) throws IOException {
+        Path backup = target.getParent().resolve("." + target.getFileName() + ".backup-" + UUID.randomUUID());
+        boolean backedUp = false;
+        try {
             if (Files.exists(target)) {
                 move(target, backup);
                 backedUp = true;
             }
-            move(staging, target);
+            move(source, target);
             deleteQuietly(backup);
-            return PluginDescriptorParser.parse(target.resolve("plugin.yml"));
         } catch (IOException | RuntimeException e) {
             if (backedUp && !Files.exists(target) && Files.exists(backup)) {
                 try {
@@ -99,7 +139,6 @@ public final class PluginInstaller {
             }
             throw e;
         } finally {
-            deleteQuietly(staging);
             if (Files.exists(target)) {
                 deleteQuietly(backup);
             }

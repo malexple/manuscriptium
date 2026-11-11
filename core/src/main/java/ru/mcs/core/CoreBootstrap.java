@@ -1,5 +1,6 @@
 package ru.mcs.core;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,12 +32,19 @@ import ru.mcs.core.shell.ShellDataContext;
 public final class CoreBootstrap {
 
     private static final int AUTOSAVE_MS = 30_000;
+    private static final System.Logger LOG = System.getLogger(CoreBootstrap.class.getName());
 
     private CoreBootstrap() {
     }
 
     public static void start(String[] args) {
         Path home = HomeDirs.resolve(argValue(args, "--home="));
+        try {
+            new PluginInstaller(HomeDirs.pluginsDir(home)).applyPending();
+        } catch (IOException | RuntimeException e) {
+            // Старая версия остаётся на месте благодаря rollback; приложение может продолжить запуск.
+            LOG.log(System.Logger.Level.ERROR, "Cannot apply pending plugin update", e);
+        }
         if (Arrays.asList(args).contains("--smoke")) {
             runSmoke(home);
         } else {

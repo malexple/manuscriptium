@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Test;
@@ -17,7 +19,7 @@ class PluginInstallerTest {
     Path temp;
 
     @Test
-    void installsAndReplacesDirectoryWithoutLeavingStagingDirectories() throws Exception {
+    void installsImmediatelyAndAppliesReplacementOnNextStartup() throws Exception {
         Path source = directoryPlugin("1.0");
         Path plugins = temp.resolve("plugins");
         PluginInstaller installer = new PluginInstaller(plugins);
@@ -32,7 +34,14 @@ class PluginInstallerTest {
         PluginInstaller.Inspection update = installer.inspect(source);
         assertThat(installer.isInstalled("demo")).isTrue();
         assertThat(installer.install(update).version()).isEqualTo("2.0");
+        assertThat(PluginDescriptorParser.parse(plugins.resolve("demo/plugin.yml")).version()).isEqualTo("1.0");
+        assertThat(PluginDescriptorParser.parse(plugins.resolve(".demo.pending/plugin.yml")).version())
+                .isEqualTo("2.0");
+
+        installer.applyPending();
+
         assertThat(PluginDescriptorParser.parse(plugins.resolve("demo/plugin.yml")).version()).isEqualTo("2.0");
+        assertThat(plugins.resolve(".demo.pending")).doesNotExist();
         try (var paths = Files.list(plugins)) {
             assertThat(paths.map(p -> p.getFileName().toString()).toList()).containsExactly("demo");
         }
@@ -43,13 +52,22 @@ class PluginInstallerTest {
         Path plugins = temp.resolve("plugins");
         Path existing = Files.createDirectories(plugins.resolve("hello"));
         Files.writeString(existing.resolve("plugin.yml"), manifest("1.0"));
-        Files.writeString(existing.resolve("old.jar"), "old");
+        try (JarOutputStream ignored = new JarOutputStream(Files.newOutputStream(existing.resolve("old.jar")))) {
+            // Пустой, но валидный JAR: на Windows открытый JarFile заблокирует перемещение каталога.
+        }
         Path source = directoryPlugin("2.0");
         PluginInstaller installer = new PluginInstaller(plugins);
         PluginInstaller.Inspection inspection = installer.inspect(source);
 
         assertThat(installer.isInstalled("demo")).isTrue();
-        installer.install(inspection);
+        try (JarFile ignored = new JarFile(existing.resolve("old.jar").toFile())) {
+            installer.install(inspection);
+
+            assertThat(PluginDescriptorParser.parse(existing.resolve("plugin.yml")).version()).isEqualTo("1.0");
+            assertThat(existing.resolve("old.jar")).isRegularFile();
+            assertThat(plugins.resolve(".demo.pending/plugin.yml")).isRegularFile();
+        }
+        installer.applyPending();
 
         assertThat(plugins.resolve("hello/plugin.yml")).isRegularFile();
         assertThat(plugins.resolve("hello/demo.jar")).isRegularFile();
