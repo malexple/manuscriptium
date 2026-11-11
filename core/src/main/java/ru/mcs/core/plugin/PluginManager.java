@@ -14,6 +14,7 @@ import java.util.ServiceLoader;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import ru.mcs.core.plugin.contrib.ContributionRegistrar;
 import ru.mcs.spi.McsSdk;
@@ -48,6 +49,7 @@ public final class PluginManager {
     private final Path pluginsDir;
     private final Function<PluginDescriptor, PluginContext> contextFactory;
     private final Consumer<PluginDescriptor> afterStop;
+    private final Predicate<String> enabled;
     private final Map<String, Declared> declared = new LinkedHashMap<>();
     private final Map<String, Declared> started = new LinkedHashMap<>();
     private final Map<String, String> failures = new LinkedHashMap<>();
@@ -59,9 +61,15 @@ public final class PluginManager {
 
     public PluginManager(Path pluginsDir, Function<PluginDescriptor, PluginContext> contextFactory,
                          Consumer<PluginDescriptor> afterStop) {
+        this(pluginsDir, contextFactory, afterStop, id -> true);
+    }
+
+    public PluginManager(Path pluginsDir, Function<PluginDescriptor, PluginContext> contextFactory,
+                         Consumer<PluginDescriptor> afterStop, Predicate<String> enabled) {
         this.pluginsDir = pluginsDir;
         this.contextFactory = contextFactory;
         this.afterStop = afterStop;
+        this.enabled = enabled;
     }
 
     /** Вызывается при любой ошибке плагина (манифест, объявление вкладов, загрузка): (pluginId, причина). */
@@ -76,7 +84,9 @@ public final class PluginManager {
         List<PluginDescriptor> result = new ArrayList<>();
         List<Path> dirs;
         try (Stream<Path> s = Files.list(pluginsDir)) {
-            dirs = s.filter(Files::isDirectory).sorted().toList();
+            dirs = s.filter(Files::isDirectory)
+                    .filter(dir -> !dir.getFileName().toString().startsWith("."))
+                    .sorted().toList();
         }
         for (Path dir : dirs) {
             Path yml = dir.resolve("plugin.yml");
@@ -93,9 +103,12 @@ public final class PluginManager {
         return result;
     }
 
-    /** Объявляет вклады всех плагинов и загружает те, что с activation=onStartup. */
+    /** Объявляет вклады включённых плагинов и загружает те, что с activation=onStartup. */
     public synchronized void loadAll() throws IOException {
-        PluginOrdering.OrderResult order = PluginOrdering.sort(discover());
+        List<PluginDescriptor> enabledPlugins = discover().stream()
+                .filter(d -> enabled.test(d.id()))
+                .toList();
+        PluginOrdering.OrderResult order = PluginOrdering.sort(enabledPlugins);
         order.errors().forEach(this::fail);
         for (PluginDescriptor d : order.ordered()) {
             declare(d);

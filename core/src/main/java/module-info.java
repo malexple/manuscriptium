@@ -1,5 +1,6 @@
 module ru.mcs.core {
     requires transitive ru.mcs.spi;
+    requires java.management;
     requires com.formdev.flatlaf;
     requires com.formdev.flatlaf.extras;
     requires com.github.weisj.jsvg;

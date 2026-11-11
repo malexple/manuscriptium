@@ -19,15 +19,25 @@ public final class SettingsActions {
     }
 
     public static void register(ActionManager actions, JFrame frame, SettingsManager settings, Runnable saveState) {
-        register(actions, frame, settings, saveState, MacOsSupport.isMacOs());
+        register(actions, frame, settings, saveState, () -> { });
+    }
+
+    public static void register(ActionManager actions, JFrame frame, SettingsManager settings, Runnable saveState,
+                                Runnable afterClose) {
+        register(actions, frame, settings, saveState, MacOsSupport.isMacOs(), afterClose);
     }
 
     static void register(ActionManager actions, JFrame frame, SettingsManager settings, Runnable saveState,
                          boolean macOs) {
+        register(actions, frame, settings, saveState, macOs, () -> { });
+    }
+
+    static void register(ActionManager actions, JFrame frame, SettingsManager settings, Runnable saveState,
+                         boolean macOs, Runnable afterClose) {
         actions.registerAction(ACTION_ID, new AnAction(Messages.get("settings.action"), null, Icons.lucide("settings")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
-                open(frame, settings, saveState);
+                open(frame, settings, saveState, afterClose);
             }
         });
         if (!macOs) {
@@ -36,8 +46,13 @@ public final class SettingsActions {
     }
 
     public static void open(JFrame frame, SettingsManager settings, Runnable saveState) {
+        open(frame, settings, saveState, () -> { });
+    }
+
+    public static void open(JFrame frame, SettingsManager settings, Runnable saveState, Runnable afterClose) {
         if (SettingsDialog.showDialog(frame, settings)) {
             saveState.run();
         }
+        afterClose.run();
     }
 }

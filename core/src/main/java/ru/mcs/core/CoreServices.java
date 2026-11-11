@@ -13,6 +13,7 @@ import ru.mcs.core.i18n.PluginMessages;
 import ru.mcs.core.notification.NotificationManagerImpl;
 import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.core.plugin.PluginManager;
+import ru.mcs.core.plugin.PluginState;
 import ru.mcs.core.service.ServiceRegistryImpl;
 import ru.mcs.core.settings.AppSettings;
 import ru.mcs.core.settings.AppearanceSettingsProvider;
@@ -50,6 +51,7 @@ final class CoreServices {
     final NotificationManagerImpl notifications = new NotificationManagerImpl();
     final SessionStore sessionStore = new SessionStore();
     final WindowState windowState = new WindowState();
+    final PluginState plugins = new PluginState();
 
     CoreServices(Path home, boolean persist) {
         state = new StateManagerImpl(home.resolve("state"), home.resolve("workspace").resolve("state"), persist);
@@ -63,6 +65,7 @@ final class CoreServices {
         state.register("core", "core.layout", Scope.APPLICATION, layout);
         state.register("core", "core.session", Scope.APPLICATION, sessionStore);
         state.register("core", "core.window", Scope.APPLICATION, windowState);
+        state.register("core", "core.plugins", Scope.APPLICATION, plugins);
 
         CoreActions.registerStandardGroups(actions);
         toolWindows = new ToolWindowManagerImpl(actions, layout);
@@ -71,7 +74,7 @@ final class CoreServices {
     }
 
     PluginManager newPluginManager(Path home) {
-        return new PluginManager(HomeDirs.pluginsDir(home), this::contextFor, this::release);
+        return new PluginManager(HomeDirs.pluginsDir(home), this::contextFor, this::release, plugins::isEnabled);
     }
 
     private PluginContext contextFor(PluginDescriptor d) {

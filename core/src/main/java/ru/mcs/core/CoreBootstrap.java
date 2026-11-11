@@ -12,7 +12,9 @@ import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.core.notification.NotificationLayer;
 import ru.mcs.core.notification.NotificationsPanel;
+import ru.mcs.core.plugin.PluginInstaller;
 import ru.mcs.core.plugin.PluginManager;
+import ru.mcs.core.plugin.PluginsConfigurableProvider;
 import ru.mcs.core.settings.SettingsActions;
 import ru.mcs.core.shell.ShellFrame;
 import ru.mcs.spi.action.ActionIds;
@@ -38,11 +40,11 @@ public final class CoreBootstrap {
         if (Arrays.asList(args).contains("--smoke")) {
             runSmoke(home);
         } else {
-            SwingUtilities.invokeLater(() -> startUi(home));
+            SwingUtilities.invokeLater(() -> startUi(home, args));
         }
     }
 
-    private static void startUi(Path home) {
+    private static void startUi(Path home, String[] args) {
         LafInstaller.install();
         CoreServices s = new CoreServices(home, true);
         s.themes.start();
@@ -57,17 +59,20 @@ public final class CoreBootstrap {
                 s.actions,
                 () -> new ShellDataContext(s.editors)
         );
-        SettingsActions.register(s.actions, frame, s.configurables, s.state::saveChanged);
+        PluginManager pm = s.newPluginManager(home);
+        PluginRestartController restarter = new PluginRestartController(frame, args);
+        s.configurables.register(new PluginsConfigurableProvider(pm, s.plugins,
+                new PluginInstaller(HomeDirs.pluginsDir(home)), restarter::markRequired));
+        SettingsActions.register(s.actions, frame, s.configurables, s.state::saveChanged, restarter::promptIfNeeded);
         MacOsSupport.installApplicationMenu(
                 () -> CoreActions.showAbout(frame),
-                () -> SettingsActions.open(frame, s.configurables, s.state::saveChanged),
+                () -> SettingsActions.open(frame, s.configurables, s.state::saveChanged, restarter::promptIfNeeded),
                 () -> CoreActions.requestQuit(frame)
         );
         s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", Messages.get("notifications.title"),
                         ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications))
                 .withIcon(Icons.lucide("bell")));
 
-        PluginManager pm = s.newPluginManager(home);
         pm.setFailureListener((id, reason) -> s.notifications.notify("core",
                 Messages.get("plugin.failed.title", id), reason, NotificationType.ERROR));
         frame.setVisible(true);
