@@ -1,6 +1,8 @@
 package ru.mcs.core.plugin.contrib;
 
+import javax.swing.Icon;
 import javax.swing.JComponent;
+import ru.mcs.core.icon.PluginIcons;
 import ru.mcs.core.plugin.Contributions;
 import ru.mcs.core.plugin.PluginActivator;
 import ru.mcs.core.plugin.PluginDescriptor;
@@ -31,20 +33,24 @@ public final class ContributionRegistrar {
 
         // Сначала создаём все группы, потом связываем: группы могут ссылаться друг на друга в любом порядке.
         for (Contributions.ActionGroupDecl g : c.actionGroups()) {
-            actions.registerAction(g.id(), new DefaultActionGroup(text(ctx, g.text()), g.popup()));
+            DefaultActionGroup group = new DefaultActionGroup(text(ctx, g.text()), g.popup());
+            group.getTemplatePresentation().setIcon(icon(descriptor, g.icon()));
+            actions.registerAction(g.id(), group);
         }
         for (Contributions.ActionGroupDecl g : c.actionGroups()) {
             addTo(actions, g.groups(), g.id());
         }
         for (Contributions.ActionDecl a : c.actions()) {
-            actions.registerAction(a.id(), new ProxyAction(text(ctx, a.text()), pluginId, a.id(), activator));
+            actions.registerAction(a.id(), new ProxyAction(text(ctx, a.text()), pluginId, a.id(), activator,
+                    icon(descriptor, a.icon())));
             addTo(actions, a.groups(), a.id());
         }
         for (Contributions.ToolWindowDecl t : c.toolWindows()) {
             ToolWindowSpec spec = ToolWindowSpec
                     .of(t.id(), text(ctx, t.title()), t.anchor(),
                             () -> toolWindowContent(activator, pluginId, t.id()))
-                    .withShowByDefault(t.showByDefault());
+                    .withShowByDefault(t.showByDefault())
+                    .withIcon(icon(descriptor, t.icon()));
             ctx.toolWindows().register(spec);
         }
         for (Contributions.EditorDecl e : c.fileEditors()) {
@@ -65,6 +71,10 @@ public final class ContributionRegistrar {
             return ctx.i18n().get(raw.substring(1));
         }
         return raw;
+    }
+
+    private static Icon icon(PluginDescriptor descriptor, String path) {
+        return path == null ? null : PluginIcons.load(descriptor, path);
     }
 
     private static void addTo(ActionManager actions, Iterable<String> parents, String actionId) {

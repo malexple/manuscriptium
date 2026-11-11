@@ -1,5 +1,6 @@
 package ru.mcs.core.plugin.contrib;
 
+import javax.swing.Icon;
 import ru.mcs.core.plugin.PluginActivator;
 import ru.mcs.spi.action.AnAction;
 import ru.mcs.spi.action.AnActionEvent;
@@ -18,7 +19,11 @@ final class ProxyAction extends AnAction {
     private volatile AnAction delegate;
 
     ProxyAction(String text, String pluginId, String actionId, PluginActivator activator) {
-        super(text);
+        this(text, pluginId, actionId, activator, null);
+    }
+
+    ProxyAction(String text, String pluginId, String actionId, PluginActivator activator, Icon icon) {
+        super(text, null, icon);
         this.pluginId = pluginId;
         this.actionId = actionId;
         this.activator = activator;

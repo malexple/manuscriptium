@@ -18,13 +18,22 @@ public record Contributions(
                 && settings.isEmpty();
     }
 
-    public record ActionGroupDecl(String id, String text, boolean popup, List<String> groups) {
+    public record ActionGroupDecl(String id, String text, boolean popup, List<String> groups, String icon) {
+        public ActionGroupDecl(String id, String text, boolean popup, List<String> groups) {
+            this(id, text, popup, groups, null);
+        }
     }
 
-    public record ActionDecl(String id, String text, List<String> groups) {
+    public record ActionDecl(String id, String text, List<String> groups, String icon) {
+        public ActionDecl(String id, String text, List<String> groups) {
+            this(id, text, groups, null);
+        }
     }
 
-    public record ToolWindowDecl(String id, String title, ToolWindowAnchor anchor, boolean showByDefault) {
+    public record ToolWindowDecl(String id, String title, ToolWindowAnchor anchor, boolean showByDefault, String icon) {
+        public ToolWindowDecl(String id, String title, ToolWindowAnchor anchor, boolean showByDefault) {
+            this(id, title, anchor, showByDefault, null);
+        }
     }
 
     public record EditorDecl(String id, List<String> patterns, int priority) {

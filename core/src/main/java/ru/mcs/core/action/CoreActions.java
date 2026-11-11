@@ -4,6 +4,7 @@ import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import ru.mcs.core.i18n.Messages;
+import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.McsSdk;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionManager;
@@ -30,7 +31,7 @@ public final class CoreActions {
 
     /** Exit и About; регистрировать после действий File, чтобы Exit оказался последним. */
     public static void registerShellActions(ActionManager am, JFrame frame) {
-        am.registerAction("core.exit", new AnAction(Messages.get("action.exit")) {
+        am.registerAction("core.exit", new AnAction(Messages.get("action.exit"), null, Icons.lucide("log-out")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
                 frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
@@ -38,7 +39,7 @@ public final class CoreActions {
         });
         am.addToGroup(ActionIds.FILE_MENU, "core.exit", Constraints.LAST);
 
-        am.registerAction("core.about", new AnAction(Messages.get("action.about")) {
+        am.registerAction("core.about", new AnAction(Messages.get("action.about"), null, Icons.lucide("circle-question-mark")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
                 JOptionPane.showMessageDialog(frame, Messages.get("about.text", McsSdk.VERSION));

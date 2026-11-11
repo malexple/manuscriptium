@@ -9,6 +9,7 @@ import javax.swing.Timer;
 import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.editor.EditorActions;
 import ru.mcs.core.i18n.Messages;
+import ru.mcs.core.icon.Icons;
 import ru.mcs.core.notification.NotificationLayer;
 import ru.mcs.core.notification.NotificationsPanel;
 import ru.mcs.core.plugin.PluginManager;
@@ -58,7 +59,8 @@ public final class CoreBootstrap {
         );
         SettingsActions.register(s.actions, frame, s.configurables, s.state::saveChanged);
         s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", Messages.get("notifications.title"),
-                ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications)));
+                        ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications))
+                .withIcon(Icons.lucide("bell")));
 
         PluginManager pm = s.newPluginManager(home);
         pm.setFailureListener((id, reason) -> s.notifications.notify("core",

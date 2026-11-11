@@ -32,15 +32,18 @@ class PluginContributionsParserTest {
                   actionGroups:
                     - id: p.group
                       text: Group
+                      icon: /icons/group.svg
                       popup: false
                       groups: [MainMenu.Tools]
                   actions:
                     - id: p.a
                       text: A
+                      icon: /icons/action.svg
                       groups: [p.group, MainToolbar]
                   toolWindows:
                     - id: p.tool
                       title: Tool
+                      icon: /icons/tool.svg
                       anchor: Bottom
                       show-by-default: true
                   fileEditors:
@@ -56,11 +59,12 @@ class PluginContributionsParserTest {
         assertThat(d.activation()).isEqualTo(Activation.ON_DEMAND);
         Contributions c = d.contributions();
         assertThat(c.actionGroups()).containsExactly(
-                new Contributions.ActionGroupDecl("p.group", "Group", false, List.of("MainMenu.Tools")));
+                new Contributions.ActionGroupDecl("p.group", "Group", false, List.of("MainMenu.Tools"),
+                        "/icons/group.svg"));
         assertThat(c.actions()).containsExactly(
-                new Contributions.ActionDecl("p.a", "A", List.of("p.group", "MainToolbar")));
+                new Contributions.ActionDecl("p.a", "A", List.of("p.group", "MainToolbar"), "/icons/action.svg"));
         assertThat(c.toolWindows()).containsExactly(
-                new Contributions.ToolWindowDecl("p.tool", "Tool", ToolWindowAnchor.BOTTOM, true));
+                new Contributions.ToolWindowDecl("p.tool", "Tool", ToolWindowAnchor.BOTTOM, true, "/icons/tool.svg"));
         assertThat(c.fileEditors()).containsExactly(
                 new Contributions.EditorDecl("p.editor", List.of("*.hello", "*.hi"), 10));
         assertThat(c.settings()).containsExactly(

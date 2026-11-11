@@ -1,6 +1,9 @@
 dependencies {
     api project(':spi')
     implementation "com.formdev:flatlaf:${flatlafVersion}"
+    implementation "com.formdev:flatlaf-extras:${flatlafVersion}"
+    // В flatlaf-extras JSVG optional (requires static): явная зависимость нужна для compileClasspath и jlink.
+    implementation "com.github.weisj:jsvg:2.1.0"
     implementation "org.yaml:snakeyaml:${snakeyamlVersion}"
 
     testImplementation platform("org.junit:junit-bom:${junitVersion}")

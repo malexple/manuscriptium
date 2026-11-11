@@ -72,14 +72,14 @@ public final class PluginDescriptorParser {
         List<Contributions.ActionGroupDecl> groups = new ArrayList<>();
         for (Map<?, ?> m : maps(c, "actionGroups")) {
             groups.add(new Contributions.ActionGroupDecl(uniqueId(m, seen, "actionGroups"),
-                    required(m, "text"), bool(m, "popup", true), list(m, "groups")));
+                    required(m, "text"), bool(m, "popup", true), list(m, "groups"), optional(m, "icon", null)));
         }
 
         seen = new HashSet<>();
         List<Contributions.ActionDecl> actions = new ArrayList<>();
         for (Map<?, ?> m : maps(c, "actions")) {
             actions.add(new Contributions.ActionDecl(uniqueId(m, seen, "actions"),
-                    required(m, "text"), list(m, "groups")));
+                    required(m, "text"), list(m, "groups"), optional(m, "icon", null)));
         }
 
         seen = new HashSet<>();
@@ -95,7 +95,7 @@ public final class PluginDescriptorParser {
                         + "' has unknown anchor '" + anchorText + "' (left, right or bottom)");
             }
             toolWindows.add(new Contributions.ToolWindowDecl(id, required(m, "title"), anchor,
-                    bool(m, "show-by-default", false)));
+                    bool(m, "show-by-default", false), optional(m, "icon", null)));
         }
 
         seen = new HashSet<>();

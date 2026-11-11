@@ -27,6 +27,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionPlaces;
 import ru.mcs.spi.action.AnAction;
@@ -49,7 +50,7 @@ public final class CommandPalette {
     ) {
         actions.registerAction(
                 ACTION_ID,
-                new AnAction("Find Action...", "Search and run an action", null) {
+                new AnAction("Find Action...", "Search and run an action", Icons.lucide("search")) {
                     @Override
                     public void actionPerformed(AnActionEvent e) {
                         show(frame, actions, context);
@@ -110,6 +111,7 @@ public final class CommandPalette {
                     "JTextField.placeholderText",
                     "Type action name or id"
             );
+            search.putClientProperty("JTextField.leadingIcon", Icons.lucide("search"));
             content.add(search, BorderLayout.NORTH);
 
             list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);

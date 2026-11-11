@@ -6,6 +6,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import ru.mcs.core.i18n.Messages;
+import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.action.AnAction;
@@ -23,7 +24,7 @@ public final class EditorActions {
     public static void register(ActionManager am, FileEditorManagerImpl em, JFrame frame) {
         Path[] lastDir = {Path.of(System.getProperty("user.home"))};
 
-        am.registerAction("core.file.open", new AnAction(Messages.get("file.open")) {
+        am.registerAction("core.file.open", new AnAction(Messages.get("file.open"), null, Icons.lucide("folder-open")) {
             @Override
             public void actionPerformed(AnActionEvent e) {
                 JFileChooser chooser = new JFileChooser(lastDir[0].toFile());
@@ -41,7 +42,7 @@ public final class EditorActions {
             }
         });
 
-        am.registerAction("core.file.save", new AnAction(Messages.get("file.save")) {
+        am.registerAction("core.file.save", new AnAction(Messages.get("file.save"), null, Icons.lucide("save")) {
             @Override
             public void update(AnActionEvent e) {
                 e.getPresentation().setEnabled(em.selectedEditor().map(FileEditor::isModified).orElse(false));
@@ -53,7 +54,7 @@ public final class EditorActions {
             }
         });
 
-        am.registerAction("core.file.saveAll", new AnAction(Messages.get("file.saveAll")) {
+        am.registerAction("core.file.saveAll", new AnAction(Messages.get("file.saveAll"), null, Icons.lucide("save-all")) {
             @Override
             public void update(AnActionEvent e) {
                 e.getPresentation().setEnabled(em.hasModified());
@@ -69,7 +70,7 @@ public final class EditorActions {
             }
         });
 
-        am.registerAction("core.tab.close", new AnAction(Messages.get("tab.close")) {
+        am.registerAction("core.tab.close", new AnAction(Messages.get("tab.close"), null, Icons.lucide("x")) {
             @Override
             public void update(AnActionEvent e) {
                 e.getPresentation().setEnabled(em.getSelectedFile().isPresent());
@@ -81,13 +82,14 @@ public final class EditorActions {
             }
         });
 
-        am.registerAction("core.tab.pin", new AnAction(Messages.get("tab.pin")) {
+        am.registerAction("core.tab.pin", new AnAction(Messages.get("tab.pin"), null, Icons.lucide("pin")) {
             @Override
             public void update(AnActionEvent e) {
                 boolean selected = em.getSelectedFile().isPresent();
                 boolean pinned = em.getSelectedFile().map(em::isPinned).orElse(false);
                 e.getPresentation().setEnabled(selected);
                 e.getPresentation().setText(Messages.get(pinned ? "tab.unpin" : "tab.pin"));
+                e.getPresentation().setIcon(Icons.lucide(pinned ? "pin-off" : "pin"));
             }
 
             @Override
@@ -100,6 +102,9 @@ public final class EditorActions {
         am.addToGroup(ActionIds.FILE_MENU, "core.file.open", Constraints.LAST);
         am.addToGroup(ActionIds.FILE_MENU, "core.file.save", Constraints.LAST);
         am.addToGroup(ActionIds.FILE_MENU, "core.file.saveAll", Constraints.LAST);
+        am.addToGroup(ActionIds.MAIN_TOOLBAR, "core.file.open", Constraints.LAST);
+        am.addToGroup(ActionIds.MAIN_TOOLBAR, "core.file.save", Constraints.LAST);
+        am.addToGroup(ActionIds.MAIN_TOOLBAR, "core.file.saveAll", Constraints.LAST);
         file.addSeparator();
         am.addToGroup(ActionIds.FILE_MENU, "core.tab.close", Constraints.LAST);
         am.addToGroup(ActionIds.FILE_MENU, "core.tab.pin", Constraints.LAST);

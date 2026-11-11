@@ -22,25 +22,32 @@ contributions:
   actions:
     - id: hello.say
       text: "%action.say"
+      icon: /ru/mcs/plugin/hello/icons/message-circle.svg
       groups: [hello.group, MainToolbar, EditorTabPopup]
     - id: hello.counter
       text: "%action.counter"
+      icon: /ru/mcs/plugin/hello/icons/mouse-pointer-click.svg
       groups: [hello.group]
     - id: hello.notify
       text: "%action.notify"
+      icon: /ru/mcs/plugin/hello/icons/bell.svg
       groups: [hello.group]
     - id: hello.task
       text: "%action.task"
+      icon: /ru/mcs/plugin/hello/icons/list-checks.svg
       groups: [hello.group]
   toolWindows:
     - id: hello.panel
       title: "%toolwindow.panel"
+      icon: /ru/mcs/plugin/hello/icons/panel-left.svg
       anchor: left
     - id: hello.log
       title: "%toolwindow.log"
+      icon: /ru/mcs/plugin/hello/icons/scroll-text.svg
       anchor: bottom
     - id: hello.info
       title: "%toolwindow.info"
+      icon: /ru/mcs/plugin/hello/icons/info.svg
       anchor: right
   fileEditors:
     - id: hello.editor

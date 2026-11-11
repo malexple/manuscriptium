@@ -7,6 +7,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import javax.swing.Icon;
 import javax.swing.JToggleButton;
 import javax.swing.UIManager;
 
@@ -17,7 +18,7 @@ final class StripeButton extends JToggleButton {
 
     /** @param rotation -1 — слева (текст снизу вверх), +1 — справа (сверху вниз), 0 — без поворота */
     StripeButton(ToolWindowImpl tw, int rotation) {
-        super(tw.getTitle());
+        super(tw.getTitle(), tw.getIcon());
         this.rotation = rotation;
         setFocusable(false);
         setRolloverEnabled(true);
@@ -64,8 +65,17 @@ final class StripeButton extends JToggleButton {
                 g2.translate(w, 0);
                 g2.rotate(Math.PI / 2);
             }
-            int textWidth = fm.stringWidth(getText());
-            g2.drawString(getText(), (h - textWidth) / 2, (w + fm.getAscent() - fm.getDescent()) / 2);
+            String text = getText();
+            int textWidth = fm.stringWidth(text);
+            Icon icon = getIcon();
+            int iconWidth = icon == null ? 0 : icon.getIconWidth();
+            int gap = icon == null || text.isEmpty() ? 0 : getIconTextGap();
+            int contentWidth = iconWidth + gap + textWidth;
+            int contentX = (h - contentWidth) / 2;
+            if (icon != null) {
+                icon.paintIcon(this, g2, contentX, (w - icon.getIconHeight()) / 2);
+            }
+            g2.drawString(text, contentX + iconWidth + gap, (w + fm.getAscent() - fm.getDescent()) / 2);
         } finally {
             g2.dispose();
         }
