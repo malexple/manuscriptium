@@ -31,6 +31,26 @@ record MarkdownDocument(String path, String title, String frontMatter, String co
                 Files.size(file), Files.getLastModifiedTime(file).toMillis());
     }
 
+    /** Тело заметки без Front Matter для отдельной области полнотекстового поиска. */
+    String body() {
+        String text = content.startsWith("\uFEFF") ? content.substring(1) : content;
+        if (!text.startsWith("---\n") && !text.startsWith("---\r\n")) {
+            return content;
+        }
+        int offset = text.startsWith("---\r\n") ? 5 : 4;
+        Matcher end = FRONT_MATTER_END.matcher(text);
+        if (!end.find(offset)) {
+            return content;
+        }
+        int bodyStart = end.end();
+        if (text.startsWith("\r\n", bodyStart)) {
+            bodyStart += 2;
+        } else if (text.startsWith("\n", bodyStart)) {
+            bodyStart++;
+        }
+        return text.substring(bodyStart);
+    }
+
     private static String frontMatter(String content) {
         String text = content.startsWith("\uFEFF") ? content.substring(1) : content;
         if (!text.startsWith("---\n") && !text.startsWith("---\r\n")) {

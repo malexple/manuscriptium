@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,13 +26,18 @@ class VaultServiceTest {
             Files.writeString(created, "# Created");
             await(() -> contains(service.notes(), "new/nested/created.md"));
             service.awaitIdle();
+            assertThat(service.search(search("Created", VaultSearchScope.TITLE)).get(5, TimeUnit.SECONDS))
+                    .extracting(VaultSearchResult::path).containsExactly("new/nested/created.md");
 
             Files.writeString(created, "---\ntitle: Changed\n---\nbody");
             await(() -> service.notes().stream().anyMatch(n -> n.title().equals("Changed")));
+            assertThat(service.search(search("Changed", VaultSearchScope.TITLE)).get(5, TimeUnit.SECONDS))
+                    .extracting(VaultSearchResult::path).containsExactly("new/nested/created.md");
 
             Files.delete(created);
             Files.delete(tmp.resolve("new/nested"));
             await(() -> !contains(service.notes(), "new/nested/created.md"));
+            assertThat(service.search(search("Changed", VaultSearchScope.ALL)).get(5, TimeUnit.SECONDS)).isEmpty();
             assertThat(service.notes()).extracting(VaultNote::path).containsExactly("initial.md");
         }
     }
@@ -41,6 +47,7 @@ class VaultServiceTest {
         Files.writeString(tmp.resolve("note.md"), "note");
         try (VaultService ignored = VaultService.open(tmp, snapshot -> { })) {
             assertThat(VaultPaths.databaseFile(tmp)).exists();
+            assertThat(VaultPaths.luceneDir(tmp)).isDirectory();
             assertThat(tmp.resolve("note.md")).exists();
         }
     }
@@ -162,6 +169,10 @@ class VaultServiceTest {
         assertThat(persistedExisting.entries().getFirst().children()).extracting(ViewEntry::file)
                 .containsExactly("note.md");
         assertThat(persistedExisting.entries().get(1).file()).isEqualTo("note.md");
+    }
+
+    private static VaultSearchQuery search(String text, VaultSearchScope scope) {
+        return new VaultSearchQuery(text, scope, "", null, 100);
     }
 
     private static boolean contains(List<VaultNote> notes, String path) {

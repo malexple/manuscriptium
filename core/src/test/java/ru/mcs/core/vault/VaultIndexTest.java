@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -105,11 +104,9 @@ class VaultIndexTest {
             index.rebuild();
             assertThat(db).exists();
         }
-        try (var paths = Files.list(VaultPaths.metadataDir(tmp))) {
-            for (Path file : paths.sorted(Comparator.reverseOrder()).toList()) {
-                Files.delete(file);
-            }
-        }
+        Files.deleteIfExists(db);
+        Files.deleteIfExists(tmp.resolve(".manuscriptium/index.db-wal"));
+        Files.deleteIfExists(tmp.resolve(".manuscriptium/index.db-shm"));
         try (VaultIndex index = new VaultIndex(tmp)) {
             assertThat(index.count()).isZero();
             index.rebuild();

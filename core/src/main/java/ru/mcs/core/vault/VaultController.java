@@ -39,6 +39,7 @@ public final class VaultController implements AutoCloseable {
     private final NotificationManagerImpl notifications;
     private final ObsidianLinkNavigator obsidianLinks;
     private final VaultTreePanel treePanel;
+    private final VaultSearchPanel searchPanel;
 
     private VaultService current;
     private boolean busy;
@@ -60,13 +61,18 @@ public final class VaultController implements AutoCloseable {
         this.obsidianLinks.setStatusHandler(statusBar::setMessage);
         this.treePanel = new VaultTreePanel(editors, this::moveOrClone, this::newMarkdown,
                 this::addLink, this::moveLink);
+        this.searchPanel = new VaultSearchPanel(this::openSearchResult);
 
         toolWindows.register("core", ToolWindowSpec.of("core.vault", Messages.get("vault.title"),
                         ToolWindowAnchor.LEFT, () -> treePanel)
                 .withIcon(Icons.lucide("folder-open"))
                 .withShowByDefault(true));
+        toolWindows.register("core", ToolWindowSpec.of("core.search", Messages.get("vault.search.title"),
+                        ToolWindowAnchor.BOTTOM, () -> searchPanel)
+                .withIcon(Icons.lucide("search")));
         registerOpenAction(actions);
         registerNewNoteAction(actions);
+        registerSearchAction(actions, toolWindows);
     }
 
     /** Восстанавливает последний Vault после загрузки провайдеров редакторов всеми плагинами. */
@@ -146,6 +152,7 @@ public final class VaultController implements AutoCloseable {
         state.changeVaultDirectory(VaultPaths.stateDir(opened.root()));
         obsidianLinks.setVault(opened.root(), opened.snapshot().notes());
         treePanel.setVault(opened.root(), opened.snapshot());
+        searchPanel.setVault(opened);
         frame.setTitle(Messages.get("vault.window.title", displayName(opened.root())));
         restoreSession();
         state.saveChanged();
@@ -346,6 +353,32 @@ public final class VaultController implements AutoCloseable {
         actions.addToGroup(ActionIds.MAIN_TOOLBAR, "core.vault.newNote", Constraints.after("core.vault.open"));
     }
 
+    private void registerSearchAction(ActionManagerImpl actions, ToolWindowManagerImpl toolWindows) {
+        actions.registerAction("core.search.open", new AnAction(Messages.get("vault.search.action"), null,
+                Icons.lucide("search")) {
+            @Override
+            public void actionPerformed(AnActionEvent e) {
+                toolWindows.get("core.search").show();
+                javax.swing.SwingUtilities.invokeLater(searchPanel::focusQuery);
+            }
+        });
+        actions.addToGroup(ActionIds.TOOLS_MENU, "core.search.open", Constraints.FIRST);
+        actions.addToGroup(ActionIds.MAIN_TOOLBAR, "core.search.open", Constraints.after("core.vault.newNote"));
+    }
+
+    private void openSearchResult(VaultSearchResult result) {
+        VaultService service = current;
+        if (service == null) {
+            return;
+        }
+        Path file = result.file().toAbsolutePath().normalize();
+        if (!file.startsWith(service.root())) {
+            return;
+        }
+        editors.openFile(file);
+        statusBar.setMessage(Messages.get("vault.search.opened", result.path()));
+    }
+
     private static String displayName(Path root) {
         Path name = root.getFileName();
         return name != null ? name.toString() : root.toString();
@@ -356,6 +389,7 @@ public final class VaultController implements AutoCloseable {
         if (current != null) {
             current.close();
             current = null;
+            searchPanel.setVault(null);
             obsidianLinks.clearVault();
             actions.updateActions();
         }

@@ -22,6 +22,7 @@ final class VaultIndex implements AutoCloseable {
 
     private final Path root;
     private final Connection connection;
+    private final LuceneVaultIndex lucene;
 
     VaultIndex(Path root) throws IOException, SQLException {
         this.root = VaultPaths.normalize(root);
@@ -50,13 +51,19 @@ final class VaultIndex implements AutoCloseable {
             connection.close();
             throw e;
         }
+        try {
+            lucene = new LuceneVaultIndex(VaultPaths.luceneDir(root));
+        } catch (IOException | RuntimeException e) {
+            connection.close();
+            throw e;
+        }
     }
 
     synchronized void rebuild() throws IOException, SQLException {
         replaceAll(MarkdownScanner.scan(root, root));
     }
 
-    private void replaceAll(List<MarkdownDocument> documents) throws SQLException {
+    private void replaceAll(List<MarkdownDocument> documents) throws IOException, SQLException {
         boolean autoCommit = connection.getAutoCommit();
         connection.setAutoCommit(false);
         try (Statement delete = connection.createStatement();
@@ -79,6 +86,7 @@ final class VaultIndex implements AutoCloseable {
         } finally {
             connection.setAutoCommit(autoCommit);
         }
+        lucene.replaceAll(documents);
     }
 
     synchronized void refresh(Path path) {
@@ -109,7 +117,7 @@ final class VaultIndex implements AutoCloseable {
         }
     }
 
-    private void upsert(MarkdownDocument document) throws SQLException {
+    private void upsert(MarkdownDocument document) throws IOException, SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "INSERT INTO notes(path,title,front_matter,content,size,modified_ms) VALUES(?,?,?,?,?,?) "
                         + "ON CONFLICT(path) DO UPDATE SET title=excluded.title,"
@@ -118,9 +126,10 @@ final class VaultIndex implements AutoCloseable {
             bind(statement, document);
             statement.executeUpdate();
         }
+        lucene.update(document);
     }
 
-    private void removePath(Path path) throws SQLException {
+    private void removePath(Path path) throws IOException, SQLException {
         String relative = VaultPaths.relativePath(root, path);
         try (PreparedStatement statement = connection.prepareStatement(
                 "DELETE FROM notes WHERE path=? OR substr(path,1,length(?)+1)=? || '/'")) {
@@ -129,6 +138,7 @@ final class VaultIndex implements AutoCloseable {
             statement.setString(3, relative);
             statement.executeUpdate();
         }
+        lucene.removePath(relative);
     }
 
     private static void bind(PreparedStatement statement, MarkdownDocument document) throws SQLException {
@@ -167,6 +177,10 @@ final class VaultIndex implements AutoCloseable {
         }
     }
 
+    synchronized List<VaultSearchResult> search(VaultSearchQuery query) throws IOException {
+        return lucene.search(root, query);
+    }
+
     synchronized int count() throws SQLException {
         try (Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery("SELECT count(*) FROM notes")) {
@@ -176,6 +190,11 @@ final class VaultIndex implements AutoCloseable {
 
     @Override
     public synchronized void close() {
+        try {
+            lucene.close();
+        } catch (IOException | RuntimeException e) {
+            LOG.log(System.Logger.Level.WARNING, "Cannot close Lucene index", e);
+        }
         try {
             connection.close();
         } catch (SQLException e) {

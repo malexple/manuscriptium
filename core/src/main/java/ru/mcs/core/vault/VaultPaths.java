@@ -33,6 +33,10 @@ public final class VaultPaths {
         return metadataDir(root).resolve("index.db");
     }
 
+    public static Path luceneDir(Path root) {
+        return metadataDir(root).resolve("lucene");
+    }
+
     public static boolean isMarkdown(Path file) {
         Path name = file.getFileName();
         return name != null && name.toString().toLowerCase(Locale.ROOT).endsWith(".md");

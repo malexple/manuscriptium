@@ -126,6 +126,31 @@ final class VaultService implements AutoCloseable {
         return snapshot.notes();
     }
 
+    /** Поиск стоит в той же очереди, что rebuild/refresh, и никогда не выполняется на EDT. */
+    CompletableFuture<List<VaultSearchResult>> search(VaultSearchQuery query) {
+        CompletableFuture<List<VaultSearchResult>> result = new CompletableFuture<>();
+        if (closed.get()) {
+            result.complete(List.of());
+            return result;
+        }
+        try {
+            executor.execute(() -> {
+                if (closed.get()) {
+                    result.complete(List.of());
+                    return;
+                }
+                try {
+                    result.complete(index.search(query));
+                } catch (IOException | RuntimeException e) {
+                    result.completeExceptionally(e);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            result.complete(List.of());
+        }
+        return result;
+    }
+
     private boolean isViewChange(Path path) {
         Path normalized = path.toAbsolutePath().normalize();
         Path viewsDir = VaultPaths.viewsDir(root);
