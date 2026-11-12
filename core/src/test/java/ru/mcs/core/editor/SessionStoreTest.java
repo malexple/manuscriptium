@@ -45,6 +45,17 @@ class SessionStoreTest {
     }
 
     @Test
+    void deactivationRestoresLoadedStateDuringVaultSwitch() {
+        SessionStore store = new SessionStore();
+        store.loadState(Map.of("tabs", List.of(Map.of("file", A.toString(), "pinned", true))));
+        store.activate(() -> new SessionStore.Session(List.of(), null));
+        assertThat((List<?>) store.getState().get("tabs")).isEmpty();
+
+        store.deactivate();
+        assertThat((List<?>) store.getState().get("tabs")).hasSize(1);
+    }
+
+    @Test
     void garbageEntriesAreSkipped() {
         SessionStore store = new SessionStore();
         store.loadState(Map.of("tabs", List.of("not a map", Map.of("pinned", true), Map.of("file", 5),

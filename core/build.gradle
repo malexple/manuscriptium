@@ -5,6 +5,7 @@ dependencies {
     // В flatlaf-extras JSVG optional (requires static): явная зависимость нужна для compileClasspath и jlink.
     implementation "com.github.weisj:jsvg:2.1.0"
     implementation "org.yaml:snakeyaml:${snakeyamlVersion}"
+    implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"
 
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'

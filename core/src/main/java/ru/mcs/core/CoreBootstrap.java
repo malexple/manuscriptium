@@ -22,6 +22,7 @@ import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.ui.NotificationType;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.ui.ToolWindowSpec;
+import ru.mcs.core.vault.VaultController;
 import ru.mcs.core.action.CommandPalette;
 import ru.mcs.core.shell.ShellDataContext;
 
@@ -80,6 +81,8 @@ public final class CoreBootstrap {
         s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", Messages.get("notifications.title"),
                         ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications))
                 .withIcon(Icons.lucide("bell")));
+        VaultController vaultController = new VaultController(frame, s.actions, s.toolWindows, s.editors,
+                s.sessionStore, s.state, s.vaultState, s.statusBar, s.notifications);
 
         pm.setFailureListener((id, reason) -> s.notifications.notify("core",
                 Messages.get("plugin.failed.title", id), reason, NotificationType.ERROR));
@@ -91,16 +94,16 @@ public final class CoreBootstrap {
                     Messages.get("plugins.loading.failed", e.toString()), NotificationType.ERROR);
         }
 
-        // Вклады объявлены — провайдеры на месте (для onDemand-плагинов это заглушки): восстанавливаем вкладки.
-        s.editors.restoreSession(s.sessionStore.loaded());
-        s.sessionStore.activate(s.editors::currentSession);
+        // Вклады объявлены — провайдеры на месте: можно открыть Vault и восстановить его вкладки.
         s.statusBar.setMessage(Messages.get("plugins.status", pm.declaredIds(), pm.loadedIds()));
+        vaultController.openInitial();
 
         Timer autosave = new Timer(AUTOSAVE_MS, e -> s.state.saveChanged());
         autosave.start();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             s.themes.close();
             s.state.saveChanged();
+            vaultController.close();
             pm.stopAll();
         }));
     }

@@ -39,7 +39,7 @@ public final class StateManagerImpl {
     }
 
     private final Path appDir;
-    private final Path vaultDir;
+    private Path vaultDir;
     private final boolean persist;
     private final Map<String, Entry> entries = new LinkedHashMap<>();
 
@@ -58,7 +58,7 @@ public final class StateManagerImpl {
         }
         Entry entry = new Entry(owner, id, scope, component);
         Path file = fileOf(entry);
-        if (Files.isRegularFile(file)) {
+        if (file != null && Files.isRegularFile(file)) {
             try {
                 String text = Files.readString(file, StandardCharsets.UTF_8);
                 entry.lastText = text;
@@ -91,6 +91,35 @@ public final class StateManagerImpl {
         }
     }
 
+    /**
+     * Переключает область VAULT без записи в прежний каталог: вызывающий код заранее сохраняет старую сессию.
+     * Зарегистрированные компоненты сначала получают пустое состояние, затем данные нового Vault.
+     */
+    public synchronized void changeVaultDirectory(Path directory) {
+        vaultDir = directory == null ? null : directory.toAbsolutePath().normalize();
+        for (Entry entry : entries.values()) {
+            if (entry.scope != Scope.VAULT) {
+                continue;
+            }
+            entry.lastText = null;
+            Path file = fileOf(entry);
+            try {
+                componentReset(entry);
+                if (file != null && Files.isRegularFile(file)) {
+                    String text = Files.readString(file, StandardCharsets.UTF_8);
+                    entry.lastText = text;
+                    entry.component.loadState(StateYaml.parse(text));
+                }
+            } catch (Throwable t) {
+                LOG.log(System.Logger.Level.WARNING, "Cannot load state '" + entry.id + "' from " + file, t);
+            }
+        }
+    }
+
+    private static void componentReset(Entry entry) {
+        entry.component.loadState(Map.of());
+    }
+
     /** Записывает состояние всех компонентов, которое изменилось с прошлой записи. */
     public synchronized void saveChanged() {
         for (Entry entry : new ArrayList<>(entries.values())) {
@@ -119,11 +148,15 @@ public final class StateManagerImpl {
 
     private Path fileOf(Entry entry) {
         Path dir = entry.scope == Scope.APPLICATION ? appDir : vaultDir;
-        return dir.resolve(entry.id + ".yml");
+        return dir == null ? null : dir.resolve(entry.id + ".yml");
     }
 
     private void save(Entry entry) {
         if (!persist) {
+            return;
+        }
+        Path file = fileOf(entry);
+        if (file == null) {
             return;
         }
         String text;
@@ -139,7 +172,6 @@ public final class StateManagerImpl {
         if (entry.lastText == null && text.trim().equals("{}")) {
             return;
         }
-        Path file = fileOf(entry);
         try {
             Files.createDirectories(file.getParent());
             Path tmp = file.resolveSibling(file.getFileName() + ".tmp");

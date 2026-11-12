@@ -133,6 +133,41 @@ class StateManagerImplTest {
     }
 
     @Test
+    void changingVaultReloadsOnlyVaultState() throws IOException {
+        Path secondVault = tmp.resolve("second");
+        Files.createDirectories(secondVault);
+        Files.writeString(secondVault.resolve("v.yml"), "a: 2\n");
+        MapState vaultState = new MapState();
+        vaultState.data.put("a", 1);
+        MapState appState = new MapState();
+        appState.data.put("language", "ru");
+        manager.register("core", "v", Scope.VAULT, vaultState);
+        manager.register("core", "app", Scope.APPLICATION, appState);
+
+        manager.changeVaultDirectory(secondVault);
+
+        assertThat(vaultState.data).containsEntry("a", 2);
+        assertThat(appState.data).containsEntry("language", "ru");
+        vaultState.data.put("a", 3);
+        manager.saveChanged();
+        assertThat(secondVault.resolve("v.yml")).exists();
+        assertThat(vaultDir.resolve("v.yml")).doesNotExist();
+    }
+
+    @Test
+    void missingVaultStateResetsComponentAndNullVaultDisablesWrites() {
+        MapState state = new MapState();
+        state.data.put("old", true);
+        manager.register("core", "v", Scope.VAULT, state);
+
+        manager.changeVaultDirectory(null);
+        assertThat(state.data).isEmpty();
+        state.data.put("new", true);
+        manager.saveChanged();
+        assertThat(vaultDir.resolve("v.yml")).doesNotExist();
+    }
+
+    @Test
     void corruptFileDoesNotBreakRegistration() throws IOException {
         Files.createDirectories(appDir);
         Files.writeString(appDir.resolve("x.yml"), "[: broken");

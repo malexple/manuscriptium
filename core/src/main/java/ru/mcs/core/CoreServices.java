@@ -27,12 +27,15 @@ import ru.mcs.core.statusbar.StatusBarModel;
 import ru.mcs.core.theme.McsThemeManager;
 import ru.mcs.core.toolwindow.LayoutStore;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
+import ru.mcs.core.vault.VaultPaths;
+import ru.mcs.core.vault.VaultState;
 import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.service.Scope;
 
 /**
  * Корневой набор сервисов приложения (application-level). Состояние: {@code <home>/state/*.yml};
- * VAULT-состояние пока временно в {@code <home>/workspace/state} (в Фазе 4 переедет в vault).
+ * VAULT-состояние — {@code <vault>/.manuscriptium/state}. Старый {@code home/workspace/state} читается только
+ * до первого открытия Vault для совместимости с сессией предыдущих фаз.
  * Язык интерфейса читается из настроек до создания любых UI-сервисов и дальше не меняется.
  */
 final class CoreServices {
@@ -53,9 +56,13 @@ final class CoreServices {
     final SessionStore sessionStore = new SessionStore();
     final WindowState windowState = new WindowState();
     final PluginState plugins = new PluginState();
+    final VaultState vaultState = new VaultState();
 
     CoreServices(Path home, boolean persist) {
-        state = new StateManagerImpl(home.resolve("state"), home.resolve("workspace").resolve("state"), persist);
+        Path legacyVaultState = home.resolve("workspace").resolve("state");
+        state = new StateManagerImpl(home.resolve("state"), legacyVaultState, persist);
+        state.register("core", "core.vault", Scope.APPLICATION, vaultState);
+        vaultState.vault().ifPresent(root -> state.changeVaultDirectory(VaultPaths.stateDir(root)));
         state.register("core", "core.settings", Scope.APPLICATION, settings);
         Messages.init(settings.resolveLocale());
         themes = new McsThemeManager(settings, home.resolve("themes"));
@@ -64,7 +71,7 @@ final class CoreServices {
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);
-        state.register("core", "core.session", Scope.APPLICATION, sessionStore);
+        state.register("core", "core.session", Scope.VAULT, sessionStore);
         state.register("core", "core.window", Scope.APPLICATION, windowState);
         state.register("core", "core.plugins", Scope.APPLICATION, plugins);
 
