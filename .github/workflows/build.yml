@@ -27,15 +27,17 @@ jobs:
       - name: Build runtime image
         run: ./gradlew :app:jlink
         shell: bash
-      - name: Smoke test of the runtime image (bundled plugin via ModuleLayer)
+      - name: Smoke test of the runtime image (bundled plugins via ModuleLayer)
         shell: bash
         run: |
           test -f app/build/image/system-plugins/hello/plugin.yml
+          test -f app/build/image/system-plugins/notes/plugin.yml
+          test -f app/build/image/system-plugins/properties/plugin.yml
           EXE=app/build/image/bin/manuscriptium
           if [ "$RUNNER_OS" = "Windows" ]; then EXE=$EXE.bat; fi
           "$EXE" --smoke --home=app/build/dev-home | tee smoke.log
-          grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello\]" smoke.log
-      - name: Smoke test of the runtime image (bundled Hello + external template JAR)
+          grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello, ru.mcs.plugin.notes, ru.mcs.plugin.properties\]" smoke.log
+      - name: Smoke test of the runtime image (bundled plugins + external template JAR)
         shell: bash
         run: |
           TEMPLATE_DIR=app/build/external-home/plugins/template
@@ -46,6 +48,6 @@ jobs:
           EXE=app/build/image/bin/manuscriptium
           if [ "$RUNNER_OS" = "Windows" ]; then EXE=$EXE.bat; fi
           "$EXE" --smoke --home=app/build/external-home | tee external-smoke.log
-          grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello, ru.mcs.plugin.template\]" external-smoke.log
+          grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello, ru.mcs.plugin.notes, ru.mcs.plugin.properties, ru.mcs.plugin.template\]" external-smoke.log
           grep -q "template.hello" external-smoke.log
           grep -q "toolwindow.toggle.template.panel" external-smoke.log

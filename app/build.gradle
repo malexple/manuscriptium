@@ -3,7 +3,8 @@ plugins {
     id 'org.beryx.jlink' version '4.2.0'
 }
 
-evaluationDependsOn(':plugins:hello')
+def bundledPlugins = ['hello', 'notes', 'properties']
+bundledPlugins.each { evaluationDependsOn(":plugins:${it}") }
 
 dependencies {
     implementation project(':core')
@@ -19,18 +20,22 @@ def devHomeDir = layout.buildDirectory.dir('dev-home')
 def systemPluginsDir = layout.buildDirectory.dir('system-plugins')
 
 tasks.register('systemPlugins', Sync) {
-    def hello = project(':plugins:hello')
-    dependsOn hello.tasks.named('jar')
-    from(hello.tasks.named('jar')) { into 'hello' }
-    from(hello.file('plugin.yml')) { into 'hello' }
+    bundledPlugins.each { id ->
+        def plugin = project(":plugins:${id}")
+        dependsOn plugin.tasks.named('jar')
+        from(plugin.tasks.named('jar')) { into id }
+        from(plugin.file('plugin.yml')) { into id }
+    }
     into systemPluginsDir
 }
 
 tasks.register('devHome') {
     dependsOn 'systemPlugins'
     doLast {
-        // До появления system-plugins демо Hello копировался во внешний каталог dev-home.
-        devHomeDir.get().dir('plugins/hello').asFile.deleteDir()
+        // Bundled-плагины не должны дублироваться во внешнем каталоге dev-home.
+        bundledPlugins.each { id ->
+            devHomeDir.get().dir("plugins/${id}").asFile.deleteDir()
+        }
         devHomeDir.get().asFile.mkdirs()
     }
 }

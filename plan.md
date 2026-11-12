@@ -163,6 +163,8 @@ bundled Hello. Сетевой репозиторий по-прежнему не 
 - [x] Clone/move из физической вкладки Files, включая создание первого view и перенос ссылки между views без ручного YAML.
 - [x] Сохранение выбранного языка и явный запрос перезапуска после фактической смены языка.
 - [x] Совместимость с Obsidian в source-редакторе: `[[wikilinks]]`, `![[embed]]`, callouts, навигация и предпросмотр изображений.
+- [x] Демо-плагины «Заметки», «Свойства» (front matter как виджеты).
+- [x] Совместимость с Obsidian в source-редакторе: `[[wikilinks]]`, `![[embed]]`, callouts, навигация и предпросмотр изображений.
 - Демо-плагины «Заметки», «Свойства» (front matter как виджеты).
 
 Архитектура фундамента Vault: открывается весь выбранный каталог, поэтому существующие Obsidian Vault работают без импорта;
@@ -215,6 +217,26 @@ renderer добавляет overlay, не изменяя Markdown. Обычны�
 `GeneralSettingsProvider` вызывает restart callback только если сохранённое значение языка действительно изменилось. Callback
 подключается в `CoreBootstrap` к общему `PluginRestartController`, поэтому Settings сохраняет состояние и затем предлагает
 перезапуск; `CoreServices` по-прежнему инициализирует `Messages` из сохранённого языка до создания UI. SPI остаётся `0.9.0`.
+
+`ObsidianSyntax` — неблокирующий лексер только нужных конструкций: он возвращает UTF-16 offsets wikilinks, embeds и
+callouts, игнорируя BOM/front matter, inline code и fenced code. `ObsidianEditorSupport` лишь добавляет Highlighter к
+редактируемому `JTextArea`, поэтому исходный Markdown остаётся источником истины. Ctrl/Cmd+Click открывает заметку,
+`#заголовок` или `^block-id`; `ObsidianLinkResolver` ищет sibling/root-relative/shortest-path совпадения без учёта регистра,
+но отклоняет выход за Vault и symlink. `ObsidianLinkNavigator` разрешает пути и декодирует PNG/JPEG/GIF/BMP/SVG вне EDT,
+обновляет список заметок из атомарного `VaultSnapshot` и игнорирует завершение операции после смены Vault. Embed заметки
+открывает её, изображение показывает в немодальном preview, остальные attachments передаёт ОС. Callout-подсветка не
+сворачивает блоки; полноценный rendered/WYSIWYG-preview остаётся в Фазе 5. SPI и набор зависимостей не изменились.
+
+Bundled `plugins:notes` и `plugins:properties` — независимые `onDemand` JPMS-модули, зависящие только от `spi`; общий
+список bundled-плагинов в `app/build.gradle` копирует их JAR и `plugin.yml` в `system-plugins` и jlink-образ. «Заметки»
+подписывается на `EditorTopics.EDITOR`, открывает существующие вкладки через `FileEditorManager`, копирует короткую
+`[[wikilink]]` и считает статистику в `SwingWorker`, отбрасывая устаревшие результаты. «Свойства» не регистрирует свой
+FileEditorProvider и поэтому сохраняет Obsidian-подсветку и навигацию source-редактора. Его line-based FrontMatter
+изменяет только `title`, `tags`, `draft`, сохраняя body, BOM, CRLF и неизвестные YAML-строки; duplicate managed keys,
+незакрытый front matter и неподдерживаемые значения отклоняются. Apply выполняет `saveAll()` на EDT, повторное чтение
+и запись в фоне через temp + `ATOMIC_MOVE`, отклоняет symlink и переоткрывает файл только если он остался активным.
+Новый front matter создаётся лишь при непустых управляемых значениях. Тесты покрывают parser, symlink, Swing-панели и
+полный Apply; smoke CI проверяет все три bundled-плагина. SPI остаётся `0.9.0`, зависимости плагинов не расширялись.
 
 `ObsidianSyntax` — неблокирующий лексер только нужных конструкций: он возвращает UTF-16 offsets wikilinks, embeds и
 callouts, игнорируя BOM/front matter, inline code и fenced code. `ObsidianEditorSupport` лишь добавляет Highlighter к

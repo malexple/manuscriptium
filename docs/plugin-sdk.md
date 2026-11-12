@@ -1,7 +1,9 @@
 # Manuscriptium Plugin SDK 0.9
 
 Руководство по созданию внешнего плагина на Java 21. Готовый проект из этого руководства находится в
-[`plugin-template/`](../plugin-template/), расширенный пример — в [`plugins/hello/`](../plugins/hello/).
+[`plugin-template/`](../plugin-template/), расширенный пример — в [`plugins/hello/`](../plugins/hello/). Дополнительные
+bundled-примеры: [`plugins/notes/`](../plugins/notes/) (список открытых файлов, действие и фоновая статистика) и
+[`plugins/properties/`](../plugins/properties/) (tool window активного редактора, фоновое чтение и безопасная запись).
 
 ## 1. Быстрый старт
 
