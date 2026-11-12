@@ -1,0 +1,23 @@
+id: ru.mcs.plugin.mdeditor
+name: Markdown Canvas Editor
+version: 0.1.0
+sdk-version: "0.9"
+module: ru.mcs.plugin.mdeditor
+depends-on: []
+permissions: []
+activation: onDemand
+i18n: ru/mcs/plugin/mdeditor/messages
+
+contributions:
+  actions:
+    - id: markdown.editor.toggleMode
+      text: "%action.toggleMode"
+      icon: /ru/mcs/plugin/mdeditor/icons/notebook-text.svg
+      groups: [MainMenu.View, MainToolbar, EditorTabPopup]
+  fileEditors:
+    - id: markdown.editor
+      patterns: ["*.md"]
+      priority: 100
+  settings:
+    - id: markdown.editor.settings
+      title: "%settings.title"

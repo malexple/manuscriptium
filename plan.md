@@ -1,6 +1,6 @@
 # Manuscriptium — план реализации (plan.md)
 
-Версия документа: 1.1 (2026-11-13). Статус: Фазы 0–3 завершены, идёт Фаза 4.
+Версия документа: 1.2 (2026-11-13). Статус: Фазы 0–4 завершены, выполняется Canvas-редактор E0–E9; публикация Фазы 5 продолжится после E9.
 
 ## 1. Цель и приоритеты
 
@@ -31,7 +31,7 @@ Manuscriptium — кроссплатформенное (Windows, Linux, macOS) �
 | Сервисы | `ServiceRegistry` двух уровней: application и vault; `PersistentStateComponent` регистрируется явно |
 | Hot-reload | Тяжёлые Java-плагины — требуют перезапуска; лёгкие скрипты — на лету |
 | Скрипты | Только собственный JS-подобный интерпретатор (из `wiremock-js-extension`), фасад `McsFacade`. Рантайм-компиляция Java — поздняя фаза |
-| Редактор (MVP) | Интерфейс `FileEditorProvider`/`FileEditor`; простой Swing-редактор (кандидат RSyntaxTextArea; проверить Markdown-режим на прототипе). JCEF + WYSIWYG — внешний плагин в поздней фазе |
+| Редактор | Собственный Swing Canvas по `EDITOR_CANVAS_PLAN.md` и `TYPORA_FEATURES.md`; `FileEditorProvider` встраивает Canvas/Source в одну Markdown-вкладку. JavaFX/JCEF/WebView не используются |
 | Docking | Собственный, на `JSplitPane`; стороны LEFT/RIGHT/BOTTOM; stripes; без drag-and-drop панелей и плавающих окон |
 | Окна | Одно окно — один vault; несколько окон допустимы на уровне ядра |
 | Вкладки | Закрепление + восстановление сессии в MVP; сплиты позже |
@@ -272,8 +272,20 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
 Новый front matter создаётся лишь при непустых управляемых значениях. Тесты покрывают parser, symlink, Swing-панели и
 полный Apply; smoke CI проверяет все три bundled-плагина. SPI остаётся `0.9.0`, зависимости плагинов не расширялись.
 
-### Фаза 5. Редактор и публикация
-- Markdown-редактор (Swing), линтер front matter, word count.
+### Canvas-редактор E0–E9
+
+Основной маршрут — `EDITOR_CANVAS_PLAN.md`; функциональные идентификаторы и приоритеты — `TYPORA_FEATURES.md`.
+- [x] **E0. Каркас:** `plugins/markdown-editor`, `MarkdownFileEditorProvider`, `MarkdownFileEditor`, собственный `EditorCanvas`,
+  режимы Canvas/Source внутри одной вкладки, действие переключения, настройка режима по умолчанию, ru/en и headless-тесты.
+- [ ] E1–E9 выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
+
+Принятые решения: плагин не зависит от `core`; Obsidian-навигация и preview будут предоставлены через SPI-сервисы и адаптер
+`core`. `flexmark-java`, CSS-движок и `JLaTeXMath` становятся отдельными JAR-плагинами с JDK-only сервисными контрактами SPI
+и связями `depends-on`. F-007, F-008, полный F-060, F-062 и outline из F-100 перенесены в E9. Рендеринг проверяется метриками
+с встроенным шрифтом, записью `DrawSink` и платформенными golden-изображениями с допусками/diff-артефактами; пиксельное
+совпадение между ОС не требуется. В E0 Source только читается, а Canvas показывает состояние каркаса; SPI остаётся `0.9.0`.
+
+### Фаза 5. Публикация (после Canvas E0–E9)
 - Публикация: `StaticSiteExporter` (Hugo), `PublishingProfile`, валидация YAML, конвертация `![[img]]`, проверка `draft`, битые ссылки, JGit commit/push в фоне со статусом в статус-баре.
 - Мультиязычность `index.md`/`index.en.md`.
 

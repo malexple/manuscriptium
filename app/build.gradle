@@ -3,7 +3,7 @@ plugins {
     id 'org.beryx.jlink' version '4.2.0'
 }
 
-def bundledPlugins = ['hello', 'notes', 'properties']
+def bundledPlugins = ['hello', 'markdown-editor', 'notes', 'properties']
 bundledPlugins.each { evaluationDependsOn(":plugins:${it}") }
 
 dependencies {
