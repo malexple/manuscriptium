@@ -29,6 +29,7 @@ import ru.mcs.spi.ui.ToolWindowSpec;
 public final class VaultController implements AutoCloseable {
 
     private final JFrame frame;
+    private final ActionManagerImpl actions;
     private final FileEditorManagerImpl editors;
     private final SessionStore sessionStore;
     private final StateManagerImpl state;
@@ -39,24 +40,28 @@ public final class VaultController implements AutoCloseable {
 
     private VaultService current;
     private boolean busy;
+    private boolean creatingNote;
 
     public VaultController(JFrame frame, ActionManagerImpl actions, ToolWindowManagerImpl toolWindows,
                            FileEditorManagerImpl editors, SessionStore sessionStore, StateManagerImpl state,
                            VaultState vaultState, StatusBarModel statusBar, NotificationManagerImpl notifications) {
         this.frame = frame;
+        this.actions = actions;
         this.editors = editors;
         this.sessionStore = sessionStore;
         this.state = state;
         this.vaultState = vaultState;
         this.statusBar = statusBar;
         this.notifications = notifications;
-        this.treePanel = new VaultTreePanel(editors, this::moveOrClone);
+        this.treePanel = new VaultTreePanel(editors, this::moveOrClone, this::newMarkdown,
+                this::addLink, this::moveLink);
 
         toolWindows.register("core", ToolWindowSpec.of("core.vault", Messages.get("vault.title"),
                         ToolWindowAnchor.LEFT, () -> treePanel)
                 .withIcon(Icons.lucide("folder-open"))
                 .withShowByDefault(true));
         registerOpenAction(actions);
+        registerNewNoteAction(actions);
     }
 
     /** Восстанавливает последний Vault после загрузки провайдеров редакторов всеми плагинами. */
@@ -128,6 +133,7 @@ public final class VaultController implements AutoCloseable {
         }
         VaultService previous = current;
         current = opened;
+        actions.updateActions();
         if (previous != null) {
             previous.close();
         }
@@ -171,6 +177,11 @@ public final class VaultController implements AutoCloseable {
             return CompletableFuture.completedFuture(false);
         }
         CompletableFuture<Boolean> result = service.moveOrClone(viewId, sourcePath, sourceFile, targetPath, clone);
+        linkResult(service, result, clone);
+        return result;
+    }
+
+    private void linkResult(VaultService service, CompletableFuture<?> result, boolean clone) {
         result.whenComplete((changed, error) -> javax.swing.SwingUtilities.invokeLater(() -> {
             if (current != service) {
                 return;
@@ -182,13 +193,98 @@ public final class VaultController implements AutoCloseable {
                 notifications.notify("core", Messages.get("vault.drop.error.title"),
                         Messages.get("vault.drop.error", detail), NotificationType.ERROR);
                 statusBar.setMessage(Messages.get("vault.drop.error", detail));
-            } else if (!changed) {
+            } else if (changed == null || changed instanceof Boolean value && !value) {
                 statusBar.setMessage(Messages.get("vault.drop.rejected"));
             } else {
+                if (changed instanceof String viewId) {
+                    treePanel.selectView(viewId);
+                }
                 statusBar.setMessage(Messages.get(clone ? "vault.drop.cloned" : "vault.drop.moved"));
             }
         }));
-        return result;
+    }
+
+    private void moveLink(String file, String sourceViewId, List<Integer> sourcePath,
+                          String targetViewId, String newViewName, List<Integer> targetPath) {
+        VaultService service = current;
+        if (service == null) {
+            return;
+        }
+        linkResult(service, service.moveLink(file, sourceViewId, sourcePath,
+                targetViewId, newViewName, targetPath), false);
+    }
+
+    private void addLink(String file, String viewId, String newViewName, List<Integer> targetPath) {
+        VaultService service = current;
+        if (service == null) {
+            return;
+        }
+        linkResult(service, service.addLink(file, viewId, newViewName, targetPath), true);
+    }
+
+    private void newMarkdown(Path directory) {
+        VaultService service = current;
+        if (service == null || creatingNote) {
+            return;
+        }
+        Path root = service.root();
+        Path parent = directory != null ? directory : treePanel.newNoteDirectory();
+        String defaultPath = defaultNotePath(root, parent);
+        Object answer = JOptionPane.showInputDialog(frame, Messages.get("vault.newNote.message"),
+                Messages.get("vault.newNote.title"), JOptionPane.QUESTION_MESSAGE,
+                null, null, defaultPath);
+        if (answer == null) {
+            return;
+        }
+        creatingNote = true;
+        actions.updateActions();
+        new SwingWorker<Path, Void>() {
+            @Override
+            protected Path doInBackground() throws Exception {
+                return MarkdownNoteCreator.create(root, answer.toString());
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Path created = get();
+                    if (current == service) {
+                        editors.openFile(created);
+                        statusBar.setMessage(Messages.get("vault.newNote.created",
+                                VaultPaths.relativePath(root, created)));
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    noteFailed(e);
+                } catch (ExecutionException | RuntimeException e) {
+                    noteFailed(e);
+                } finally {
+                    creatingNote = false;
+                    actions.updateActions();
+                }
+            }
+        }.execute();
+    }
+
+    private static String defaultNotePath(Path root, Path parent) {
+        Path directory = parent == null ? root : parent;
+        String prefix = directory.equals(root) ? "" : VaultPaths.relativePath(root, directory) + "/";
+        for (int i = 1; i < 1000; i++) {
+            String name = i == 1 ? "untitled.md" : "untitled-" + i + ".md";
+            if (!java.nio.file.Files.exists(directory.resolve(name), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                return prefix + name;
+            }
+        }
+        return prefix + "untitled.md";
+    }
+
+    private void noteFailed(Exception error) {
+        Throwable cause = error instanceof ExecutionException && error.getCause() != null ? error.getCause() : error;
+        String detail = cause.getMessage() == null ? cause.toString() : cause.getMessage();
+        notifications.notify("core", Messages.get("vault.newNote.error.title"),
+                Messages.get("vault.newNote.error", detail), NotificationType.ERROR);
+        JOptionPane.showMessageDialog(frame, Messages.get("vault.newNote.error", detail),
+                Messages.get("vault.newNote.error.title"), JOptionPane.ERROR_MESSAGE);
     }
 
     private void openFailed(Path root, Exception error, boolean interactive) {
@@ -226,6 +322,23 @@ public final class VaultController implements AutoCloseable {
         actions.addToGroup(ActionIds.MAIN_TOOLBAR, "core.vault.open", Constraints.FIRST);
     }
 
+    private void registerNewNoteAction(ActionManagerImpl actions) {
+        actions.registerAction("core.vault.newNote", new AnAction(Messages.get("vault.newNote"), null,
+                Icons.lucide("scroll-text")) {
+            @Override
+            public void update(AnActionEvent e) {
+                e.getPresentation().setEnabled(current != null && !creatingNote);
+            }
+
+            @Override
+            public void actionPerformed(AnActionEvent e) {
+                newMarkdown(null);
+            }
+        });
+        actions.addToGroup(ActionIds.FILE_MENU, "core.vault.newNote", Constraints.after("core.vault.open"));
+        actions.addToGroup(ActionIds.MAIN_TOOLBAR, "core.vault.newNote", Constraints.after("core.vault.open"));
+    }
+
     private static String displayName(Path root) {
         Path name = root.getFileName();
         return name != null ? name.toString() : root.toString();
@@ -236,6 +349,7 @@ public final class VaultController implements AutoCloseable {
         if (current != null) {
             current.close();
             current = null;
+            actions.updateActions();
         }
     }
 }

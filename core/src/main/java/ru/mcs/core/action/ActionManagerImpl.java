@@ -101,6 +101,11 @@ public final class ActionManagerImpl implements ActionManager {
         return () -> listeners.remove(listener);
     }
 
+    /** Обновляет меню и toolbar после изменения контекста, когда сам реестр действий не менялся. */
+    public void updateActions() {
+        fireChanged();
+    }
+
     private void fireChanged() {
         for (Runnable l : listeners) {
             l.run();

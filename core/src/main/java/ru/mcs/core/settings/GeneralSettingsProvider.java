@@ -16,9 +16,20 @@ public final class GeneralSettingsProvider implements ConfigurableProvider {
     public static final String ID = "core.settings.general";
 
     private final AppSettings settings;
+    private Runnable restartRequired = () -> { };
 
     public GeneralSettingsProvider(AppSettings settings) {
         this.settings = settings;
+    }
+
+    public GeneralSettingsProvider(AppSettings settings, Runnable restartRequired) {
+        this(settings);
+        onRestartRequired(restartRequired);
+    }
+
+    /** Перезапуск — обязанность shell; headless CoreServices сохраняет страницу настроек без этого callback. */
+    public void onRestartRequired(Runnable restartRequired) {
+        this.restartRequired = java.util.Objects.requireNonNull(restartRequired);
     }
 
     @Override
@@ -33,7 +44,7 @@ public final class GeneralSettingsProvider implements ConfigurableProvider {
 
     @Override
     public Configurable createConfigurable() {
-        return new GeneralConfigurable(settings);
+        return new GeneralConfigurable(settings, restartRequired);
     }
 
     private record LanguageChoice(String id, String label) {
@@ -46,14 +57,16 @@ public final class GeneralSettingsProvider implements ConfigurableProvider {
     private static final class GeneralConfigurable implements Configurable {
 
         private final AppSettings settings;
+        private final Runnable restartRequired;
         private final JComboBox<LanguageChoice> language = new JComboBox<>(new LanguageChoice[]{
                 new LanguageChoice(AppSettings.AUTO, Messages.get("language.auto")),
                 new LanguageChoice(AppSettings.EN, Messages.get("language.en")),
                 new LanguageChoice(AppSettings.RU, Messages.get("language.ru"))
         });
 
-        private GeneralConfigurable(AppSettings settings) {
+        private GeneralConfigurable(AppSettings settings, Runnable restartRequired) {
             this.settings = settings;
+            this.restartRequired = restartRequired;
             select(settings.language());
         }
 
@@ -76,7 +89,12 @@ public final class GeneralSettingsProvider implements ConfigurableProvider {
 
         @Override
         public void apply() {
-            settings.setLanguage(selectedLanguage());
+            String selected = selectedLanguage();
+            if (selected.equals(settings.language())) {
+                return;
+            }
+            settings.setLanguage(selected);
+            restartRequired.run();
         }
 
         @Override

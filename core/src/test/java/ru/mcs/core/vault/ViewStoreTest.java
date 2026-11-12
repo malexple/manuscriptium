@@ -1,6 +1,7 @@
 package ru.mcs.core.vault;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -124,6 +125,18 @@ class ViewStoreTest {
         try (var stream = Files.list(VaultPaths.viewsDir(tmp))) {
             assertThat(stream.map(p -> p.getFileName().toString()).filter(n -> n.endsWith(".tmp"))).isEmpty();
         }
+    }
+
+    @Test
+    void createNeverOverwritesExistingView() throws Exception {
+        write("tree.yml", "name: Original\nentries: []\n");
+        ViewDefinition replacement = new ViewDefinition("tree", "Replacement",
+                VaultPaths.viewsDir(tmp).resolve("tree.yml"), new java.util.ArrayList<>());
+
+        assertThatThrownBy(() -> new ViewStore(tmp).create(replacement))
+                .isInstanceOf(java.nio.file.FileAlreadyExistsException.class);
+        assertThat(VaultPaths.viewsDir(tmp).resolve("tree.yml"))
+                .content().isEqualTo("name: Original\nentries: []\n");
     }
 
     private void write(String name, String content) throws Exception {

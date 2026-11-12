@@ -41,6 +41,35 @@ final class ViewOperations {
         return true;
     }
 
+    /** Добавляет ссылку из физического дерева; сам Markdown-файл остаётся неизменным. */
+    static boolean addLink(ViewDefinition view, String file, List<Integer> targetPath) {
+        ViewEntry target = targetPath.isEmpty() ? null : entryAt(view.entries(), targetPath);
+        if (!targetPath.isEmpty() && target == null || target != null && !target.isNode()) {
+            return false;
+        }
+        List<ViewEntry> targetChildren = target == null ? view.entries() : target.children();
+        if (targetChildren == null) {
+            return false;
+        }
+        for (ViewEntry sibling : targetChildren) {
+            if (!sibling.isNode() && sibling.file().equals(file)) {
+                return false;
+            }
+        }
+        targetChildren.add(ViewEntry.file(file, null, true, List.of()));
+        return true;
+    }
+
+    static boolean removeLink(ViewDefinition view, List<Integer> sourcePath, String expectedFile) {
+        if (sourcePath.isEmpty()) {
+            return false;
+        }
+        ViewEntry source = entryAt(view.entries(), sourcePath);
+        List<ViewEntry> parent = parentOf(view.entries(), sourcePath);
+        return source != null && !source.isNode() && source.file().equals(expectedFile)
+                && parent != null && parent.remove(source);
+    }
+
     static ViewEntry entryAt(List<ViewEntry> entries, List<Integer> path) {
         List<ViewEntry> current = entries;
         ViewEntry result = null;

@@ -108,6 +108,16 @@ class ActionManagerImplTest {
     }
 
     @Test
+    void contextUpdateNotifiesListeners() {
+        AtomicInteger n = new AtomicInteger();
+        am.addChangeListener(n::incrementAndGet);
+
+        am.updateActions();
+
+        assertThat(n.get()).isEqualTo(1);
+    }
+
+    @Test
     void changeListenerFiresOnChangesAndCanBeRemoved() {
         AtomicInteger n = new AtomicInteger();
         Runnable remove = am.addChangeListener(n::incrementAndGet);

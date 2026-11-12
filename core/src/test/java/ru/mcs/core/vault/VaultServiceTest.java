@@ -107,6 +107,63 @@ class VaultServiceTest {
         assertThat(reloaded.views().getFirst().entries().get(2).file()).isEqualTo("note.md");
     }
 
+    @Test
+    void addLinkCreatesFirstViewWithoutOverwritingYamlAndReusesExistingTargets() throws Exception {
+        Files.writeString(tmp.resolve("note.md"), "# Note");
+        Files.createDirectories(VaultPaths.viewsDir(tmp));
+        Path occupied = VaultPaths.viewsDir(tmp).resolve("classification.yml");
+        Files.writeString(occupied, "name: [\n");
+        Files.writeString(VaultPaths.viewsDir(tmp).resolve("existing.yml"), """
+                name: Existing
+                entries:
+                  - node: Target
+                    children: []
+                """);
+        try (VaultService service = VaultService.open(tmp, snapshot -> { })) {
+            String createdId = service.addLink("note.md", null, "Classification", List.of()).get();
+            assertThat(createdId).isEqualTo("classification-2");
+            assertThat(Files.readString(occupied)).isEqualTo("name: [\n");
+            ViewDefinition created = service.snapshot().views().stream()
+                    .filter(view -> view.id().equals(createdId)).findFirst().orElseThrow();
+            assertThat(created.entries()).extracting(ViewEntry::file).containsExactly("note.md");
+            assertThat(service.addLink("note.md", createdId, null, List.of()).get()).isNull();
+
+            assertThat(service.addLink("note.md", "existing", null, List.of()).get()).isEqualTo("existing");
+            assertThat(service.addLink("note.md", "existing", null, List.of()).get()).isNull();
+            assertThat(service.addLink("note.md", "existing", null, List.of(0)).get()).isEqualTo("existing");
+            ViewDefinition existing = service.snapshot().views().stream()
+                    .filter(view -> view.id().equals("existing")).findFirst().orElseThrow();
+            assertThat(existing.entries().getFirst().children()).extracting(ViewEntry::file).containsExactly("note.md");
+            assertThat(existing.entries().get(1).file()).isEqualTo("note.md");
+
+            String movedId = service.moveLink("note.md", createdId, List.of(0),
+                    null, "Second", List.of()).get();
+            assertThat(movedId).isEqualTo("second");
+            assertThat(service.snapshot().views().stream().filter(view -> view.id().equals(createdId))
+                    .findFirst().orElseThrow().entries()).isEmpty();
+            assertThat(service.snapshot().views().stream().filter(view -> view.id().equals("second"))
+                    .findFirst().orElseThrow().entries()).extracting(ViewEntry::file).containsExactly("note.md");
+
+            assertThat(service.moveLink("note.md", "second", List.of(0),
+                    createdId, null, List.of()).get()).isEqualTo(createdId);
+            assertThat(service.snapshot().views().stream().filter(view -> view.id().equals("second"))
+                    .findFirst().orElseThrow().entries()).isEmpty();
+            assertThat(service.moveLink("note.md", "second", List.of(0),
+                    createdId, null, List.of()).get()).isNull();
+            assertThat(service.addLink("missing.md", createdId, null, List.of()).get()).isNull();
+            assertThat(tmp.resolve("note.md")).exists();
+        }
+
+        ViewDefinition persisted = new ViewStore(tmp).load().views().stream()
+                .filter(view -> view.id().equals("classification-2")).findFirst().orElseThrow();
+        assertThat(persisted.entries().getFirst().file()).isEqualTo("note.md");
+        ViewDefinition persistedExisting = new ViewStore(tmp).load().views().stream()
+                .filter(view -> view.id().equals("existing")).findFirst().orElseThrow();
+        assertThat(persistedExisting.entries().getFirst().children()).extracting(ViewEntry::file)
+                .containsExactly("note.md");
+        assertThat(persistedExisting.entries().get(1).file()).isEqualTo("note.md");
+    }
+
     private static boolean contains(List<VaultNote> notes, String path) {
         return notes.stream().anyMatch(note -> note.path().equals(path));
     }

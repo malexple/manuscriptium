@@ -6,7 +6,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -15,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -123,36 +121,20 @@ final class ViewStore {
             throw new IllegalArgumentException(path + ": 'children' is allowed only for a node");
         }
         String file = requiredString(map, "file", path);
-        validateRelativeMarkdown(file, path);
+        VaultPaths.validateRelativeMarkdown(file, path + ".file");
         return ViewEntry.file(file, overrideTitle, visibility, tags);
     }
 
-    private static void validateRelativeMarkdown(String file, String path) {
-        if (file.indexOf('\\') >= 0 || file.startsWith("/") || file.matches("^[A-Za-z]:($|/).*")) {
-            throw new IllegalArgumentException(path + ".file must be a relative path with '/' separators");
-        }
-        try {
-            if (Path.of(file).isAbsolute()) {
-                throw new IllegalArgumentException(path + ".file must be relative");
-            }
-        } catch (InvalidPathException e) {
-            throw new IllegalArgumentException(path + ".file is invalid: " + e.getMessage(), e);
-        }
-        String[] parts = file.split("/", -1);
-        for (String part : parts) {
-            if (part.isEmpty() || part.equals(".") || part.equals("..")) {
-                throw new IllegalArgumentException(path + ".file contains an invalid path segment");
-            }
-        }
-        if (parts[0].equals(VaultPaths.METADATA_DIR) || parts[0].equals(".git")) {
-            throw new IllegalArgumentException(path + ".file points outside the note hierarchy");
-        }
-        if (!file.toLowerCase(Locale.ROOT).endsWith(".md")) {
-            throw new IllegalArgumentException(path + ".file must reference a Markdown file");
-        }
+    void save(ViewDefinition view) throws IOException {
+        write(view, true);
     }
 
-    void save(ViewDefinition view) throws IOException {
+    /** Создаёт новый YAML без REPLACE_EXISTING: чужой или одновременно созданный файл не перезаписывается. */
+    void create(ViewDefinition view) throws IOException {
+        write(view, false);
+    }
+
+    private void write(ViewDefinition view, boolean replace) throws IOException {
         Files.createDirectories(directory);
         Map<String, Object> rootMap = new LinkedHashMap<>();
         rootMap.put("name", view.name());
@@ -181,10 +163,14 @@ final class ViewStore {
                 }
                 channel.force(true);
             }
-            try {
-                Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-                Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+            if (replace) {
+                try {
+                    Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+                } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                    Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
+                }
+            } else {
+                Files.move(temp, target);
             }
             moved = true;
         } finally {

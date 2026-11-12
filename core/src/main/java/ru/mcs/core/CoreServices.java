@@ -57,6 +57,7 @@ final class CoreServices {
     final WindowState windowState = new WindowState();
     final PluginState plugins = new PluginState();
     final VaultState vaultState = new VaultState();
+    final GeneralSettingsProvider generalSettings;
 
     CoreServices(Path home, boolean persist) {
         Path legacyVaultState = home.resolve("workspace").resolve("state");
@@ -66,7 +67,8 @@ final class CoreServices {
         state.register("core", "core.settings", Scope.APPLICATION, settings);
         Messages.init(settings.resolveLocale());
         themes = new McsThemeManager(settings, home.resolve("themes"));
-        configurables.register(new GeneralSettingsProvider(settings));
+        generalSettings = new GeneralSettingsProvider(settings);
+        configurables.register(generalSettings);
         configurables.register(new AppearanceSettingsProvider(themes));
 
         LayoutStore layout = new LayoutStore();

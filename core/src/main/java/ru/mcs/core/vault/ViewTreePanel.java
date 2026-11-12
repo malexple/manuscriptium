@@ -11,12 +11,15 @@ import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import javax.swing.AbstractAction;
 import javax.swing.DropMode;
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
@@ -67,6 +70,7 @@ final class ViewTreePanel extends JPanel {
                 }
             }
         });
+        TreePopupSupport.install(tree, this::linkPopup);
         tree.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "mcs.openViewNote");
         tree.getActionMap().put("mcs.openViewNote", new AbstractAction() {
             @Override
@@ -138,6 +142,37 @@ final class ViewTreePanel extends JPanel {
             }
         }
         return null;
+    }
+
+    private JPopupMenu linkPopup(TreePath path) {
+        ViewTreeModel.Node value = value(path);
+        if (value == null || value.directory()) {
+            return null;
+        }
+        JPopupMenu popup = new JPopupMenu();
+        JMenuItem open = new JMenuItem(Messages.get("vault.note.open"));
+        open.setEnabled(!value.missing());
+        open.addActionListener(e -> editors.openFile(value.file()));
+        popup.add(open);
+        popup.addSeparator();
+        popup.add(targetAction(value, true));
+        popup.add(targetAction(value, false));
+        return popup;
+    }
+
+    private JMenuItem targetAction(ViewTreeModel.Node source, boolean clone) {
+        JMenuItem action = new JMenuItem(Messages.get(clone ? "vault.link.clone" : "vault.link.move"));
+        ViewDefinition view = model.view();
+        action.setEnabled(view != null && !ViewTargetChooser.targets(view, source.path(), clone).isEmpty());
+        action.addActionListener(e -> {
+            Optional<List<Integer>> target = ViewTargetChooser.choose(SwingUtilities.getWindowAncestor(this),
+                    model.view(), source.path(), clone);
+            target.ifPresent(path -> {
+                dropHandler.drop(source.viewId(), source.path(), source.entry().file(), path, clone);
+                expand(path);
+            });
+        });
+        return action;
     }
 
     private void openSelected() {

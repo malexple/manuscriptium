@@ -64,6 +64,19 @@ class ViewOperationsTest {
     }
 
     @Test
+    void addLinkFromPhysicalTreeChecksTargetAndDuplicateSibling() {
+        ViewDefinition view = view();
+
+        assertThat(ViewOperations.addLink(view, "new.md", List.of(1))).isTrue();
+        assertThat(view.entries().get(1).children()).extracting(ViewEntry::file)
+                .containsExactly("b.md", "new.md");
+        assertThat(ViewOperations.addLink(view, "new.md", List.of(1))).isFalse();
+        assertThat(ViewOperations.addLink(view, "other.md", List.of(0, 0))).isFalse();
+        assertThat(ViewOperations.addLink(view, "other.md", List.of(99))).isFalse();
+        assertThat(view.entries().get(1).children()).hasSize(2);
+    }
+
+    @Test
     void cloneSetCountsOnlyVisibleLinksAcrossAllViews() {
         ViewEntry visible = ViewEntry.file("shared.md", null, true, List.of());
         ViewEntry hidden = ViewEntry.file("hidden.md", null, true, List.of());

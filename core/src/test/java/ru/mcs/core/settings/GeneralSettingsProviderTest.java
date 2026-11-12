@@ -2,6 +2,7 @@ package ru.mcs.core.settings;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,9 @@ class GeneralSettingsProviderTest {
     @Test
     void selectionIsAppliedOnlyOnApplyAndResetRestoresSavedLanguage() throws Exception {
         AppSettings settings = new AppSettings();
-        Configurable configurable = new GeneralSettingsProvider(settings).createConfigurable();
+        AtomicInteger restartRequests = new AtomicInteger();
+        Configurable configurable = new GeneralSettingsProvider(settings, restartRequests::incrementAndGet)
+                .createConfigurable();
         JComboBox<?> language = languageCombo(configurable);
 
         assertThat(configurable.isModified()).isFalse();
@@ -23,11 +26,16 @@ class GeneralSettingsProviderTest {
         configurable.reset();
         assertThat(language.getSelectedIndex()).isZero();
         assertThat(configurable.isModified()).isFalse();
+        assertThat(restartRequests).hasValue(0);
 
         language.setSelectedIndex(1);
         configurable.apply();
         assertThat(settings.language()).isEqualTo(AppSettings.EN);
         assertThat(configurable.isModified()).isFalse();
+        assertThat(restartRequests).hasValue(1);
+
+        configurable.apply();
+        assertThat(restartRequests).hasValue(1);
     }
 
     private static JComboBox<?> languageCombo(Configurable configurable) {

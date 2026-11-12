@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -207,6 +208,191 @@ final class VaultService implements AutoCloseable {
             result.complete(false);
         }
         return result;
+    }
+
+    /** Добавляет ссылку из Files в существующий или новый view. Возвращает id затронутого view. */
+    CompletableFuture<String> addLink(String file, String viewId, String newViewName, List<Integer> targetPath) {
+        List<Integer> target = List.copyOf(targetPath);
+        CompletableFuture<String> result = new CompletableFuture<>();
+        if (closed.get()) {
+            result.complete(null);
+            return result;
+        }
+        try {
+            executor.execute(() -> {
+                if (closed.get()) {
+                    result.complete(null);
+                    return;
+                }
+                try {
+                    VaultPaths.validateRelativeMarkdown(file, "link.file");
+                    Path note = root.resolve(file).normalize();
+                    if (!note.startsWith(root) || !Files.isRegularFile(note, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                        result.complete(null);
+                        return;
+                    }
+                    if (viewId == null) {
+                        createViewWithLink(file, newViewName, target, result);
+                        return;
+                    }
+                    ViewDefinition view = findView(viewId);
+                    if (view == null) {
+                        throw new IOException("View no longer exists: " + viewId);
+                    }
+                    boolean changed = ViewOperations.addLink(view, file, target);
+                    if (changed) {
+                        try {
+                            viewStore.save(view);
+                        } catch (IOException | RuntimeException e) {
+                            reloadViews();
+                            throw e;
+                        }
+                    }
+                    publish();
+                    result.complete(changed ? view.id() : null);
+                } catch (IOException | SQLException | RuntimeException e) {
+                    result.completeExceptionally(e);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            result.complete(null);
+        }
+        return result;
+    }
+
+    /** Переносит ссылку из Files внутри view, между views или в новый view. */
+    CompletableFuture<String> moveLink(String file, String sourceViewId, List<Integer> sourcePath,
+                                       String targetViewId, String newViewName, List<Integer> targetPath) {
+        List<Integer> source = List.copyOf(sourcePath);
+        List<Integer> target = List.copyOf(targetPath);
+        CompletableFuture<String> result = new CompletableFuture<>();
+        if (closed.get()) {
+            result.complete(null);
+            return result;
+        }
+        try {
+            executor.execute(() -> {
+                if (closed.get()) {
+                    result.complete(null);
+                    return;
+                }
+                try {
+                    ViewDefinition sourceView = findView(sourceViewId);
+                    ViewEntry sourceEntry = sourceView == null ? null
+                            : ViewOperations.entryAt(sourceView.entries(), source);
+                    if (sourceEntry == null || sourceEntry.isNode() || !sourceEntry.file().equals(file)) {
+                        result.complete(null);
+                        return;
+                    }
+                    if (sourceView.id().equals(targetViewId)) {
+                        boolean changed = ViewOperations.moveOrClone(sourceView, source, target, false);
+                        if (changed) {
+                            try {
+                                viewStore.save(sourceView);
+                            } catch (IOException | RuntimeException e) {
+                                reloadViews();
+                                throw e;
+                            }
+                        }
+                        publish();
+                        result.complete(changed ? sourceView.id() : null);
+                        return;
+                    }
+
+                    boolean createTarget = targetViewId == null;
+                    ViewDefinition targetView = createTarget ? newViewWithLink(file, newViewName, target)
+                            : findView(targetViewId);
+                    if (targetView == null) {
+                        if (createTarget) {
+                            result.complete(null);
+                            return;
+                        }
+                        throw new IOException("View no longer exists: " + targetViewId);
+                    }
+                    if (!createTarget && !ViewOperations.addLink(targetView, file, target)) {
+                        result.complete(null);
+                        return;
+                    }
+                    if (!ViewOperations.removeLink(sourceView, source, file)) {
+                        reloadViews();
+                        result.complete(null);
+                        return;
+                    }
+                    try {
+                        if (createTarget) {
+                            viewStore.create(targetView);
+                        } else {
+                            viewStore.save(targetView);
+                        }
+                        viewStore.save(sourceView);
+                    } catch (IOException | RuntimeException e) {
+                        reloadViews();
+                        throw e;
+                    }
+                    if (createTarget) {
+                        registerView(targetView);
+                    }
+                    publish();
+                    result.complete(targetView.id());
+                } catch (IOException | SQLException | RuntimeException e) {
+                    result.completeExceptionally(e);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            result.complete(null);
+        }
+        return result;
+    }
+
+    private void createViewWithLink(String file, String newViewName, List<Integer> target,
+                                    CompletableFuture<String> result) throws IOException, SQLException {
+        ViewDefinition view = newViewWithLink(file, newViewName, target);
+        if (view == null) {
+            result.complete(null);
+            return;
+        }
+        viewStore.create(view);
+        registerView(view);
+        publish();
+        result.complete(view.id());
+    }
+
+    private ViewDefinition newViewWithLink(String file, String newViewName, List<Integer> target) {
+        String name = newViewName == null ? "" : newViewName.trim();
+        if (name.isEmpty() || !target.isEmpty()) {
+            return null;
+        }
+        String base = ViewIds.base(name);
+        String id = base;
+        for (int suffix = 2; viewExists(id); suffix++) {
+            id = base + "-" + suffix;
+        }
+        ViewDefinition view = new ViewDefinition(id, name, VaultPaths.viewsDir(root).resolve(id + ".yml"),
+                new ArrayList<>());
+        return ViewOperations.addLink(view, file, List.of()) ? view : null;
+    }
+
+    private void registerView(ViewDefinition view) {
+        List<ViewDefinition> updated = new ArrayList<>(views);
+        updated.add(view);
+        updated.sort(Comparator.comparing(ViewDefinition::id));
+        views = List.copyOf(updated);
+    }
+
+    private boolean viewExists(String id) {
+        if (Files.exists(VaultPaths.viewsDir(root).resolve(id + ".yml"), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            return true;
+        }
+        return findView(id) != null;
+    }
+
+    private ViewDefinition findView(String id) {
+        for (ViewDefinition candidate : views) {
+            if (candidate.id().equals(id)) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private void submit(IndexTask task) {

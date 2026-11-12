@@ -10,11 +10,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import javax.swing.AbstractAction;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
@@ -35,6 +38,19 @@ import ru.mcs.core.icon.Icons;
 /** Панель Vault: ленивое физическое дерево, вкладки виртуальных views и неблокирующие ошибки YAML. */
 final class VaultTreePanel extends JPanel {
 
+    interface NewNoteHandler {
+        void newNote(Path directory);
+    }
+
+    interface CloneLinkHandler {
+        void cloneLink(String file, String viewId, String newViewName, List<Integer> targetPath);
+    }
+
+    interface MoveLinkHandler {
+        void moveLink(String file, String sourceViewId, List<Integer> sourcePath,
+                      String targetViewId, String newViewName, List<Integer> targetPath);
+    }
+
     private static final String EMPTY = "empty";
     private static final String TABS = "tabs";
     private static final System.Logger LOG = System.getLogger(VaultTreePanel.class.getName());
@@ -46,15 +62,24 @@ final class VaultTreePanel extends JPanel {
     private final JTabbedPane tabs = new JTabbedPane();
     private final FileEditorManagerImpl editors;
     private final ViewTreePanel.DropHandler dropHandler;
+    private final NewNoteHandler newNoteHandler;
+    private final CloneLinkHandler cloneLinkHandler;
+    private final MoveLinkHandler moveLinkHandler;
     private final Map<String, ViewTreePanel> viewPanels = new HashMap<>();
+    private List<ViewDefinition> views = List.of();
     private final Set<Path> pending = new HashSet<>();
     private Set<Path> desiredExpanded = new HashSet<>();
     private Path desiredSelection;
 
-    VaultTreePanel(FileEditorManagerImpl editors, ViewTreePanel.DropHandler dropHandler) {
+    VaultTreePanel(FileEditorManagerImpl editors, ViewTreePanel.DropHandler dropHandler,
+                   NewNoteHandler newNoteHandler, CloneLinkHandler cloneLinkHandler,
+                   MoveLinkHandler moveLinkHandler) {
         super(new BorderLayout());
         this.editors = editors;
         this.dropHandler = dropHandler;
+        this.newNoteHandler = newNoteHandler;
+        this.cloneLinkHandler = cloneLinkHandler;
+        this.moveLinkHandler = moveLinkHandler;
         setLayout(cards);
         JLabel empty = new JLabel(Messages.get("vault.empty"), SwingConstants.CENTER);
         empty.setBorder(new EmptyBorder(16, 16, 16, 16));
@@ -87,6 +112,7 @@ final class VaultTreePanel extends JPanel {
                 }
             }
         });
+        TreePopupSupport.install(tree, this::physicalPopup);
         tree.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "mcs.openVaultNote");
         tree.getActionMap().put("mcs.openVaultNote", new AbstractAction() {
             @Override
@@ -111,9 +137,11 @@ final class VaultTreePanel extends JPanel {
         if (normalized == null) {
             desiredExpanded = Set.of();
             desiredSelection = null;
+            views = List.of();
             cards.show(this, EMPTY);
             return;
         }
+        views = snapshot.views();
         updateViews(normalized, snapshot);
         desiredExpanded.add(normalized);
         expand(normalized);
@@ -149,6 +177,17 @@ final class VaultTreePanel extends JPanel {
             tabs.addTab(Messages.get("vault.view.errors", snapshot.viewErrors().size()), scroll);
         }
         restoreSelectedTab(selectedId);
+    }
+
+    void selectView(String id) {
+        for (int i = 1; i < tabs.getTabCount(); i++) {
+            if (tabs.getComponentAt(i) instanceof ViewTreePanel panel
+                    && panel.tree().getModel() instanceof ViewTreeModel viewModel
+                    && viewModel.view() != null && viewModel.view().id().equals(id)) {
+                tabs.setSelectedIndex(i);
+                return;
+            }
+        }
     }
 
     private String selectedViewId() {
@@ -273,6 +312,60 @@ final class VaultTreePanel extends JPanel {
             return value;
         }
         return null;
+    }
+
+    JPopupMenu physicalPopup(TreePath path) {
+        VaultTreeModel.Node value = physicalValue(path);
+        if (value == null) {
+            return null;
+        }
+        JPopupMenu popup = new JPopupMenu();
+        if (!value.directory()) {
+            JMenuItem open = new JMenuItem(Messages.get("vault.note.open"));
+            open.addActionListener(e -> editors.openFile(value.file()));
+            popup.add(open);
+            popup.addSeparator();
+            String file = VaultPaths.relativePath(model.vault(), value.file());
+            popup.add(clonePhysicalAction(file));
+            popup.add(movePhysicalAction(file));
+            popup.addSeparator();
+        }
+        JMenuItem create = new JMenuItem(Messages.get("vault.newNote"));
+        Path directory = value.directory() ? value.file() : value.file().getParent();
+        create.addActionListener(e -> newNoteHandler.newNote(directory));
+        popup.add(create);
+        return popup;
+    }
+
+    private JMenuItem clonePhysicalAction(String file) {
+        JMenuItem action = new JMenuItem(Messages.get("vault.link.clone"));
+        action.addActionListener(e -> PhysicalLinkTargetChooser.choose(SwingUtilities.getWindowAncestor(this), views, file)
+                .ifPresent(target -> cloneLinkHandler.cloneLink(file, target.viewId(),
+                        target.newViewName(), target.targetPath())));
+        return action;
+    }
+
+    private JMenuItem movePhysicalAction(String file) {
+        JMenuItem action = new JMenuItem(Messages.get("vault.link.move"));
+        List<PhysicalLinkSources.Source> sources = PhysicalLinkSources.find(views, file);
+        action.setEnabled(!sources.isEmpty());
+        action.addActionListener(e -> {
+            Optional<PhysicalLinkSources.Source> selected = PhysicalLinkSources.choose(
+                    SwingUtilities.getWindowAncestor(this), sources);
+            selected.ifPresent(source -> PhysicalLinkTargetChooser.chooseMove(SwingUtilities.getWindowAncestor(this),
+                            views, source)
+                    .ifPresent(target -> moveLinkHandler.moveLink(file, source.view().id(), source.path(),
+                            target.viewId(), target.newViewName(), target.targetPath())));
+        });
+        return action;
+    }
+
+    Path newNoteDirectory() {
+        VaultTreeModel.Node value = physicalValue(tree.getSelectionPath());
+        if (value == null) {
+            return model.vault();
+        }
+        return value.directory() ? value.file() : value.file().getParent();
     }
 
     private void openSelected() {

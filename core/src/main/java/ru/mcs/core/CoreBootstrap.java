@@ -70,6 +70,7 @@ public final class CoreBootstrap {
         );
         PluginManager pm = s.newPluginManager(home);
         PluginRestartController restarter = new PluginRestartController(frame, args);
+        s.generalSettings.onRestartRequired(restarter::markRequired);
         s.configurables.register(new PluginsConfigurableProvider(pm, s.plugins,
                 new PluginInstaller(HomeDirs.pluginsDir(home)), restarter::markRequired));
         SettingsActions.register(s.actions, frame, s.configurables, s.state::saveChanged, restarter::promptIfNeeded);
