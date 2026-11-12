@@ -2,6 +2,7 @@ package ru.mcs.core.vault;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -49,7 +50,7 @@ public final class VaultController implements AutoCloseable {
         this.vaultState = vaultState;
         this.statusBar = statusBar;
         this.notifications = notifications;
-        this.treePanel = new VaultTreePanel(editors);
+        this.treePanel = new VaultTreePanel(editors, this::moveOrClone);
 
         toolWindows.register("core", ToolWindowSpec.of("core.vault", Messages.get("vault.title"),
                         ToolWindowAnchor.LEFT, () -> treePanel)
@@ -84,7 +85,7 @@ public final class VaultController implements AutoCloseable {
         new SwingWorker<VaultService, Void>() {
             @Override
             protected VaultService doInBackground() throws Exception {
-                return VaultService.open(normalized, notes -> notesChanged(normalized, notes));
+                return VaultService.open(normalized, snapshot -> snapshotChanged(normalized, snapshot));
             }
 
             @Override
@@ -132,11 +133,11 @@ public final class VaultController implements AutoCloseable {
         }
         vaultState.setVault(opened.root());
         state.changeVaultDirectory(VaultPaths.stateDir(opened.root()));
-        treePanel.setVault(opened.root(), opened.notes());
+        treePanel.setVault(opened.root(), opened.snapshot());
         frame.setTitle(Messages.get("vault.window.title", displayName(opened.root())));
         restoreSession();
         state.saveChanged();
-        statusBar.setMessage(Messages.get("vault.status", opened.notes().size()));
+        updateStatus(opened.snapshot());
     }
 
     private void restoreSession() {
@@ -144,14 +145,50 @@ public final class VaultController implements AutoCloseable {
         sessionStore.activate(editors::currentSession);
     }
 
-    private void notesChanged(Path root, List<VaultNote> notes) {
+    private void snapshotChanged(Path root, VaultSnapshot snapshot) {
         javax.swing.SwingUtilities.invokeLater(() -> {
             if (current == null || !current.root().equals(VaultPaths.normalize(root))) {
                 return;
             }
-            treePanel.setVault(current.root(), notes);
-            statusBar.setMessage(Messages.get("vault.status", notes.size()));
+            treePanel.setVault(current.root(), snapshot);
+            updateStatus(snapshot);
         });
+    }
+
+    private void updateStatus(VaultSnapshot snapshot) {
+        if (snapshot.viewErrors().isEmpty()) {
+            statusBar.setMessage(Messages.get("vault.status.views", snapshot.notes().size(), snapshot.views().size()));
+        } else {
+            statusBar.setMessage(Messages.get("vault.status.viewErrors", snapshot.notes().size(),
+                    snapshot.views().size(), snapshot.viewErrors().size()));
+        }
+    }
+
+    private CompletableFuture<Boolean> moveOrClone(String viewId, List<Integer> sourcePath, String sourceFile,
+                                                    List<Integer> targetPath, boolean clone) {
+        VaultService service = current;
+        if (service == null) {
+            return CompletableFuture.completedFuture(false);
+        }
+        CompletableFuture<Boolean> result = service.moveOrClone(viewId, sourcePath, sourceFile, targetPath, clone);
+        result.whenComplete((changed, error) -> javax.swing.SwingUtilities.invokeLater(() -> {
+            if (current != service) {
+                return;
+            }
+            if (error != null) {
+                Throwable cause = error instanceof java.util.concurrent.CompletionException
+                        && error.getCause() != null ? error.getCause() : error;
+                String detail = cause.getMessage() == null ? cause.toString() : cause.getMessage();
+                notifications.notify("core", Messages.get("vault.drop.error.title"),
+                        Messages.get("vault.drop.error", detail), NotificationType.ERROR);
+                statusBar.setMessage(Messages.get("vault.drop.error", detail));
+            } else if (!changed) {
+                statusBar.setMessage(Messages.get("vault.drop.rejected"));
+            } else {
+                statusBar.setMessage(Messages.get(clone ? "vault.drop.cloned" : "vault.drop.moved"));
+            }
+        }));
+        return result;
     }
 
     private void openFailed(Path root, Exception error, boolean interactive) {

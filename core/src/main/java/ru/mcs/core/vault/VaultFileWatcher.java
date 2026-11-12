@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Рекурсивный WatchService. События лишь сообщают путь; чтение файлов и SQLite выполняет VaultService. */
+/** Рекурсивный WatchService для Markdown и отдельное наблюдение за {@code .manuscriptium/views}. */
 final class VaultFileWatcher implements AutoCloseable {
 
     interface Listener {
@@ -38,7 +38,21 @@ final class VaultFileWatcher implements AutoCloseable {
         this.root = VaultPaths.normalize(root);
         this.listener = listener;
         this.service = root.getFileSystem().newWatchService();
-        registerTree(this.root);
+        try {
+            registerTree(this.root);
+            // Остальные служебные данные не индексируются, но создание views внутри metadata должно быть видно.
+            Path metadata = VaultPaths.metadataDir(this.root);
+            if (Files.isDirectory(metadata, LinkOption.NOFOLLOW_LINKS)) {
+                register(metadata);
+            }
+            Path views = VaultPaths.viewsDir(this.root);
+            if (Files.isDirectory(views, LinkOption.NOFOLLOW_LINKS)) {
+                register(views);
+            }
+        } catch (IOException | RuntimeException e) {
+            service.close();
+            throw e;
+        }
         thread = new Thread(this::run, "mcs-vault-watcher");
         thread.setDaemon(true);
         thread.start();
@@ -97,13 +111,20 @@ final class VaultFileWatcher implements AutoCloseable {
                     continue;
                 }
                 Path changed = directory.resolve(name).normalize();
-                if (VaultPaths.isExcluded(root, changed)) {
+                boolean viewsDirectory = changed.equals(VaultPaths.viewsDir(root));
+                boolean viewFile = changed.getParent() != null
+                        && changed.getParent().equals(VaultPaths.viewsDir(root));
+                if (VaultPaths.isExcluded(root, changed) && !viewsDirectory && !viewFile) {
                     continue;
                 }
                 if (event.kind() == StandardWatchEventKinds.ENTRY_CREATE
                         && Files.isDirectory(changed, LinkOption.NOFOLLOW_LINKS)) {
                     try {
-                        registerTree(changed);
+                        if (viewsDirectory) {
+                            register(changed);
+                        } else {
+                            registerTree(changed);
+                        }
                     } catch (IOException e) {
                         LOG.log(System.Logger.Level.WARNING, "Cannot watch new directory: " + changed, e);
                     }

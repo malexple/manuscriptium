@@ -24,6 +24,10 @@ public final class VaultPaths {
         return metadataDir(root).resolve("state");
     }
 
+    public static Path viewsDir(Path root) {
+        return metadataDir(root).resolve("views");
+    }
+
     public static Path databaseFile(Path root) {
         return metadataDir(root).resolve("index.db");
     }

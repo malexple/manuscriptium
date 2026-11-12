@@ -6,20 +6,25 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.file.Path;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import javax.swing.AbstractAction;
-import javax.swing.ActionMap;
-import javax.swing.InputMap;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreePath;
@@ -27,30 +32,53 @@ import ru.mcs.core.editor.FileEditorManagerImpl;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 
-/** Панель Vault: двойной щелчок или Enter открывает Markdown в существующей Editor area. */
+/** Панель Vault: ленивое физическое дерево, вкладки виртуальных views и неблокирующие ошибки YAML. */
 final class VaultTreePanel extends JPanel {
 
     private static final String EMPTY = "empty";
-    private static final String TREE = "tree";
+    private static final String TABS = "tabs";
+    private static final System.Logger LOG = System.getLogger(VaultTreePanel.class.getName());
 
     private final CardLayout cards = new CardLayout();
     private final VaultTreeModel model = new VaultTreeModel();
     private final JTree tree = new JTree(model);
+    private final JScrollPane physicalScroll = new JScrollPane(tree);
+    private final JTabbedPane tabs = new JTabbedPane();
     private final FileEditorManagerImpl editors;
+    private final ViewTreePanel.DropHandler dropHandler;
+    private final Map<String, ViewTreePanel> viewPanels = new HashMap<>();
+    private final Set<Path> pending = new HashSet<>();
+    private Set<Path> desiredExpanded = new HashSet<>();
+    private Path desiredSelection;
 
-    VaultTreePanel(FileEditorManagerImpl editors) {
+    VaultTreePanel(FileEditorManagerImpl editors, ViewTreePanel.DropHandler dropHandler) {
         super(new BorderLayout());
         this.editors = editors;
+        this.dropHandler = dropHandler;
         setLayout(cards);
         JLabel empty = new JLabel(Messages.get("vault.empty"), SwingConstants.CENTER);
         empty.setBorder(new EmptyBorder(16, 16, 16, 16));
         add(empty, EMPTY);
-        add(new JScrollPane(tree), TREE);
+        tabs.addTab(Messages.get("vault.files"), physicalScroll);
+        add(tabs, TABS);
         cards.show(this, EMPTY);
 
         tree.setRootVisible(true);
         tree.setShowsRootHandles(true);
-        tree.setCellRenderer(new Renderer());
+        tree.setCellRenderer(new PhysicalRenderer());
+        tree.addTreeWillExpandListener(new TreeWillExpandListener() {
+            @Override
+            public void treeWillExpand(javax.swing.event.TreeExpansionEvent event) {
+                if (event.getPath().getLastPathComponent() instanceof DefaultMutableTreeNode node) {
+                    loadChildren(node);
+                }
+            }
+
+            @Override
+            public void treeWillCollapse(javax.swing.event.TreeExpansionEvent event) {
+                // Свёрнутые дети остаются материализованными до следующего снимка.
+            }
+        });
         tree.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -59,10 +87,8 @@ final class VaultTreePanel extends JPanel {
                 }
             }
         });
-        InputMap input = tree.getInputMap();
-        ActionMap actions = tree.getActionMap();
-        input.put(KeyStroke.getKeyStroke("ENTER"), "mcs.openVaultNote");
-        actions.put("mcs.openVaultNote", new AbstractAction() {
+        tree.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "mcs.openVaultNote");
+        tree.getActionMap().put("mcs.openVaultNote", new AbstractAction() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 openSelected();
@@ -70,22 +96,139 @@ final class VaultTreePanel extends JPanel {
         });
     }
 
-    void setVault(Path root, List<VaultNote> notes) {
-        Set<Path> expanded = expandedFiles();
-        Path selected = selectedFile();
-        model.setVault(root, notes);
-        if (root == null) {
+    void setVault(Path root, VaultSnapshot snapshot) {
+        Path normalized = root == null ? null : VaultPaths.normalize(root);
+        if (normalized == null || !normalized.equals(model.vault())) {
+            desiredExpanded = new HashSet<>();
+            desiredSelection = null;
+        } else {
+            desiredExpanded = expandedFiles();
+            Path selected = selectedFile();
+            desiredSelection = selected;
+        }
+        model.setVault(normalized, snapshot.notes());
+        pending.clear();
+        if (normalized == null) {
+            desiredExpanded = Set.of();
+            desiredSelection = null;
             cards.show(this, EMPTY);
             return;
         }
-        expand(root);
-        for (Path file : expanded) {
-            expand(file);
+        updateViews(normalized, snapshot);
+        desiredExpanded.add(normalized);
+        expand(normalized);
+        cards.show(this, TABS);
+    }
+
+    private void updateViews(Path root, VaultSnapshot snapshot) {
+        String selectedId = selectedViewId();
+        for (int i = tabs.getTabCount() - 1; i >= 1; i--) {
+            tabs.removeTabAt(i);
         }
-        if (selected != null) {
-            select(selected);
+        Set<String> notePaths = new HashSet<>();
+        for (VaultNote note : snapshot.notes()) {
+            notePaths.add(note.path());
         }
-        cards.show(this, TREE);
+        Set<String> clonedFiles = ViewOperations.clonedFiles(snapshot.views());
+        Set<String> present = new HashSet<>();
+        for (ViewDefinition view : snapshot.views()) {
+            present.add(view.id());
+            ViewTreePanel panel = viewPanels.computeIfAbsent(view.id(), ignored -> new ViewTreePanel(editors, dropHandler));
+            panel.setView(root, view, notePaths, clonedFiles);
+            tabs.addTab(view.name(), panel);
+        }
+        viewPanels.keySet().retainAll(present);
+        if (!snapshot.viewErrors().isEmpty()) {
+            JTextArea errors = new JTextArea(String.join("\n\n", snapshot.viewErrors()));
+            errors.setEditable(false);
+            errors.setLineWrap(true);
+            errors.setWrapStyleWord(true);
+            errors.setBorder(new EmptyBorder(8, 8, 8, 8));
+            JScrollPane scroll = new JScrollPane(errors);
+            scroll.setName("view-errors");
+            tabs.addTab(Messages.get("vault.view.errors", snapshot.viewErrors().size()), scroll);
+        }
+        restoreSelectedTab(selectedId);
+    }
+
+    private String selectedViewId() {
+        java.awt.Component selected = tabs.getSelectedComponent();
+        if (selected instanceof ViewTreePanel panel && panel.tree().getModel() instanceof ViewTreeModel viewModel
+                && viewModel.view() != null) {
+            return viewModel.view().id();
+        }
+        if (selected instanceof JScrollPane scroll && "view-errors".equals(scroll.getName())) {
+            return "view-errors";
+        }
+        return null;
+    }
+
+    private void restoreSelectedTab(String selectedId) {
+        if (selectedId == null) {
+            tabs.setSelectedIndex(0);
+            return;
+        }
+        for (int i = 1; i < tabs.getTabCount(); i++) {
+            java.awt.Component component = tabs.getComponentAt(i);
+            if ("view-errors".equals(selectedId) && component instanceof JScrollPane scroll
+                    && "view-errors".equals(scroll.getName())) {
+                tabs.setSelectedIndex(i);
+                return;
+            }
+            if (component instanceof ViewTreePanel panel
+                    && panel.tree().getModel() instanceof ViewTreeModel viewModel
+                    && viewModel.view() != null && viewModel.view().id().equals(selectedId)) {
+                tabs.setSelectedIndex(i);
+                return;
+            }
+        }
+        tabs.setSelectedIndex(0);
+    }
+
+    private void loadChildren(DefaultMutableTreeNode node) {
+        if (!(node.getUserObject() instanceof VaultTreeModel.Node value) || !value.directory()
+                || model.isLoaded(value.file()) || !pending.add(value.file())) {
+            return;
+        }
+        long generation = model.generation();
+        new SwingWorker<List<VaultTreeModel.Node>, Void>() {
+            @Override
+            protected List<VaultTreeModel.Node> doInBackground() {
+                return model.children(value.file(), generation);
+            }
+
+            @Override
+            protected void done() {
+                pending.remove(value.file());
+                try {
+                    if (!model.installChildren(value.file(), generation, get())) {
+                        return;
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                } catch (ExecutionException e) {
+                    LOG.log(System.Logger.Level.WARNING, "Cannot materialize vault tree: " + value.file(), e);
+                    return;
+                }
+                for (int i = 0; i < node.getChildCount(); i++) {
+                    DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
+                    if (child.getUserObject() instanceof VaultTreeModel.Node childValue
+                            && childValue.directory() && desiredExpanded.contains(childValue.file())) {
+                        expand(childValue.file());
+                    }
+                }
+                if (desiredSelection != null) {
+                    DefaultMutableTreeNode selected = model.findNode(desiredSelection);
+                    if (selected != null) {
+                        TreePath path = VaultTreeModel.path(selected);
+                        tree.setSelectionPath(path);
+                        tree.scrollPathToVisible(path);
+                        desiredSelection = null;
+                    }
+                }
+            }
+        }.execute();
     }
 
     private Set<Path> expandedFiles() {
@@ -94,7 +237,7 @@ final class VaultTreePanel extends JPanel {
         if (!(root instanceof DefaultMutableTreeNode node)) {
             return result;
         }
-        Enumeration<TreePath> paths = tree.getExpandedDescendants(new TreePath(node));
+        Enumeration<TreePath> paths = tree.getExpandedDescendants(VaultTreeModel.path(node));
         if (paths != null) {
             while (paths.hasMoreElements()) {
                 Path file = file(paths.nextElement());
@@ -107,28 +250,11 @@ final class VaultTreePanel extends JPanel {
     }
 
     private void expand(Path file) {
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-        Enumeration<?> nodes = root.depthFirstEnumeration();
-        while (nodes.hasMoreElements()) {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) nodes.nextElement();
-            if (node.getUserObject() instanceof VaultTreeModel.Node n && n.directory() && n.file().equals(file)) {
-                tree.expandPath(new TreePath(node.getPath()));
-                return;
-            }
-        }
-    }
-
-    private void select(Path file) {
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-        Enumeration<?> nodes = root.depthFirstEnumeration();
-        while (nodes.hasMoreElements()) {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) nodes.nextElement();
-            if (node.getUserObject() instanceof VaultTreeModel.Node n && n.file().equals(file)) {
-                TreePath path = new TreePath(node.getPath());
-                tree.setSelectionPath(path);
-                tree.scrollPathToVisible(path);
-                return;
-            }
+        DefaultMutableTreeNode node = model.findNode(file);
+        if (node != null) {
+            tree.expandPath(VaultTreeModel.path(node));
+            // JTree может автоматически раскрыть root при setRoot без TreeWillExpandEvent.
+            loadChildren(node);
         }
     }
 
@@ -137,33 +263,45 @@ final class VaultTreePanel extends JPanel {
     }
 
     private static Path file(TreePath path) {
-        if (path == null || !(path.getLastPathComponent() instanceof DefaultMutableTreeNode node)
-                || !(node.getUserObject() instanceof VaultTreeModel.Node value)) {
-            return null;
+        VaultTreeModel.Node value = physicalValue(path);
+        return value == null ? null : value.file();
+    }
+
+    private static VaultTreeModel.Node physicalValue(TreePath path) {
+        if (path != null && path.getLastPathComponent() instanceof DefaultMutableTreeNode node
+                && node.getUserObject() instanceof VaultTreeModel.Node value) {
+            return value;
         }
-        return value.file();
+        return null;
     }
 
     private void openSelected() {
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-        if (root.getUserObject() == null) {
-            return;
-        }
-        TreePath path = tree.getSelectionPath();
-        if (path != null && path.getLastPathComponent() instanceof DefaultMutableTreeNode node
-                && node.getUserObject() instanceof VaultTreeModel.Node value && !value.directory()) {
+        VaultTreeModel.Node value = physicalValue(tree.getSelectionPath());
+        if (value != null && !value.directory()) {
             editors.openFile(value.file());
         }
     }
 
-    private static final class Renderer extends DefaultTreeCellRenderer {
+    JTree physicalTree() {
+        return tree;
+    }
+
+    JTabbedPane tabs() {
+        return tabs;
+    }
+
+    private static final class PhysicalRenderer extends DefaultTreeCellRenderer {
         @Override
         public java.awt.Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected,
                                                               boolean expanded, boolean leaf, int row, boolean focus) {
             super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, focus);
-            if (value instanceof DefaultMutableTreeNode node
-                    && node.getUserObject() instanceof VaultTreeModel.Node n && !n.directory()) {
-                setIcon(Icons.lucide("scroll-text"));
+            if (value instanceof DefaultMutableTreeNode node) {
+                if (node.getUserObject() instanceof VaultTreeModel.Node n && !n.directory()) {
+                    setIcon(Icons.lucide("scroll-text"));
+                } else if (node.getUserObject() == null) {
+                    setText(Messages.get("vault.tree.loading"));
+                    setIcon(null);
+                }
             }
             return this;
         }
