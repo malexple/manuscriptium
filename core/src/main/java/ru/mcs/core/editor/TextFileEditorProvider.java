@@ -14,6 +14,20 @@ public final class TextFileEditorProvider implements FileEditorProvider {
 
     static final long MAX_BYTES = 5L * 1024 * 1024;
 
+    private final ObsidianNavigation navigation;
+
+    public TextFileEditorProvider() {
+        this.navigation = null;
+    }
+
+    public TextFileEditorProvider(ObsidianLinkNavigator navigation) {
+        this.navigation = navigation;
+    }
+
+    TextFileEditorProvider(ObsidianNavigation navigation) {
+        this.navigation = navigation;
+    }
+
     @Override
     public String getId() {
         return "core.text";
@@ -45,6 +59,6 @@ public final class TextFileEditorProvider implements FileEditorProvider {
         if (crlf) {
             text = text.replace("\r\n", "\n");
         }
-        return new TextFileEditor(file, text, crlf);
+        return new TextFileEditor(file, text, crlf, navigation);
     }
 }

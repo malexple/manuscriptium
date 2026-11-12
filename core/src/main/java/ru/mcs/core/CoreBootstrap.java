@@ -83,7 +83,7 @@ public final class CoreBootstrap {
                         ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications))
                 .withIcon(Icons.lucide("bell")));
         VaultController vaultController = new VaultController(frame, s.actions, s.toolWindows, s.editors,
-                s.sessionStore, s.state, s.vaultState, s.statusBar, s.notifications);
+                s.sessionStore, s.state, s.vaultState, s.statusBar, s.notifications, s.obsidianLinks);
 
         pm.setFailureListener((id, reason) -> s.notifications.notify("core",
                 Messages.get("plugin.failed.title", id), reason, NotificationType.ERROR));

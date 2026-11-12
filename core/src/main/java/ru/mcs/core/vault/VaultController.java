@@ -10,6 +10,7 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.editor.FileEditorManagerImpl;
+import ru.mcs.core.editor.ObsidianLinkNavigator;
 import ru.mcs.core.editor.SessionStore;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
@@ -36,6 +37,7 @@ public final class VaultController implements AutoCloseable {
     private final VaultState vaultState;
     private final StatusBarModel statusBar;
     private final NotificationManagerImpl notifications;
+    private final ObsidianLinkNavigator obsidianLinks;
     private final VaultTreePanel treePanel;
 
     private VaultService current;
@@ -44,7 +46,8 @@ public final class VaultController implements AutoCloseable {
 
     public VaultController(JFrame frame, ActionManagerImpl actions, ToolWindowManagerImpl toolWindows,
                            FileEditorManagerImpl editors, SessionStore sessionStore, StateManagerImpl state,
-                           VaultState vaultState, StatusBarModel statusBar, NotificationManagerImpl notifications) {
+                           VaultState vaultState, StatusBarModel statusBar, NotificationManagerImpl notifications,
+                           ObsidianLinkNavigator obsidianLinks) {
         this.frame = frame;
         this.actions = actions;
         this.editors = editors;
@@ -53,6 +56,8 @@ public final class VaultController implements AutoCloseable {
         this.vaultState = vaultState;
         this.statusBar = statusBar;
         this.notifications = notifications;
+        this.obsidianLinks = obsidianLinks;
+        this.obsidianLinks.setStatusHandler(statusBar::setMessage);
         this.treePanel = new VaultTreePanel(editors, this::moveOrClone, this::newMarkdown,
                 this::addLink, this::moveLink);
 
@@ -139,6 +144,7 @@ public final class VaultController implements AutoCloseable {
         }
         vaultState.setVault(opened.root());
         state.changeVaultDirectory(VaultPaths.stateDir(opened.root()));
+        obsidianLinks.setVault(opened.root(), opened.snapshot().notes());
         treePanel.setVault(opened.root(), opened.snapshot());
         frame.setTitle(Messages.get("vault.window.title", displayName(opened.root())));
         restoreSession();
@@ -156,6 +162,7 @@ public final class VaultController implements AutoCloseable {
             if (current == null || !current.root().equals(VaultPaths.normalize(root))) {
                 return;
             }
+            obsidianLinks.updateNotes(snapshot.notes());
             treePanel.setVault(current.root(), snapshot);
             updateStatus(snapshot);
         });
@@ -349,6 +356,7 @@ public final class VaultController implements AutoCloseable {
         if (current != null) {
             current.close();
             current = null;
+            obsidianLinks.clearVault();
             actions.updateActions();
         }
     }

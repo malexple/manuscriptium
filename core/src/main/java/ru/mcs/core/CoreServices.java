@@ -7,6 +7,7 @@ import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.bus.MessageBusImpl;
 import ru.mcs.core.editor.EditorEventsBridge;
 import ru.mcs.core.editor.FileEditorManagerImpl;
+import ru.mcs.core.editor.ObsidianLinkNavigator;
 import ru.mcs.core.editor.SessionStore;
 import ru.mcs.core.editor.TextFileEditorProvider;
 import ru.mcs.core.i18n.Messages;
@@ -50,6 +51,7 @@ final class CoreServices {
     final ActionManagerImpl actions = new ActionManagerImpl();
     final ToolWindowManagerImpl toolWindows;
     final FileEditorManagerImpl editors = new FileEditorManagerImpl();
+    final ObsidianLinkNavigator obsidianLinks = new ObsidianLinkNavigator(editors);
     final MessageBusImpl bus = new MessageBusImpl();
     final StatusBarModel statusBar = new StatusBarModel();
     final NotificationManagerImpl notifications = new NotificationManagerImpl();
@@ -79,7 +81,7 @@ final class CoreServices {
 
         CoreActions.registerStandardGroups(actions);
         toolWindows = new ToolWindowManagerImpl(actions, layout);
-        editors.registerProvider(new TextFileEditorProvider());
+        editors.registerProvider(new TextFileEditorProvider(obsidianLinks));
         EditorEventsBridge.install(editors, bus);
     }
 
