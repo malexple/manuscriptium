@@ -1,0 +1,16 @@
+id: ru.mcs.plugin.properties
+name: Properties
+version: 0.1.0
+sdk-version: "0.9"
+module: ru.mcs.plugin.properties
+depends-on: []
+permissions: []
+activation: onDemand
+i18n: ru/mcs/plugin/properties/messages
+
+contributions:
+  toolWindows:
+    - id: properties.panel
+      title: "%toolwindow.properties"
+      icon: /ru/mcs/plugin/properties/icons/sliders-horizontal.svg
+      anchor: right

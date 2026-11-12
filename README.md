@@ -108,3 +108,4 @@ Markdown-редактор подсвечивает `[[wikilinks]]`, `![[embed]]`
 - [Standalone-шаблон JAR-плагина](plugin-template/).
 - [Расширенный демо-плагин Hello](plugins/hello/).
 - Bundled-примеры tool windows и фоновой работы: [Заметки](plugins/notes/) и [Свойства](plugins/properties/).
+- Bundled-примеры tool windows и фоновой работы: [Заметки](plugins/notes/) и [Свойства](plugins/properties/).

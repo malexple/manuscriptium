@@ -1,0 +1,21 @@
+id: ru.mcs.plugin.notes
+name: Notes
+version: 0.1.0
+sdk-version: "0.9"
+module: ru.mcs.plugin.notes
+depends-on: []
+permissions: []
+activation: onDemand
+i18n: ru/mcs/plugin/notes/messages
+
+contributions:
+  actions:
+    - id: notes.copyWikiLink
+      text: "%action.copy"
+      icon: /ru/mcs/plugin/notes/icons/copy.svg
+      groups: [MainMenu.Tools, MainToolbar, EditorTabPopup]
+  toolWindows:
+    - id: notes.panel
+      title: "%toolwindow.notes"
+      icon: /ru/mcs/plugin/notes/icons/notebook-text.svg
+      anchor: left
