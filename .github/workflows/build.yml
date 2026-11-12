@@ -21,6 +21,9 @@ jobs:
       - name: Build and test
         run: ./gradlew build :app:devHome
         shell: bash
+      - name: Build standalone plugin template
+        run: ./gradlew -p plugin-template build
+        shell: bash
       - name: Build runtime image
         run: ./gradlew :app:jlink
         shell: bash
@@ -32,14 +35,17 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then EXE=$EXE.bat; fi
           "$EXE" --smoke --home=app/build/dev-home | tee smoke.log
           grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello\]" smoke.log
-      - name: Smoke test of the runtime image (external plugin via ModuleLayer)
+      - name: Smoke test of the runtime image (bundled Hello + external template JAR)
         shell: bash
         run: |
-          mkdir -p app/build/external-home/plugins app/build/empty-system-plugins
-          cp -R app/build/image/system-plugins/hello app/build/external-home/plugins/hello
-          JAVA=app/build/image/bin/java
-          if [ "$RUNNER_OS" = "Windows" ]; then JAVA=$JAVA.exe; fi
-          "$JAVA" -Dmanuscriptium.systemPlugins=app/build/empty-system-plugins \
-            -m ru.mcs.app/ru.mcs.app.ManuscriptiumApp \
-            --smoke --home=app/build/external-home | tee external-smoke.log
-          grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello\]" external-smoke.log
+          TEMPLATE_DIR=app/build/external-home/plugins/template
+          TEMPLATE_JAR=plugin-template/build/libs/manuscriptium-plugin-template-0.1.0.jar
+          mkdir -p "$TEMPLATE_DIR"
+          cp "$TEMPLATE_JAR" "$TEMPLATE_DIR/template.jar"
+          (cd "$TEMPLATE_DIR" && jar xf "$OLDPWD/$TEMPLATE_JAR" plugin.yml)
+          EXE=app/build/image/bin/manuscriptium
+          if [ "$RUNNER_OS" = "Windows" ]; then EXE=$EXE.bat; fi
+          "$EXE" --smoke --home=app/build/external-home | tee external-smoke.log
+          grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.hello, ru.mcs.plugin.template\]" external-smoke.log
+          grep -q "template.hello" external-smoke.log
+          grep -q "toolwindow.toggle.template.panel" external-smoke.log

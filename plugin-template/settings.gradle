@@ -1,0 +1,5 @@
+rootProject.name = 'manuscriptium-plugin-template'
+
+// Когда шаблон находится в репозитории Manuscriptium, SDK подключается напрямую из исходников.
+// После копирования шаблона измените путь на каталог с settings.gradle Manuscriptium.
+includeBuild('..')

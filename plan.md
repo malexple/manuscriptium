@@ -130,7 +130,7 @@ Settings → Plugins показывает метаданные, зависимо
 ### Фаза 3. Плагины (полный цикл)
 - [x] Граф зависимостей (`depends-on`), проверка `sdk-version`, ошибки загрузки в UI.
 - [x] Bundled-плагины в `system-plugins/`, внешние — `.manuscriptium/plugins/`.
-- [ ] Документация SDK и шаблон проекта плагина.
+- [x] Документация SDK и шаблон проекта плагина.
 
 Архитектура проверки плагинов: `PluginManager.loadAll()` отбрасывает повреждённые манифесты и некорректные либо
 несовместимые `sdk-version` до регистрации декларативных вкладов. `PluginOrdering` отклоняет duplicate ID, циклы и
@@ -145,6 +145,12 @@ Settings → Plugins показывает метаданные, зависимо
 `<home>/plugins/`; только там работают установка и pending-обновления. Для Gradle run и нестандартных launcher есть
 `manuscriptium.systemPlugins`, а `manuscriptium.home` заменяет dev-аргумент `--home`, чтобы абсолютный путь сборочной
 машины не попадал в launcher образа. SPI остаётся `0.9.0`.
+
+SDK задокументирован в `docs/plugin-sdk.md`: сборка, JPMS, манифест, lifecycle, вклады, i18n, иконки, контекст,
+состояние, зависимости и ограничения безопасности. `plugin-template/` — standalone Gradle-проект, подключающий
+`ru.mcs:spi` через composite build с `compileOnly` и собирающий один JAR с `plugin.yml` в корне. Шаблон демонстрирует
+`onDemand`, действие, tool window, SVG и ru/en. CI собирает шаблон и проверяет его как внешний плагин рядом с
+bundled Hello. Сетевой репозиторий по-прежнему не входит в этот этап.
 
 ### Фаза 4. Vault и иерархия
 - Vault: `.md` как источник истины; FileWatcher (WatchService); SQLite как кэш (пересобираемый); Lucene — позже в этой фазе.

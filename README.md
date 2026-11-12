@@ -13,3 +13,9 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 
 Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
 внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
+
+## Разработка плагинов
+
+- [Руководство по Plugin SDK 0.9](docs/plugin-sdk.md).
+- [Standalone-шаблон JAR-плагина](plugin-template/).
+- [Расширенный демо-плагин Hello](plugins/hello/).

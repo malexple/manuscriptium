@@ -1,0 +1,30 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'ru.mcs.plugin'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+dependencies {
+    // SDK предоставляется Manuscriptium во время выполнения и не упаковывается в плагин.
+    compileOnly 'ru.mcs:spi:0.1.0-SNAPSHOT'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.named('jar') {
+    archiveBaseName = 'manuscriptium-plugin-template'
+}

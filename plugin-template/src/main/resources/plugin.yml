@@ -1,0 +1,29 @@
+id: ru.mcs.plugin.template
+name: Manuscriptium Plugin Template
+version: 0.1.0
+sdk-version: "0.9"
+module: ru.mcs.plugin.template
+depends-on: []
+permissions: []
+activation: onDemand
+i18n: ru/mcs/plugin/template/messages
+
+contributions:
+  actionGroups:
+    - id: template.group
+      text: "%group.template"
+      popup: true
+      groups: [MainMenu.Tools]
+
+  actions:
+    - id: template.hello
+      text: "%action.hello"
+      icon: /ru/mcs/plugin/template/icons/sparkles.svg
+      groups: [template.group, MainToolbar]
+
+  toolWindows:
+    - id: template.panel
+      title: "%toolwindow.panel"
+      icon: /ru/mcs/plugin/template/icons/sparkles.svg
+      anchor: right
+      show-by-default: false
