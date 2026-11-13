@@ -29,7 +29,7 @@ class MarkdownFileEditorProviderTest {
         java.nio.file.Files.writeString(file, "# Heading");
         MarkdownEditorRegistry registry = new MarkdownEditorRegistry();
         MarkdownFileEditorProvider provider = new MarkdownFileEditorProvider(
-                new MarkdownEditorState(), registry, ru.mcs.spi.i18n.I18n.passthrough());
+                new MarkdownEditorState(), registry, ru.mcs.spi.i18n.I18n.passthrough(), new TestAtomicFileStore());
 
         MarkdownFileEditor editor = (MarkdownFileEditor) provider.createEditor(file);
         try {
@@ -44,6 +44,6 @@ class MarkdownFileEditorProviderTest {
 
     private MarkdownFileEditorProvider provider() {
         return new MarkdownFileEditorProvider(new MarkdownEditorState(), new MarkdownEditorRegistry(),
-                ru.mcs.spi.i18n.I18n.passthrough());
+                ru.mcs.spi.i18n.I18n.passthrough(), new TestAtomicFileStore());
     }
 }

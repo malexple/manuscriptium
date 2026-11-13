@@ -7,12 +7,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.JComponent;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import ru.mcs.core.vault.VaultPaths;
@@ -28,6 +31,8 @@ final class TextFileEditor implements FileEditor {
     private final ObsidianEditorSupport obsidian;
     private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
     private boolean modified;
+    private long editVersion;
+    private CompletableFuture<Void> saveInFlight;
 
     TextFileEditor(Path file, String text, boolean crlf) {
         this(file, text, crlf, null);
@@ -43,17 +48,17 @@ final class TextFileEditor implements FileEditor {
         area.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                setModified(true);
+                documentEdited();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                setModified(true);
+                documentEdited();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                setModified(true);
+                documentEdited();
             }
         });
         this.scroll = new JScrollPane(area);
@@ -129,20 +134,88 @@ final class TextFileEditor implements FileEditor {
 
     @Override
     public void save() throws IOException {
+        SaveSnapshot snapshot = saveSnapshot();
+        if (snapshot == null) {
+            return;
+        }
+        write(snapshot.text());
+        commitSave(snapshot.version());
+    }
+
+    @Override
+    public CompletableFuture<Void> saveAsync() {
+        if (saveInFlight != null && !saveInFlight.isDone()) {
+            return saveInFlight;
+        }
+        SaveSnapshot snapshot = saveSnapshot();
+        if (snapshot == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        saveInFlight = result;
+        new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                write(snapshot.text());
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
+                    commitSave(snapshot.version());
+                    result.complete(null);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    result.completeExceptionally(e);
+                } catch (ExecutionException e) {
+                    result.completeExceptionally(e.getCause() == null ? e : e.getCause());
+                } finally {
+                    if (saveInFlight == result) {
+                        saveInFlight = null;
+                    }
+                }
+            }
+        }.execute();
+        return result;
+    }
+
+    private SaveSnapshot saveSnapshot() {
+        if (!modified) {
+            return null;
+        }
         String text = area.getText();
         if (crlf) {
             text = text.replace("\n", "\r\n");
         }
+        return new SaveSnapshot(text, editVersion);
+    }
+
+    private void write(String text) throws IOException {
         Path parent = file.toAbsolutePath().getParent();
         Path tmp = parent.resolve(file.getFileName() + ".mcs-tmp");
         Files.writeString(tmp, text, StandardCharsets.UTF_8);
         Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-        setModified(false);
+    }
+
+    private void commitSave(long savedVersion) {
+        if (editVersion == savedVersion) {
+            setModified(false);
+        }
+    }
+
+    private record SaveSnapshot(String text, long version) {
     }
 
     @Override
     public void addModifiedListener(Runnable listener) {
         listeners.add(listener);
+    }
+
+    private void documentEdited() {
+        editVersion++;
+        setModified(true);
     }
 
     private void setModified(boolean value) {

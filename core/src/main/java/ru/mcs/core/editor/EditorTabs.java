@@ -138,7 +138,7 @@ public final class EditorTabs extends JPanel {
             close.setFocusable(false);
             close.setToolTipText(Messages.get("tab.close.tooltip"));
             close.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
-            close.addActionListener(e -> manager.closeFile(file));
+            close.addActionListener(e -> manager.closeFileAsync(file));
             add(label);
             add(close);
 
@@ -149,7 +149,7 @@ public final class EditorTabs extends JPanel {
                     if (e.isPopupTrigger()) {
                         showPopup(e);
                     } else if (SwingUtilities.isMiddleMouseButton(e) && !pinned) {
-                        manager.closeFile(file);
+                        manager.closeFileAsync(file);
                     }
                 }
 

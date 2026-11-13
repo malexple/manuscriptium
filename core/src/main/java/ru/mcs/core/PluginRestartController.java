@@ -28,8 +28,8 @@ public final class PluginRestartController {
         }
         int answer = JOptionPane.showConfirmDialog(frame, Messages.get("plugins.restart.message"),
                 Messages.get("plugins.restart.title"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (answer == JOptionPane.YES_OPTION && !AppRestarter.restart(frame, args)) {
-            required.set(true);
+        if (answer == JOptionPane.YES_OPTION) {
+            AppRestarter.restart(frame, args);
         }
     }
 }

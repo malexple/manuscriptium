@@ -184,17 +184,19 @@ final class PropertiesPanel extends JPanel {
         generation++;
         statusLabel.setText(ctx.i18n().get("properties.saving"));
         updateEnabled();
-        try {
-            // Текущий SPI не открывает Document: сначала сохраняем живой редактор на EDT.
-            ctx.editors().saveAll();
-        } catch (IOException e) {
-            applying = false;
-            busy = false;
-            showError(e);
-            updateEnabled();
-            return;
-        }
+        ctx.editors().saveAllAsync().whenComplete((ignored, error) -> {
+            if (error != null) {
+                applying = false;
+                busy = false;
+                showError(error.getCause() == null ? error : error.getCause());
+                updateEnabled();
+                return;
+            }
+            writeFrontMatter(expected, values);
+        });
+    }
 
+    private void writeFrontMatter(Path expected, FrontMatter.Values values) {
         new SwingWorker<Boolean, Void>() {
             @Override
             protected Boolean doInBackground() throws Exception {

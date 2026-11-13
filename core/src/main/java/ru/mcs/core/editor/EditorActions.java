@@ -62,11 +62,11 @@ public final class EditorActions {
 
             @Override
             public void actionPerformed(AnActionEvent e) {
-                try {
-                    em.saveAll();
-                } catch (IOException ex) {
-                    showError(frame, ex);
-                }
+                em.saveAllAsync().whenComplete((ignored, error) -> {
+                    if (error != null) {
+                        showError(frame, saveError(error));
+                    }
+                });
             }
         });
 
@@ -78,7 +78,7 @@ public final class EditorActions {
 
             @Override
             public void actionPerformed(AnActionEvent e) {
-                em.getSelectedFile().ifPresent(em::closeFile);
+                em.getSelectedFile().ifPresent(em::closeFileAsync);
             }
         });
 
@@ -115,11 +115,16 @@ public final class EditorActions {
     }
 
     private static void save(JFrame frame, FileEditor editor) {
-        try {
-            editor.save();
-        } catch (IOException ex) {
-            showError(frame, ex);
-        }
+        editor.saveAsync().whenComplete((ignored, error) -> {
+            if (error != null) {
+                showError(frame, saveError(error));
+            }
+        });
+    }
+
+    private static IOException saveError(Throwable error) {
+        Throwable cause = error.getCause() != null ? error.getCause() : error;
+        return cause instanceof IOException ? (IOException) cause : new IOException(cause);
     }
 
     private static void showError(JFrame frame, IOException ex) {

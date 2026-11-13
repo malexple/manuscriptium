@@ -10,6 +10,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -167,6 +169,11 @@ public final class FileEditorManagerImpl implements FileEditorManager {
             public void saveAll() throws IOException {
                 self.saveAll();
             }
+
+            @Override
+            public CompletableFuture<Void> saveAllAsync() {
+                return self.saveAllAsync();
+            }
         };
     }
 
@@ -245,6 +252,30 @@ public final class FileEditorManagerImpl implements FileEditorManager {
         return true;
     }
 
+    /** Асинхронный вариант для EDT: закрытие после SAVE ждёт фактического завершения записи. */
+    public CompletableFuture<Boolean> closeFileAsync(Path file) {
+        Entry e;
+        synchronized (this) {
+            e = find(normalize(file));
+            if (e == null) {
+                return CompletableFuture.completedFuture(true);
+            }
+            if (!e.editor.isModified()) {
+                return CompletableFuture.completedFuture(closeFile(file));
+            }
+        }
+        CloseDecision decision = confirmer.apply(e.editor);
+        return switch (decision) {
+            case CANCEL -> CompletableFuture.completedFuture(false);
+            case DISCARD -> CompletableFuture.completedFuture(closeFile(file));
+            case SAVE -> saveEntry(e).thenCompose(ignored -> closeFileAsync(file))
+                    .exceptionally(error -> {
+                        reportSaveFailure(e, error);
+                        return false;
+                    });
+        };
+    }
+
     /** Проверка перед выходом: для каждого изменённого редактора спрашиваем решение. */
     public synchronized boolean confirmAll() {
         for (Entry e : new ArrayList<>(entries)) {
@@ -253,6 +284,43 @@ public final class FileEditorManagerImpl implements FileEditorManager {
             }
         }
         return true;
+    }
+
+    /** Асинхронная проверка всех вкладок; последовательно ждёт выбранные пользователем сохранения. */
+    public CompletableFuture<Boolean> confirmAllAsync() {
+        List<Entry> snapshot;
+        synchronized (this) {
+            snapshot = new ArrayList<>(entries);
+        }
+        return confirmEntries(snapshot, 0);
+    }
+
+    private CompletableFuture<Boolean> confirmEntries(List<Entry> snapshot, int index) {
+        if (index >= snapshot.size()) {
+            return CompletableFuture.completedFuture(true);
+        }
+        Entry e = snapshot.get(index);
+        synchronized (this) {
+            if (!entries.contains(e) || !e.editor.isModified()) {
+                return confirmEntries(snapshot, index + 1);
+            }
+        }
+        return switch (confirmer.apply(e.editor)) {
+            case CANCEL -> CompletableFuture.completedFuture(false);
+            case DISCARD -> confirmEntries(snapshot, index + 1);
+            case SAVE -> saveEntry(e).thenCompose(ignored -> {
+                        synchronized (this) {
+                            if (entries.contains(e) && e.editor.isModified()) {
+                                return confirmEntries(snapshot, index);
+                            }
+                        }
+                        return confirmEntries(snapshot, index + 1);
+                    })
+                    .exceptionally(error -> {
+                        reportSaveFailure(e, error);
+                        return false;
+                    });
+        };
     }
 
     private boolean mayProceed(Entry e) {
@@ -281,6 +349,34 @@ public final class FileEditorManagerImpl implements FileEditorManager {
                 e.editor.save();
             }
         }
+    }
+
+    @Override
+    public CompletableFuture<Void> saveAllAsync() {
+        List<Entry> snapshot;
+        synchronized (this) {
+            snapshot = entries.stream().filter(e -> e.editor.isModified()).toList();
+        }
+        CompletableFuture<Void> result = CompletableFuture.completedFuture(null);
+        for (Entry e : snapshot) {
+            result = result.thenCompose(ignored -> saveEntry(e));
+        }
+        return result;
+    }
+
+    private CompletableFuture<Void> saveEntry(Entry e) {
+        try {
+            return e.editor.saveAsync();
+        } catch (RuntimeException error) {
+            return CompletableFuture.failedFuture(error);
+        }
+    }
+
+    private void reportSaveFailure(Entry e, Throwable error) {
+        Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+        IOException io = cause instanceof IOException ? (IOException) cause : new IOException(cause);
+        LOG.log(System.Logger.Level.WARNING, "Save failed: " + e.file, io);
+        errorReporter.accept(e.file, io);
     }
 
     public synchronized boolean hasModified() {

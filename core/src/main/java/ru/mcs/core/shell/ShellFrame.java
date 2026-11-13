@@ -54,9 +54,11 @@ public final class ShellFrame extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if (editors.confirmAll()) {
-                    System.exit(0);
-                }
+                editors.confirmAllAsync().thenAccept(confirmed -> {
+                    if (confirmed) {
+                        System.exit(0);
+                    }
+                });
             }
         });
 

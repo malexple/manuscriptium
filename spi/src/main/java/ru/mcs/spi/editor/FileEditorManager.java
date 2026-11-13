@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 public interface FileEditorManager {
 
@@ -29,4 +30,14 @@ public interface FileEditorManager {
     void setPinned(Path file, boolean pinned);
 
     void saveAll() throws IOException;
+
+    /** Сохраняет все изменённые редакторы; UI-реализации выполняют дисковый I/O вне EDT. */
+    default CompletableFuture<Void> saveAllAsync() {
+        try {
+            saveAll();
+            return CompletableFuture.completedFuture(null);
+        } catch (IOException | RuntimeException e) {
+            return CompletableFuture.failedFuture(e);
+        }
+    }
 }

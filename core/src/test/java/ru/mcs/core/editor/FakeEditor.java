@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import ru.mcs.spi.editor.FileEditor;
@@ -15,6 +16,7 @@ final class FakeEditor implements FileEditor {
     boolean failOnSave;
     int saves;
     boolean disposed;
+    CompletableFuture<Void> pendingAsyncSave;
     private final JPanel panel = new JPanel();
     private final List<Runnable> listeners = new ArrayList<>();
 
@@ -54,6 +56,17 @@ final class FakeEditor implements FileEditor {
         }
         saves++;
         setModified(false);
+    }
+
+    @Override
+    public CompletableFuture<Void> saveAsync() {
+        if (pendingAsyncSave == null) {
+            return FileEditor.super.saveAsync();
+        }
+        return pendingAsyncSave.thenRun(() -> {
+            saves++;
+            setModified(false);
+        });
     }
 
     @Override

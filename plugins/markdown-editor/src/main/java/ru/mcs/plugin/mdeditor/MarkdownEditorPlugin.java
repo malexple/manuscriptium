@@ -8,6 +8,7 @@ import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.action.AnAction;
 import ru.mcs.spi.action.AnActionEvent;
 import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
 import ru.mcs.spi.settings.Configurable;
 
@@ -19,10 +20,12 @@ public final class MarkdownEditorPlugin implements Plugin {
     private final MarkdownEditorState state = new MarkdownEditorState();
     private final MarkdownEditorRegistry registry = new MarkdownEditorRegistry();
     private PluginContext ctx;
+    private AtomicFileStore fileStore;
 
     @Override
     public void start(PluginContext context) {
         ctx = context;
+        fileStore = context.services().get(AtomicFileStore.class);
         ctx.state().register("editor", Scope.APPLICATION, state);
     }
 
@@ -50,7 +53,8 @@ public final class MarkdownEditorPlugin implements Plugin {
 
     @Override
     public FileEditorProvider createFileEditorProvider(String id) {
-        return "markdown.editor".equals(id) ? new MarkdownFileEditorProvider(state, registry, ctx.i18n()) : null;
+        return "markdown.editor".equals(id)
+                ? new MarkdownFileEditorProvider(state, registry, ctx.i18n(), fileStore) : null;
     }
 
     @Override

@@ -93,10 +93,20 @@ public final class VaultController implements AutoCloseable {
         if (busy || current != null && current.root().equals(normalized)) {
             return;
         }
-        if (!editors.confirmAll()) {
-            return;
-        }
         busy = true;
+        editors.confirmAllAsync().whenComplete((confirmed, error) -> {
+            if (error != null || !confirmed) {
+                if (error != null) {
+                    openFailed(normalized, error, interactive);
+                }
+                finishOpen();
+                return;
+            }
+            startOpen(normalized, interactive);
+        });
+    }
+
+    private void startOpen(Path normalized, boolean interactive) {
         statusBar.setMessage(Messages.get("vault.indexing", normalized));
         new SwingWorker<VaultService, Void>() {
             @Override
@@ -106,33 +116,46 @@ public final class VaultController implements AutoCloseable {
 
             @Override
             protected void done() {
-                VaultService opened = null;
+                VaultService opened;
                 try {
                     opened = get();
-                    if (!editors.confirmAll()) {
-                        opened.close();
-                        return;
-                    }
-                    switchVault(opened);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    if (opened != null) {
-                        opened.close();
-                    }
                     openFailed(normalized, e, interactive);
+                    finishOpen();
+                    return;
                 } catch (ExecutionException | RuntimeException e) {
-                    if (opened != null) {
-                        opened.close();
-                    }
                     openFailed(normalized, e, interactive);
-                } finally {
-                    busy = false;
-                    if (current == null) {
-                        restoreSession();
-                    }
+                    finishOpen();
+                    return;
                 }
+                editors.confirmAllAsync().whenComplete((confirmed, error) -> {
+                    if (error != null || !confirmed) {
+                        opened.close();
+                        if (error != null) {
+                            openFailed(normalized, error, interactive);
+                        }
+                        finishOpen();
+                        return;
+                    }
+                    try {
+                        switchVault(opened);
+                    } catch (RuntimeException e) {
+                        opened.close();
+                        openFailed(normalized, e, interactive);
+                    } finally {
+                        finishOpen();
+                    }
+                });
             }
         }.execute();
+    }
+
+    private void finishOpen() {
+        busy = false;
+        if (current == null) {
+            restoreSession();
+        }
     }
 
     private void switchVault(VaultService opened) {
@@ -301,7 +324,7 @@ public final class VaultController implements AutoCloseable {
                 Messages.get("vault.newNote.error.title"), JOptionPane.ERROR_MESSAGE);
     }
 
-    private void openFailed(Path root, Exception error, boolean interactive) {
+    private void openFailed(Path root, Throwable error, boolean interactive) {
         Throwable cause = error instanceof ExecutionException && error.getCause() != null ? error.getCause() : error;
         String detail = cause.getMessage() != null ? cause.getMessage() : cause.toString();
         notifications.notify("core", Messages.get("vault.open.error.title"),

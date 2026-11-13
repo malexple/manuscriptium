@@ -16,6 +16,7 @@ import ru.mcs.core.notification.NotificationManagerImpl;
 import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.core.plugin.PluginManager;
 import ru.mcs.core.plugin.PluginState;
+import ru.mcs.core.service.AtomicFileStoreImpl;
 import ru.mcs.core.service.ServiceRegistryImpl;
 import ru.mcs.core.settings.AppSettings;
 import ru.mcs.core.settings.AppearanceSettingsProvider;
@@ -31,6 +32,7 @@ import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.core.vault.VaultPaths;
 import ru.mcs.core.vault.VaultState;
 import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
 
 /**
@@ -72,6 +74,7 @@ final class CoreServices {
         generalSettings = new GeneralSettingsProvider(settings);
         configurables.register(generalSettings);
         configurables.register(new AppearanceSettingsProvider(themes));
+        services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);

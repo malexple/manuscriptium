@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -93,6 +94,26 @@ class FileEditorManagerImplTest {
         assertThat(em.closeFile(a)).isTrue();
         assertThat(provider.created.get(0).saves).isEqualTo(1);
         assertThat(provider.created.get(0).disposed).isTrue();
+        assertThat(names()).isEmpty();
+    }
+
+    @Test
+    void asyncCloseWaitsForSaveBeforeDisposingEditor() {
+        em.openFile(a);
+        FakeEditor editor = provider.created.get(0);
+        editor.setModified(true);
+        editor.pendingAsyncSave = new CompletableFuture<>();
+        em.setCloseConfirmer(e -> FileEditorManagerImpl.CloseDecision.SAVE);
+
+        CompletableFuture<Boolean> closing = em.closeFileAsync(a);
+
+        assertThat(closing).isNotDone();
+        assertThat(names()).containsExactly("a.txt");
+        assertThat(editor.disposed).isFalse();
+        editor.pendingAsyncSave.complete(null);
+        assertThat(closing.join()).isTrue();
+        assertThat(editor.saves).isEqualTo(1);
+        assertThat(editor.disposed).isTrue();
         assertThat(names()).isEmpty();
     }
 

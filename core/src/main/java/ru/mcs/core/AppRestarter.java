@@ -19,22 +19,25 @@ public final class AppRestarter {
     private AppRestarter() {
     }
 
-    /** @return false, если пользователь отменил закрытие или новый процесс не удалось запустить. */
-    public static boolean restart(ShellFrame frame, String[] args) {
-        if (!frame.editors().confirmAll()) {
-            return false;
-        }
+    /** Ждёт выбранные пользователем сохранения и только затем запускает новый процесс. */
+    public static void restart(ShellFrame frame, String[] args) {
+        frame.editors().confirmAllAsync().thenAccept(confirmed -> {
+            if (confirmed) {
+                launch(frame, args);
+            }
+        });
+    }
+
+    private static void launch(ShellFrame frame, String[] args) {
         try {
             List<String> command = command(System.getProperties(),
                     ManagementFactory.getRuntimeMXBean().getInputArguments(), args,
                     System.getProperty("os.name", ""));
             new ProcessBuilder(command).inheritIO().start();
             System.exit(0);
-            return true;
         } catch (IOException | RuntimeException e) {
             JOptionPane.showMessageDialog(frame, Messages.get("plugins.restart.error", e.toString()),
                     Messages.get("plugins.restart.title"), JOptionPane.ERROR_MESSAGE);
-            return false;
         }
     }
 

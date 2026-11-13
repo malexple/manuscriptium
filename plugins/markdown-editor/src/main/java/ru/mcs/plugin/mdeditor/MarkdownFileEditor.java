@@ -3,14 +3,13 @@ package ru.mcs.plugin.mdeditor;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Font;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import javax.swing.ButtonGroup;
 import javax.swing.JComponent;
@@ -21,11 +20,19 @@ import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingWorker;
 import ru.mcs.plugin.mdeditor.mode.EditorMode;
+import ru.mcs.plugin.mdeditor.model.DocumentListener;
+import ru.mcs.plugin.mdeditor.model.DocumentModel;
+import ru.mcs.plugin.mdeditor.model.DocumentModel.SavePoint;
+import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
+import ru.mcs.plugin.mdeditor.model.DocumentProperties;
+import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec;
+import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec.DecodedDocument;
 import ru.mcs.plugin.mdeditor.view.EditorCanvas;
 import ru.mcs.spi.editor.FileEditor;
 import ru.mcs.spi.i18n.I18n;
+import ru.mcs.spi.service.AtomicFileStore;
 
-/** Одна Markdown-вкладка. E0: Source доступен только для чтения, Canvas — каркас без редактирования. */
+/** Одна Markdown-вкладка. В E1 Source — read-only проекция DocumentModel до появления ввода в E2. */
 final class MarkdownFileEditor implements FileEditor {
 
     private static final String CANVAS_CARD = "canvas";
@@ -34,6 +41,7 @@ final class MarkdownFileEditor implements FileEditor {
     private final Path file;
     private final MarkdownEditorRegistry registry;
     private final I18n i18n;
+    private final AtomicFileStore fileStore;
     private final JPanel root = new JPanel(new BorderLayout());
     private final CardLayout cards = new CardLayout();
     private final JPanel content = new JPanel(cards);
@@ -41,16 +49,23 @@ final class MarkdownFileEditor implements FileEditor {
     private final JTextArea source = new JTextArea();
     private final JToggleButton canvasButton;
     private final JToggleButton sourceButton;
-    private final SwingWorker<String, Void> loader;
+    private final SwingWorker<DecodedDocument, Void> loader;
+    private final List<Runnable> modifiedListeners = new CopyOnWriteArrayList<>();
+    private final DocumentListener documentListener = change -> documentChanged();
 
     private volatile boolean loading = true;
     private volatile boolean disposed;
     private EditorMode mode;
+    private DocumentModel document;
+    private boolean modified;
+    private CompletableFuture<Void> saveInFlight;
 
-    MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n) {
+    MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
+                       AtomicFileStore fileStore) {
         this.file = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
         this.registry = registry;
         this.i18n = i18n;
+        this.fileStore = Objects.requireNonNull(fileStore, "fileStore");
 
         source.setName("markdown.editor.source");
         source.setEditable(false);
@@ -88,20 +103,11 @@ final class MarkdownFileEditor implements FileEditor {
         return button;
     }
 
-    private SwingWorker<String, Void> createLoader() {
+    private SwingWorker<DecodedDocument, Void> createLoader() {
         return new SwingWorker<>() {
             @Override
-            protected String doInBackground() throws Exception {
-                byte[] bytes = Files.readAllBytes(file);
-                try {
-                    return StandardCharsets.UTF_8.newDecoder()
-                            .onMalformedInput(CodingErrorAction.REPORT)
-                            .onUnmappableCharacter(CodingErrorAction.REPORT)
-                            .decode(ByteBuffer.wrap(bytes))
-                            .toString();
-                } catch (CharacterCodingException e) {
-                    throw new IllegalArgumentException("File is not valid UTF-8", e);
-                }
+            protected DecodedDocument doInBackground() throws Exception {
+                return MarkdownDocumentCodec.decode(fileStore.read(file));
             }
 
             @Override
@@ -111,7 +117,10 @@ final class MarkdownFileEditor implements FileEditor {
                     return;
                 }
                 try {
-                    source.setText(get());
+                    DecodedDocument loaded = get();
+                    document = new DocumentModelImpl(loaded.text(), loaded.properties());
+                    document.addListener(documentListener);
+                    syncSource();
                     source.setCaretPosition(0);
                     canvas.setStatus(i18n.get("canvas.ready"));
                 } catch (InterruptedException e) {
@@ -138,6 +147,9 @@ final class MarkdownFileEditor implements FileEditor {
         }
         mode = Objects.requireNonNull(newMode, "mode");
         boolean sourceMode = mode == EditorMode.SOURCE;
+        if (sourceMode) {
+            syncSource();
+        }
         cards.show(content, sourceMode ? SOURCE_CARD : CANVAS_CARD);
         sourceButton.setSelected(sourceMode);
         canvasButton.setSelected(!sourceMode);
@@ -160,8 +172,37 @@ final class MarkdownFileEditor implements FileEditor {
         return source.getText();
     }
 
+    DocumentModel document() {
+        return document;
+    }
+
     boolean isLoaded() {
         return !loading;
+    }
+
+    private void syncSource() {
+        if (document != null) {
+            int caret = source.getCaretPosition();
+            source.setText(document.text().toString());
+            source.setCaretPosition(Math.min(caret, source.getDocument().getLength()));
+        }
+    }
+
+    private void documentChanged() {
+        if (mode == EditorMode.SOURCE) {
+            syncSource();
+        }
+        updateModified();
+    }
+
+    private void updateModified() {
+        boolean value = document != null && document.isModified();
+        if (modified != value) {
+            modified = value;
+            for (Runnable listener : modifiedListeners) {
+                listener.run();
+            }
+        }
     }
 
     @Override
@@ -182,17 +223,90 @@ final class MarkdownFileEditor implements FileEditor {
 
     @Override
     public boolean isModified() {
-        return false;
+        return modified;
     }
 
     @Override
-    public void save() {
-        // E0 не изменяет документ; редактирование и атомарное сохранение появляются вместе с TextBuffer в E1.
+    public void save() throws IOException {
+        SaveSnapshot snapshot = saveSnapshot();
+        if (snapshot == null) {
+            return;
+        }
+        write(snapshot);
+        commitSave(snapshot);
+    }
+
+    @Override
+    public CompletableFuture<Void> saveAsync() {
+        if (saveInFlight != null && !saveInFlight.isDone()) {
+            return saveInFlight;
+        }
+        SaveSnapshot snapshot = saveSnapshot();
+        if (snapshot == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        saveInFlight = result;
+        new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                write(snapshot);
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
+                    if (!disposed) {
+                        commitSave(snapshot);
+                    }
+                    result.complete(null);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    result.completeExceptionally(e);
+                } catch (ExecutionException | CancellationException e) {
+                    Throwable cause = e instanceof ExecutionException && e.getCause() != null ? e.getCause() : e;
+                    result.completeExceptionally(cause);
+                } finally {
+                    if (saveInFlight == result) {
+                        saveInFlight = null;
+                    }
+                }
+            }
+        }.execute();
+        return result;
+    }
+
+    private SaveSnapshot saveSnapshot() {
+        DocumentModel current = document;
+        if (current == null || !current.isModified()) {
+            return null;
+        }
+        return new SaveSnapshot(current, current.text().toString(), current.properties(), current.savePoint());
+    }
+
+    private void write(SaveSnapshot snapshot) throws IOException {
+        if (snapshot.properties().mixedLineEndings()) {
+            throw new IOException(i18n.get("save.error.mixedEol"));
+        }
+        fileStore.write(file, MarkdownDocumentCodec.encode(snapshot.text(), snapshot.properties()));
+    }
+
+    private void commitSave(SaveSnapshot snapshot) {
+        if (document == snapshot.document()) {
+            document.markSaved(snapshot.savePoint());
+            updateModified();
+        }
+    }
+
+    private record SaveSnapshot(DocumentModel document, String text, DocumentProperties properties,
+                                SavePoint savePoint) {
     }
 
     @Override
     public void addModifiedListener(Runnable listener) {
-        Objects.requireNonNull(listener, "listener");
+        modifiedListeners.add(Objects.requireNonNull(listener, "listener"));
     }
 
     @Override
@@ -202,6 +316,10 @@ final class MarkdownFileEditor implements FileEditor {
         }
         disposed = true;
         loader.cancel(true);
+        if (document != null) {
+            document.removeListener(documentListener);
+        }
+        modifiedListeners.clear();
         registry.remove(this);
         root.removeAll();
     }
