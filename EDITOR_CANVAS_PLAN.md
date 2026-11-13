@@ -145,6 +145,15 @@ public record RenderedBlock(java.awt.image.BufferedImage image, String altText) 
 - Чек-лист: каретка и выделение мышью/клавиатурой, двойной/тройной клик, `Home/End/PageUp/PageDown`, перенос по словам, скролл с инерцией, IME, буфер обмена (текст), `Ctrl+Z/Y`, drag выделения; пока весь текст как исходник.
 - DoD: по поведению не хуже `JTextArea` (чеклист ручной приёмки + тесты `hitTest`/`caretRect`), HiDPI корректен, Windows/Linux/macOS (учесть `Cmd` вместо `Ctrl`).
 
+**Принято в реализации E2:**
+- `JTextArea` удалён из Markdown Editor. Canvas и Source — два lightweight `EditorCanvas` над одной `DocumentModel`; оба редактируются и пока показывают исходный Markdown. Переключение режима не меняет ни текст, ни историю.
+- `DocumentLineIndex` инкрементально обновляет physical-line starts. `TextLayoutEngine` выполняет word wrap через `TextLayout` и после одиночной правки измеряет только затронутые физические строки; остальные visual lines переиспользуются. Рисуются только строки viewport, кадр имеет метрики `lastFrameNanos`/`paintedFrames`.
+- `DocumentListener.changed(List<DocumentChange>)` — default batch-расширение внутреннего контракта. Старые lambda-слушатели сохраняют поэлементное поведение; canvas обрабатывает одиночную правку инкрементально, а composite/grouped undo перестраивает layout один раз по итоговому тексту.
+- `InputController` — единая точка клавиатурных, mouse, clipboard и IME-правок через `DocumentModel.apply`. Backspace/Delete и навигация не разрывают Unicode code points. Clipboard нормализует CRLF/CR к модельному LF.
+- `KeyBindingResolver` использует системный menu shortcut для clipboard/undo (`Cmd` на macOS), word navigation на macOS — Option. Поддержаны shift-selection, Home/End/PageUp/PageDown, word navigation/deletion и Ctrl/Cmd+Z/Y.
+- `ImeSupport` реализует `InputMethodRequests`: committed text попадает в модель, composed text рисуется отдельным overlay и не изменяет документ до commit. Caret/selection рисуются собственными painters; wheel scrolling имеет короткую инерцию.
+- Автоматические проверки: 600 randomized incremental line-index правок, round-trip `hitTest`/`caretRect`, сохранение unaffected visual lines, mouse/keyboard/clipboard/IME, grouped undo через два canvas и явный рендер scale=2.
+
 ### Фаза E3. Парсер и дерево блоков
 - Классы: `MarkdownParser` (на `flexmark-java` с расширениями), `AstIndex`, `BlockSpan`, `ParserExtensions` для: `FrontMatter`, `Wikilink`, `Embed`, `Callout`, `Footnote`, `Math`, `TaskList`, `Table`, `Strikethrough`.
 - Чек-лист: источник позиций (spans) для каждого узла; инкрементальный `reparse` в пределах затронутых блоков; фон ≠ EDT.

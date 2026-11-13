@@ -288,10 +288,8 @@ public final class DocumentModelImpl implements DocumentModel {
         }
         List<DocumentChange> changes = List.copyOf(pendingChanges);
         pendingChanges.clear();
-        for (DocumentChange change : changes) {
-            for (DocumentListener listener : listeners) {
-                listener.changed(change);
-            }
+        for (DocumentListener listener : listeners) {
+            listener.changed(changes);
         }
     }
 }

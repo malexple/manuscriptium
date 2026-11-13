@@ -40,6 +40,10 @@ class MarkdownFileEditorTest {
             assertThat(editor.isLoaded()).isTrue();
             assertThat(editor.mode()).isEqualTo(EditorMode.WYSIWYG);
             assertThat(editor.canvas().getStatus()).isEqualTo("canvas.ready");
+            assertThat(editor.canvas().document()).isSameAs(editor.document());
+            assertThat(editor.source().document()).isSameAs(editor.document());
+            assertThat(SwingUtilities.getAncestorOfClass(javax.swing.JScrollPane.class, editor.canvas())).isNotNull();
+            assertThat(SwingUtilities.getAncestorOfClass(javax.swing.JScrollPane.class, editor.source())).isNotNull();
             assertThat(sourceText(editor)).isEqualTo(markdown);
             assertThat(editor.isModified()).isFalse();
 
@@ -212,6 +216,37 @@ class MarkdownFileEditorTest {
             assertThat(editor.isModified()).isTrue();
         } finally {
             continueWrite.countDown();
+            SwingUtilities.invokeAndWait(editor::dispose);
+        }
+    }
+
+    @Test
+    void sourceEditsSurviveModeSwitchUndoRedoAndAsyncSave() throws Exception {
+        Path file = Files.writeString(temp.resolve("editable.md"), "one\ntwo");
+        MarkdownFileEditor editor = create(file, EditorMode.SOURCE, new MarkdownEditorRegistry());
+        try {
+            awaitLoaded(editor);
+            SwingUtilities.invokeAndWait(() -> {
+                editor.source().setCaretOffset(editor.document().length());
+                editor.source().input().insertText("\nthree");
+                assertThat(editor.isModified()).isTrue();
+                editor.setMode(EditorMode.WYSIWYG);
+                editor.canvas().setCaretOffset(editor.document().length());
+                editor.canvas().input().insertText("!");
+                editor.setMode(EditorMode.SOURCE);
+            });
+            assertThat(sourceText(editor)).isEqualTo("one\ntwo\nthree!");
+            SwingUtilities.invokeAndWait(() -> editor.source().input().undo());
+            assertThat(sourceText(editor)).isEqualTo("one\ntwo");
+            SwingUtilities.invokeAndWait(() -> editor.source().input().redo());
+            assertThat(sourceText(editor)).isEqualTo("one\ntwo\nthree!");
+
+            AtomicReference<CompletableFuture<Void>> saving = new AtomicReference<>();
+            SwingUtilities.invokeAndWait(() -> saving.set(editor.saveAsync()));
+            saving.get().get(5, TimeUnit.SECONDS);
+            assertThat(Files.readString(file)).isEqualTo("one\ntwo\nthree!");
+            assertThat(editor.isModified()).isFalse();
+        } finally {
             SwingUtilities.invokeAndWait(editor::dispose);
         }
     }

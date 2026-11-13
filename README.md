@@ -14,7 +14,7 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
 внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
 
-## Markdown Canvas Editor — E0–E1
+## Markdown Canvas Editor — E0–E2
 
 `.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
 текстового провайдера. Кнопки **Canvas** и **Source** внутри вкладки переключают представление без создания второй вкладки
@@ -29,9 +29,14 @@ Save-point учитывает undo/redo и правки во время фоно
 
 `AtomicFileStore` из SPI реализован в `core`: запись идёт через temp-файл в каталоге целевого файла и `ATOMIC_MOVE`, а symlink
 сохраняется и ведёт запись в его target. Чтение и запись выполняются вне EDT; Save, Save All, закрытие вкладки, выход,
-перезапуск и смена Vault ждут завершения фонового сохранения. Source остаётся read-only проекцией `DocumentModel` до ввода
-и каретки в E2. Следующие фазы и критерии приёмки определены в `EDITOR_CANVAS_PLAN.md`, каталог поведения — в
-`TYPORA_FEATURES.md`.
+перезапуск и смена Vault ждут завершения фонового сохранения.
+
+В E2 оба режима используют редактируемый собственный lightweight canvas и общую `DocumentModel`; `JTextArea` больше не
+используется. Поддержаны клавиатурный ввод, каретка и selection, drag/double/triple click, word wrap, Home/End/PageUp/PageDown,
+текстовый clipboard, undo/redo с системным menu shortcut (`Cmd` на macOS), IME и скролл с инерцией. Построчная раскладка
+изменяет только затронутые физические строки, а рисование ограничено viewport. Пока в обоих режимах отображается исходный
+Markdown без синтаксической раскладки; парсер и WYSIWYG относятся к E3–E5. Следующие фазы и критерии приёмки определены в
+`EDITOR_CANVAS_PLAN.md`, каталог поведения — в `TYPORA_FEATURES.md`.
 
 ## Bundled-панели заметок и свойств
 
@@ -122,8 +127,8 @@ entries:
 ### Obsidian-разметка
 
 Встроенный source-редактор `core.text` подсвечивает `[[wikilinks]]`, `![[embed]]` и callouts вида `> [!note]`, `> [!warning]`.
-Он используется, если bundled Markdown Canvas Editor отключён. В E0 новый Source доступен только для чтения и ещё не содержит
-эту подсветку; перенос Obsidian-функций в Canvas через SPI-сервисы без зависимости плагина от `core` запланирован в E8.
+Он используется, если bundled Markdown Canvas Editor отключён. Новый Canvas редактируется с E2, но ещё не содержит эту
+подсветку; перенос Obsidian-функций в Canvas через SPI-сервисы без зависимости плагина от `core` запланирован в E8.
 Поддержаны alias (`[[Note|alias]]`), заголовки (`[[Note#Heading]]`, `[[#Local heading]]`) и block-id
 (`[[Note#^block-id]]`). Ctrl+Click (Cmd+Click на macOS) открывает заметку и выбирает адресованный заголовок или блок.
 Ссылки разрешаются относительно текущей заметки и корня Vault; имя без каталога находит наиболее короткий совпадающий путь,

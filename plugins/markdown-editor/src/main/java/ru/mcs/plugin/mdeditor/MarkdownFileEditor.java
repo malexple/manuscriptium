@@ -2,7 +2,6 @@ package ru.mcs.plugin.mdeditor;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
-import java.awt.Font;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -15,7 +14,6 @@ import javax.swing.ButtonGroup;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingWorker;
@@ -32,7 +30,7 @@ import ru.mcs.spi.editor.FileEditor;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 
-/** Одна Markdown-вкладка. В E1 Source — read-only проекция DocumentModel до появления ввода в E2. */
+/** Одна Markdown-вкладка; Canvas и редактируемый Source используют общую DocumentModel. */
 final class MarkdownFileEditor implements FileEditor {
 
     private static final String CANVAS_CARD = "canvas";
@@ -46,7 +44,7 @@ final class MarkdownFileEditor implements FileEditor {
     private final CardLayout cards = new CardLayout();
     private final JPanel content = new JPanel(cards);
     private final EditorCanvas canvas = new EditorCanvas();
-    private final JTextArea source = new JTextArea();
+    private final EditorCanvas source = new EditorCanvas();
     private final JToggleButton canvasButton;
     private final JToggleButton sourceButton;
     private final SwingWorker<DecodedDocument, Void> loader;
@@ -68,11 +66,9 @@ final class MarkdownFileEditor implements FileEditor {
         this.fileStore = Objects.requireNonNull(fileStore, "fileStore");
 
         source.setName("markdown.editor.source");
-        source.setEditable(false);
-        source.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
-        source.setText(i18n.get("source.loading"));
+        source.setStatus(i18n.get("source.loading"));
         canvas.setStatus(i18n.get("canvas.loading"));
-        content.add(canvas, CANVAS_CARD);
+        content.add(new JScrollPane(canvas), CANVAS_CARD);
         content.add(new JScrollPane(source), SOURCE_CARD);
 
         canvasButton = modeButton("markdown.editor.mode.canvas", i18n.get("mode.canvas"));
@@ -120,8 +116,8 @@ final class MarkdownFileEditor implements FileEditor {
                     DecodedDocument loaded = get();
                     document = new DocumentModelImpl(loaded.text(), loaded.properties());
                     document.addListener(documentListener);
-                    syncSource();
-                    source.setCaretPosition(0);
+                    source.setDocument(document);
+                    canvas.setDocument(document);
                     canvas.setStatus(i18n.get("canvas.ready"));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -137,7 +133,7 @@ final class MarkdownFileEditor implements FileEditor {
         Throwable cause = error instanceof ExecutionException && error.getCause() != null
                 ? error.getCause() : error;
         String detail = cause.getMessage() == null ? cause.toString() : cause.getMessage();
-        source.setText(i18n.get("source.error", detail));
+        source.setStatus(i18n.get("source.error", detail));
         canvas.setStatus(i18n.get("canvas.error", detail));
     }
 
@@ -147,9 +143,6 @@ final class MarkdownFileEditor implements FileEditor {
         }
         mode = Objects.requireNonNull(newMode, "mode");
         boolean sourceMode = mode == EditorMode.SOURCE;
-        if (sourceMode) {
-            syncSource();
-        }
         cards.show(content, sourceMode ? SOURCE_CARD : CANVAS_CARD);
         sourceButton.setSelected(sourceMode);
         canvasButton.setSelected(!sourceMode);
@@ -169,7 +162,11 @@ final class MarkdownFileEditor implements FileEditor {
     }
 
     String sourceText() {
-        return source.getText();
+        return document == null ? source.getStatus() : document.text().toString();
+    }
+
+    EditorCanvas source() {
+        return source;
     }
 
     DocumentModel document() {
@@ -180,18 +177,7 @@ final class MarkdownFileEditor implements FileEditor {
         return !loading;
     }
 
-    private void syncSource() {
-        if (document != null) {
-            int caret = source.getCaretPosition();
-            source.setText(document.text().toString());
-            source.setCaretPosition(Math.min(caret, source.getDocument().getLength()));
-        }
-    }
-
     private void documentChanged() {
-        if (mode == EditorMode.SOURCE) {
-            syncSource();
-        }
         updateModified();
     }
 
@@ -320,6 +306,8 @@ final class MarkdownFileEditor implements FileEditor {
             document.removeListener(documentListener);
         }
         modifiedListeners.clear();
+        source.dispose();
+        canvas.dispose();
         registry.remove(this);
         root.removeAll();
     }
