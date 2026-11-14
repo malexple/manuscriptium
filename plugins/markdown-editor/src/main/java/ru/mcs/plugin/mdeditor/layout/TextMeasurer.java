@@ -17,6 +17,7 @@ final class TextMeasurer {
     private List<InlineRun> currentRuns = new ArrayList<>();
     private float currentWidth;
     private int currentSourceOffset;
+    private boolean endedWithNewline;
 
     TextMeasurer(int width, InlineContent.Style defaultStyle) {
         this.width = Math.max(1, width);
@@ -24,6 +25,10 @@ final class TextMeasurer {
     }
 
     List<LineBox> layout(InlineContent content, int x, int y) {
+        return layout(content, x, y, false);
+    }
+
+    List<LineBox> layout(InlineContent content, int x, int y, boolean preserveTrailingEmptyLine) {
         currentSourceOffset = content.sourceStart(0);
         for (InlineContent.Segment segment : content.segments()) {
             int tokenStart = 0;
@@ -36,9 +41,11 @@ final class TextMeasurer {
                     }
                     currentSourceOffset = segment.sourceOffsets()[index + 1];
                     finishLine();
+                    endedWithNewline = true;
                     index++;
                     tokenStart = index;
                 } else {
+                    endedWithNewline = false;
                     boolean whitespace = Character.isWhitespace(ch);
                     int next = index + 1;
                     while (next < segment.text().length() && segment.text().charAt(next) != '\n'
@@ -58,7 +65,7 @@ final class TextMeasurer {
             }
             currentSourceOffset = segment.sourceOffsets()[segment.text().length()];
         }
-        if (!currentRuns.isEmpty() || lines.isEmpty()) {
+        if (!currentRuns.isEmpty() || lines.isEmpty() || preserveTrailingEmptyLine && endedWithNewline) {
             finishLine();
         }
         int lineY = y;

@@ -35,6 +35,10 @@ contributions:
     - {id: markdown.editor.paste, text: "%action.paste", groups: []}
     - {id: markdown.editor.selectAll, text: "%action.selectAll", groups: []}
     - {id: markdown.editor.deleteBlock, text: "%action.deleteBlock", groups: []}
+    - {id: markdown.editor.toggleCase, text: "%action.toggleCase", groups: [MarkdownEditor.FormatMenu]}
+    - {id: markdown.editor.duplicateLine, text: "%action.duplicateLine", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.deleteLine, text: "%action.deleteLine", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.extendSelection, text: "%action.extendSelection", groups: [MarkdownEditor.ParagraphMenu]}
     - {id: markdown.editor.paragraph, text: "%action.paragraph", groups: [MarkdownEditor.ParagraphMenu]}
     - {id: markdown.editor.heading1, text: "%action.heading1", groups: [MarkdownEditor.ParagraphMenu]}
     - {id: markdown.editor.heading2, text: "%action.heading2", groups: [MarkdownEditor.ParagraphMenu]}

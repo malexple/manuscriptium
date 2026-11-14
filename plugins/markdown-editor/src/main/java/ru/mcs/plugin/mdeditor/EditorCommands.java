@@ -1,9 +1,12 @@
 package ru.mcs.plugin.mdeditor;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
+import ru.mcs.plugin.mdeditor.action.SelectionExpander;
 import ru.mcs.plugin.mdeditor.action.WordCount;
 import ru.mcs.plugin.mdeditor.model.Delete;
 import ru.mcs.plugin.mdeditor.model.DocumentModel;
+import ru.mcs.plugin.mdeditor.model.Insert;
 import ru.mcs.plugin.mdeditor.model.Range;
 import ru.mcs.plugin.mdeditor.model.Replace;
 import ru.mcs.plugin.mdeditor.view.EditorCanvas;
@@ -188,6 +191,66 @@ final class EditorCommands {
         canvas.setCaretSelection(caret, caret);
     }
 
+    static void toggleCase(MarkdownFileEditor editor) {
+        EditorCanvas canvas = editor.activeCanvas();
+        DocumentModel document = editor.document();
+        Range range = canvas.selectionRange();
+        if (range.length() == 0) {
+            range = SelectionExpander.wordAt(document.text().toString(), canvas.caretOffset());
+        }
+        if (range.length() == 0) {
+            return;
+        }
+        String selected = selectedText(document, range);
+        String replacement = selected.equals(selected.toUpperCase(Locale.ROOT))
+                ? selected.toLowerCase(Locale.ROOT) : selected.toUpperCase(Locale.ROOT);
+        if (!replacement.equals(selected)) {
+            document.apply(Replace.of(range.start(), range.end(), replacement));
+        }
+        canvas.setCaretSelection(range.start(), range.start() + replacement.length());
+    }
+
+    static void duplicateLine(MarkdownFileEditor editor) {
+        EditorCanvas canvas = editor.activeCanvas();
+        DocumentModel document = editor.document();
+        String text = document.text().toString();
+        int caret = canvas.caretOffset();
+        int lineStart = physicalLineStart(text, caret);
+        int contentEnd = physicalLineEnd(text, caret);
+        int lineEnd = contentEnd < text.length() ? contentEnd + 1 : contentEnd;
+        String line = text.substring(lineStart, lineEnd);
+        boolean hasTrailingNewline = lineEnd > contentEnd;
+        String insertion = hasTrailingNewline ? line : "\n" + line;
+        int insertionOffset = hasTrailingNewline ? lineEnd : contentEnd;
+        document.apply(new Insert(insertionOffset, insertion));
+        int duplicatedCaret = caret + insertion.length();
+        canvas.setCaretSelection(duplicatedCaret, duplicatedCaret);
+    }
+
+    static void deleteLine(MarkdownFileEditor editor) {
+        EditorCanvas canvas = editor.activeCanvas();
+        DocumentModel document = editor.document();
+        String text = document.text().toString();
+        if (text.isEmpty()) {
+            return;
+        }
+        int lineStart = physicalLineStart(text, canvas.caretOffset());
+        int contentEnd = physicalLineEnd(text, canvas.caretOffset());
+        int lineEnd = contentEnd < text.length() ? contentEnd + 1 : contentEnd;
+        Range removal = lineEnd > contentEnd ? new Range(lineStart, lineEnd)
+                : new Range(lineStart > 0 ? lineStart - 1 : lineStart, lineEnd);
+        document.apply(Delete.of(removal.start(), removal.end()));
+        int caret = Math.min(removal.start(), document.length());
+        canvas.setCaretSelection(caret, caret);
+    }
+
+    static void extendSelection(MarkdownFileEditor editor) {
+        EditorCanvas canvas = editor.activeCanvas();
+        Range expanded = SelectionExpander.extend(editor.document().text().toString(),
+                canvas.selectionRange(), canvas.caretOffset());
+        canvas.setCaretSelection(expanded.start(), expanded.end());
+    }
+
     static WordCount.Stats wordCount(MarkdownFileEditor editor) {
         EditorCanvas canvas = editor.activeCanvas();
         Range selection = canvas.selectionRange();
@@ -253,6 +316,22 @@ final class EditorCommands {
             end--;
         }
         return new Range(range.start(), end);
+    }
+
+    private static int physicalLineStart(String text, int offset) {
+        int start = Math.max(0, Math.min(offset, text.length()));
+        while (start > 0 && text.charAt(start - 1) != '\n') {
+            start--;
+        }
+        return start;
+    }
+
+    private static int physicalLineEnd(String text, int offset) {
+        int end = Math.max(0, Math.min(offset, text.length()));
+        while (end < text.length() && text.charAt(end) != '\n') {
+            end++;
+        }
+        return end;
     }
 
     private static String selectedText(DocumentModel document, Range selection) {

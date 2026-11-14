@@ -316,11 +316,13 @@ public final class MarkdownLayoutEngine {
             int innerWidth = Math.max(1, blockWidth - borderLeft - borderRight
                     - horizontal(style.padding(), style.fontSizePx()));
             int innerY = y + marginTop + borderTop + px(style.padding().top(), style.fontSizePx(), root.fontSizePx());
-            int contentEnd = trimmedEnd(raw, span.start(), span.end());
+            // Активный source-блок должен сохранять завершающий перевод строки:
+            // именно он создаёт видимую пустую строку сразу после Enter, до прихода нового AST.
+            int contentEnd = source ? span.end() : trimmedEnd(raw, span.start(), span.end());
             InlineContent.Style base = new InlineContent.Style(style, styles.font(style,
                     (float) style.fontSizePx()), null, -1, false);
             InlineContent content = content(raw, span, contentEnd, style, base, source, level);
-            List<LineBox> lines = new TextMeasurer(innerWidth, base).layout(content, innerX, innerY);
+            List<LineBox> lines = new TextMeasurer(innerWidth, base).layout(content, innerX, innerY, source);
             int linesHeight = lines.stream().mapToInt(LineBox::height).sum();
             if (span.kind() == BlockKind.THEMATIC_BREAK) {
                 linesHeight = Math.max(4, linesHeight / 2);

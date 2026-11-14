@@ -34,12 +34,15 @@ public final class TyporaKeymap {
 
         bind(canvas, KeyEvent.VK_Z, shortcut(), EditorActionIds.UNDO);
         bind(canvas, KeyEvent.VK_Z, shortcutShift(), EditorActionIds.REDO);
-        bind(canvas, KeyEvent.VK_Y, shortcut(), EditorActionIds.REDO);
         bind(canvas, KeyEvent.VK_X, shortcut(), EditorActionIds.CUT);
         bind(canvas, KeyEvent.VK_C, shortcut(), EditorActionIds.COPY);
         bind(canvas, KeyEvent.VK_V, shortcut(), EditorActionIds.PASTE);
         bind(canvas, KeyEvent.VK_A, shortcut(), EditorActionIds.SELECT_ALL);
         bind(canvas, KeyEvent.VK_D, shortcutShift(), EditorActionIds.DELETE_BLOCK);
+        bind(canvas, KeyEvent.VK_U, shortcut(), EditorActionIds.TOGGLE_CASE);
+        bind(canvas, KeyEvent.VK_D, shortcut(), EditorActionIds.DUPLICATE_LINE);
+        bind(canvas, KeyEvent.VK_Y, shortcut(), EditorActionIds.DELETE_LINE);
+        bind(canvas, KeyEvent.VK_W, shortcut(), EditorActionIds.EXTEND_SELECTION);
 
         bind(canvas, KeyEvent.VK_0, shortcut(), EditorActionIds.PARAGRAPH);
         for (int level = 1; level <= 6; level++) {
@@ -47,7 +50,7 @@ public final class TyporaKeymap {
         }
         bind(canvas, KeyEvent.VK_B, shortcut(), EditorActionIds.BOLD);
         bind(canvas, KeyEvent.VK_I, shortcut(), EditorActionIds.ITALIC);
-        bind(canvas, KeyEvent.VK_U, shortcut(), EditorActionIds.UNDERLINE);
+        bind(canvas, KeyEvent.VK_U, shortcutShift(), EditorActionIds.UNDERLINE);
         bind(canvas, KeyEvent.VK_5, InputEvent.ALT_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK,
                 EditorActionIds.STRIKETHROUGH);
         bind(canvas, KeyEvent.VK_BACK_QUOTE, shortcutShift(), EditorActionIds.INLINE_CODE);

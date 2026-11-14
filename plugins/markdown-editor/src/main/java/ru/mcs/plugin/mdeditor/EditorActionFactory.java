@@ -45,6 +45,10 @@ final class EditorActionFactory {
             case EditorActionIds.PASTE -> command(id, editor -> editor.activeCanvas().input().paste());
             case EditorActionIds.SELECT_ALL -> command(id, editor -> editor.activeCanvas().input().selectAll());
             case EditorActionIds.DELETE_BLOCK -> command(id, EditorCommands::deleteBlock);
+            case EditorActionIds.TOGGLE_CASE -> command(id, EditorCommands::toggleCase);
+            case EditorActionIds.DUPLICATE_LINE -> command(id, EditorCommands::duplicateLine);
+            case EditorActionIds.DELETE_LINE -> command(id, EditorCommands::deleteLine);
+            case EditorActionIds.EXTEND_SELECTION -> command(id, EditorCommands::extendSelection);
             case EditorActionIds.PARAGRAPH -> command(id, editor -> EditorCommands.heading(editor, 0));
             case EditorActionIds.BOLD -> command(id, editor -> EditorCommands.toggleInline(editor, "**", "**"));
             case EditorActionIds.ITALIC -> command(id, editor -> EditorCommands.toggleInline(editor, "*", "*"));

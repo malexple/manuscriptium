@@ -58,6 +58,34 @@ class EditorCanvasMarkdownTest {
     }
 
     @Test
+    void enterAtEndImmediatelyMovesCaretToEmptyNextLineBeforeAstArrives() throws Exception {
+        String markdown = "Body";
+        SwingUtilities.invokeAndWait(() -> {
+            EditorCanvas canvas = new EditorCanvas();
+            try {
+                DocumentModelImpl document = document(markdown);
+                canvas.setSize(800, 600);
+                canvas.setEditorStyles(new TestEditorStyleService());
+                canvas.setDocument(document);
+                canvas.setAstIndex(ast(markdown,
+                        new BlockSpan(BlockKind.PARAGRAPH, 0, markdown.length(), 1)));
+                canvas.setCaretOffset(document.length());
+                int previousY = canvas.caretRect(canvas.caretOffset()).y;
+
+                canvas.input().insertText("\n");
+
+                assertThat(document.text().toString()).isEqualTo("Body\n");
+                assertThat(canvas.caretOffset()).isEqualTo(document.length());
+                assertThat(canvas.caretRect(canvas.caretOffset()).y)
+                        .as("caret must move before the asynchronous parser publishes a new AST")
+                        .isGreaterThan(previousY);
+            } finally {
+                canvas.dispose();
+            }
+        });
+    }
+
+    @Test
     void backgroundThemeReloadInvalidatesLayoutOnEdtAndDisposeUnsubscribes() throws Exception {
         String markdown = "one\n\ntwo";
         TestEditorStyleService styles = new TestEditorStyleService();

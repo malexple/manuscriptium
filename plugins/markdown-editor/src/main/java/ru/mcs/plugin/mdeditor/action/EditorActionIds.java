@@ -23,6 +23,10 @@ public final class EditorActionIds {
     public static final String PASTE = PREFIX + "paste";
     public static final String SELECT_ALL = PREFIX + "selectAll";
     public static final String DELETE_BLOCK = PREFIX + "deleteBlock";
+    public static final String TOGGLE_CASE = PREFIX + "toggleCase";
+    public static final String DUPLICATE_LINE = PREFIX + "duplicateLine";
+    public static final String DELETE_LINE = PREFIX + "deleteLine";
+    public static final String EXTEND_SELECTION = PREFIX + "extendSelection";
 
     public static final String PARAGRAPH = PREFIX + "paragraph";
     public static final String BOLD = PREFIX + "bold";
@@ -46,6 +50,7 @@ public final class EditorActionIds {
     public static final List<String> ALL = List.of(
             TOGGLE_MODE, FOCUS_MODE, TYPEWRITER_MODE, AUTO_PAIR, WORD_COUNT,
             UNDO, REDO, CUT, COPY, PASTE, SELECT_ALL, DELETE_BLOCK,
+            TOGGLE_CASE, DUPLICATE_LINE, DELETE_LINE, EXTEND_SELECTION,
             PARAGRAPH, heading(1), heading(2), heading(3), heading(4), heading(5), heading(6),
             BOLD, ITALIC, UNDERLINE, STRIKETHROUGH, INLINE_CODE, LINK, CLEAR_FORMATTING,
             BLOCK_QUOTE, BULLET_LIST, ORDERED_LIST, TASK_LIST, CODE_BLOCK, TABLE, MATH_BLOCK,

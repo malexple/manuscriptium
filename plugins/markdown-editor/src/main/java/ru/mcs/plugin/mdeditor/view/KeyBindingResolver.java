@@ -58,7 +58,6 @@ public final class KeyBindingResolver {
         bind(canvas, key(KeyEvent.VK_V, shortcutMask), "paste", input::paste);
         bind(canvas, key(KeyEvent.VK_Z, shortcutMask), "undo", input::undo);
         bind(canvas, key(KeyEvent.VK_Z, shortcutMask | InputEvent.SHIFT_DOWN_MASK), "redo", input::redo);
-        bind(canvas, key(KeyEvent.VK_Y, shortcutMask), "redoY", input::redo);
     }
 
     int shortcutMask() {

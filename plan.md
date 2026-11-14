@@ -1,6 +1,6 @@
 # Manuscriptium — план реализации (plan.md)
 
-Версия документа: 1.8 (2026-11-15). Статус: Фазы 0–4 и Canvas-редактор E0–E6 завершены; следующий этап — E7, публикация Фазы 5 продолжится после E9.
+Версия документа: 1.9 (2026-11-15). Статус: Фазы 0–4 и Canvas-редактор E0–E6 завершены; следующий этап — E7, публикация Фазы 5 продолжится после E9.
 
 ## 1. Цель и приоритеты
 
@@ -282,7 +282,8 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
   строгий UTF-8, BOM и EOL. `AtomicFileStore` в SPI/core выполняет атомарную запись в target symlink; UI-сценарии
   используют фоновое `saveAsync()`. Property-тесты сверяют правки со `StringBuilder`, полный undo/redo и правки файла 5 МиБ.
 - [x] **E2. Ввод и простой рендер:** оба режима редактируются собственным lightweight canvas без `JTextArea`; каретка,
-  selection мышью/клавиатурой, drag/double/triple click, word wrap, Home/End/PageUp/PageDown, clipboard, Ctrl/Cmd+Z/Y,
+  selection мышью/клавиатурой, drag/double/triple click, word wrap, Home/End/PageUp/PageDown, clipboard,
+  Ctrl/Cmd+Z и Ctrl/Cmd+Shift+Z,
   IME и инерционный скролл. `DocumentLineIndex` и `TextLayoutEngine` перестраивают только затронутые строки, batch composite
   перестраивается один раз, рисование ограничено viewport; есть метрики кадра и тесты `hitTest`/`caretRect`, включая scale=2.
 - [x] **E3. Парсер и дерево блоков:** отдельный bundled `plugins/markdown-parser` на Flexmark 0.64.8; JDK-only SPI
@@ -307,10 +308,12 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
   сохраняются при mismatch. На 5000 строках p95 рисования видимого кадра после warmup остаётся < 16 мс.
 - [x] **E6. Режимы и действия:** Focus Mode приглушает фон и содержимое неактивных блоков, сохраняя selection и каретку
   непрозрачными. Typewriter Mode центрирует строку каретки через виртуальные отступы viewport, не изменяя документ или
-  внутреннюю раскладку. Auto Pair работает на общем уровне `InputController` в Canvas и Source. Единый реестр из 35 действий
+  внутреннюю раскладку. Auto Pair работает на общем уровне `InputController` в Canvas и Source. Единый реестр из 39 действий
   обслуживает Paragraph/Format/Insert, ПКМ с блок-специфичными командами, keymap-профиль Typora и существующую палитру
   `Ctrl+Shift+A`; все Markdown-правки проходят через `DocumentModel.apply`. Добавлены Word Count с Unicode-статистикой,
-  Undo/Redo в ПКМ и возврат фокуса после диалога. Исправлен разбор таблиц без явного alignment.
+  Undo/Redo в ПКМ и возврат фокуса после диалога. Исправлен разбор таблиц без явного alignment. После приёмки добавлены
+  Toggle Case, Duplicate/Delete Line и Extend Selection с IntelliJ-подобными Ctrl+U/D/Y/W; Enter в Canvas сразу показывает
+  новую пустую строку и перемещает на неё каретку до фонового обновления AST.
 - [ ] **E7–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
 
 Принятые решения: плагин не зависит от `core`; Obsidian-навигация и preview будут предоставлены через SPI-сервисы и адаптер

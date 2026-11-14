@@ -119,6 +119,70 @@ class EditorCommandsTest {
         }
     }
 
+    @Test
+    void toggleCaseUsesSelectionOrCurrentUnicodeWord() throws Exception {
+        MarkdownFileEditor editor = create("One two\nпривет");
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                editor.source().setCaretSelection(0, 3);
+                EditorCommands.toggleCase(editor);
+                assertThat(editor.sourceText()).isEqualTo("ONE two\nпривет");
+                assertThat(editor.source().selectionRange().start()).isZero();
+                assertThat(editor.source().selectionRange().end()).isEqualTo(3);
+
+                EditorCommands.toggleCase(editor);
+                assertThat(editor.sourceText()).isEqualTo("one two\nпривет");
+
+                editor.source().setCaretSelection(9, 9);
+                EditorCommands.toggleCase(editor);
+                assertThat(editor.sourceText()).isEqualTo("one two\nПРИВЕТ");
+                assertThat(editor.source().selectionRange().start()).isEqualTo(8);
+                assertThat(editor.source().selectionRange().end()).isEqualTo(14);
+            });
+        } finally {
+            dispose(editor);
+        }
+    }
+
+    @Test
+    void duplicateAndDeleteLineHandleMiddleLastAndOnlyLines() throws Exception {
+        MarkdownFileEditor editor = create("one\ntwo");
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                editor.source().setCaretSelection(1, 1);
+                EditorCommands.duplicateLine(editor);
+                assertThat(editor.sourceText()).isEqualTo("one\none\ntwo");
+                assertThat(editor.source().caretOffset()).isEqualTo(5);
+
+                editor.source().setCaretSelection(editor.document().length(), editor.document().length());
+                EditorCommands.duplicateLine(editor);
+                assertThat(editor.sourceText()).isEqualTo("one\none\ntwo\ntwo");
+                assertThat(editor.source().caretOffset()).isEqualTo(editor.document().length());
+
+                editor.source().setCaretSelection(1, 1);
+                EditorCommands.deleteLine(editor);
+                assertThat(editor.sourceText()).isEqualTo("one\ntwo\ntwo");
+                assertThat(editor.source().caretOffset()).isZero();
+
+                editor.source().setCaretSelection(editor.document().length(), editor.document().length());
+                EditorCommands.deleteLine(editor);
+                assertThat(editor.sourceText()).isEqualTo("one\ntwo");
+                assertThat(editor.source().caretOffset()).isEqualTo(7);
+
+                editor.source().setCaretSelection(5, 5);
+                EditorCommands.deleteLine(editor);
+                assertThat(editor.sourceText()).isEqualTo("one");
+                assertThat(editor.source().caretOffset()).isEqualTo(3);
+
+                EditorCommands.deleteLine(editor);
+                assertThat(editor.sourceText()).isEmpty();
+                assertThat(editor.source().caretOffset()).isZero();
+            });
+        } finally {
+            dispose(editor);
+        }
+    }
+
     private MarkdownFileEditor create(String text) throws Exception {
         Path file = Files.writeString(temp.resolve("commands.md"), text);
         AtomicReference<MarkdownFileEditor> result = new AtomicReference<>();
