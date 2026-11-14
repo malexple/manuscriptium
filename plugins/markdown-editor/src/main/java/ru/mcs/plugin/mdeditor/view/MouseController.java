@@ -18,6 +18,11 @@ public final class MouseController extends MouseAdapter {
 
     @Override
     public void mousePressed(MouseEvent event) {
+        if (event.isPopupTrigger()) {
+            canvas.showContextMenu(event);
+            dragging = false;
+            return;
+        }
         if (!SwingUtilities.isLeftMouseButton(event) || canvas.document() == null) {
             return;
         }
@@ -61,6 +66,9 @@ public final class MouseController extends MouseAdapter {
 
     @Override
     public void mouseReleased(MouseEvent event) {
+        if (event.isPopupTrigger()) {
+            canvas.showContextMenu(event);
+        }
         dragging = false;
     }
 }

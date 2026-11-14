@@ -18,6 +18,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingWorker;
+import ru.mcs.plugin.mdeditor.action.EditorContext;
+import ru.mcs.plugin.mdeditor.action.EditorContextMenuBuilder;
+import ru.mcs.plugin.mdeditor.action.TyporaKeymap;
 import ru.mcs.plugin.mdeditor.mode.EditorMode;
 import ru.mcs.plugin.mdeditor.model.DocumentListener;
 import ru.mcs.plugin.mdeditor.model.DocumentModel;
@@ -27,7 +30,10 @@ import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec;
 import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec.DecodedDocument;
 import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.editor.AstIndex;
+import ru.mcs.spi.editor.BlockKind;
+import ru.mcs.spi.editor.BlockSpan;
 import ru.mcs.spi.editor.FileEditor;
 import ru.mcs.spi.editor.MarkdownParser;
 import ru.mcs.spi.editor.style.EditorStyleService;
@@ -67,12 +73,18 @@ final class MarkdownFileEditor implements FileEditor {
 
     MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
                        AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor) {
-        this(file, initialMode, registry, i18n, fileStore, parser, parserExecutor, null);
+        this(file, initialMode, registry, i18n, fileStore, parser, parserExecutor, null, null);
     }
 
     MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
                        AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
                        EditorStyleService styles) {
+        this(file, initialMode, registry, i18n, fileStore, parser, parserExecutor, styles, null);
+    }
+
+    MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
+                       AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
+                       EditorStyleService styles, ActionManager actions) {
         this.file = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
         this.registry = registry;
         this.i18n = i18n;
@@ -86,6 +98,14 @@ final class MarkdownFileEditor implements FileEditor {
         source.setName("markdown.editor.source");
         source.setStatus(i18n.get("source.loading"));
         canvas.setStatus(i18n.get("canvas.loading"));
+        if (actions != null) {
+            TyporaKeymap keymap = new TyporaKeymap(actions);
+            keymap.install(canvas);
+            keymap.install(source);
+            EditorContextMenuBuilder contextMenus = new EditorContextMenuBuilder(actions);
+            canvas.installContextMenu(contextMenus, this::editorContext);
+            source.installContextMenu(contextMenus, this::editorContext);
+        }
         content.add(new JScrollPane(canvas), CANVAS_CARD);
         content.add(new JScrollPane(source), SOURCE_CARD);
 
@@ -165,16 +185,19 @@ final class MarkdownFileEditor implements FileEditor {
         if (disposed) {
             return;
         }
-        mode = Objects.requireNonNull(newMode, "mode");
+        EditorMode requested = Objects.requireNonNull(newMode, "mode");
+        EditorCanvas previous = activeCanvas();
+        mode = requested;
         boolean sourceMode = mode == EditorMode.SOURCE;
+        EditorCanvas next = activeCanvas();
+        if (document != null && previous != next) {
+            var selection = previous.selectionRange();
+            next.setCaretSelection(selection.start(), selection.end());
+        }
         cards.show(content, sourceMode ? SOURCE_CARD : CANVAS_CARD);
         sourceButton.setSelected(sourceMode);
         canvasButton.setSelected(!sourceMode);
-        if (sourceMode) {
-            source.requestFocusInWindow();
-        } else {
-            canvas.requestFocusInWindow();
-        }
+        next.requestFocusInWindow();
     }
 
     EditorMode mode() {
@@ -191,6 +214,55 @@ final class MarkdownFileEditor implements FileEditor {
 
     EditorCanvas source() {
         return source;
+    }
+
+    EditorCanvas activeCanvas() {
+        return mode == EditorMode.SOURCE ? source : canvas;
+    }
+
+    void setFocusMode(boolean enabled) {
+        canvas.setFocusMode(enabled);
+    }
+
+    boolean focusMode() {
+        return canvas.focusMode();
+    }
+
+    void setTypewriterMode(boolean enabled) {
+        canvas.setTypewriterMode(enabled);
+        source.setTypewriterMode(enabled);
+    }
+
+    boolean typewriterMode() {
+        return activeCanvas().typewriterMode();
+    }
+
+    void setAutoPair(boolean enabled) {
+        canvas.setAutoPairEnabled(enabled);
+        source.setAutoPairEnabled(enabled);
+    }
+
+    boolean autoPair() {
+        return activeCanvas().autoPairEnabled();
+    }
+
+    private EditorContext editorContext() {
+        EditorCanvas active = activeCanvas();
+        AstIndex index = astIndex();
+        if (index == null || document == null || index.version() != document.version()) {
+            return new EditorContext(BlockKind.PARAGRAPH, active.selectionRange().length() > 0, false, false);
+        }
+        int offset = active.caretOffset();
+        BlockKind kind = index.blockAt(offset).map(BlockSpan::kind).orElse(BlockKind.PARAGRAPH);
+        boolean link = false;
+        boolean image = false;
+        for (BlockSpan span : index.spansAt(offset)) {
+            link |= span.kind() == BlockKind.LINK || span.kind() == BlockKind.LINK_REFERENCE
+                    || span.kind() == BlockKind.AUTOLINK || span.kind() == BlockKind.WIKILINK;
+            image |= span.kind() == BlockKind.IMAGE || span.kind() == BlockKind.IMAGE_REFERENCE
+                    || span.kind() == BlockKind.WIKI_IMAGE || span.kind() == BlockKind.EMBED;
+        }
+        return new EditorContext(kind, active.selectionRange().length() > 0, link, image);
     }
 
     DocumentModel document() {

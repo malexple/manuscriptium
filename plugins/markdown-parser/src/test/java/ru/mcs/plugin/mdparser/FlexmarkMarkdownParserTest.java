@@ -64,6 +64,18 @@ class FlexmarkMarkdownParserTest {
     }
 
     @Test
+    void parsesTableCellsWithoutExplicitAlignment() {
+        String markdown = "| Name | Value |\n| --- | --- |\n| A | 1 |";
+
+        ParseResult result = parser.parse(markdown, 11);
+
+        assertThat(result.version()).isEqualTo(11);
+        assertThat(spans(result, BlockKind.TABLE_CELL)).hasSize(6)
+                .allSatisfy(span -> assertThat(span.attributes()).doesNotContainKey("alignment"));
+        assertAllOffsetsValid(result, markdown.length());
+    }
+
+    @Test
     void singleCharacterEditReparsesOnlyAffectedBlockAndMatchesFullParse() {
         String markdown = """
                 alpha

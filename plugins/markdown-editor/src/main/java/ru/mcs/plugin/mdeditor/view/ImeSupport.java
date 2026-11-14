@@ -50,7 +50,7 @@ final class ImeSupport implements InputMethodRequests, InputMethodListener {
 
     @Override
     public Rectangle getTextLocation(TextHitInfo offset) {
-        return canvas.document() == null ? new Rectangle() : canvas.caretRect(canvas.caretOffset());
+        return canvas.document() == null ? new Rectangle() : canvas.componentCaretRect(canvas.caretOffset());
     }
 
     @Override

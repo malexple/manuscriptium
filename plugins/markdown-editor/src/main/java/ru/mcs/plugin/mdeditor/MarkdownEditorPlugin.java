@@ -4,11 +4,10 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.swing.JComponent;
-import ru.mcs.plugin.mdeditor.mode.EditorMode;
+import ru.mcs.plugin.mdeditor.action.EditorActionIds;
 import ru.mcs.spi.Plugin;
 import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
 import ru.mcs.spi.editor.FileEditorProvider;
 import ru.mcs.spi.editor.MarkdownParser;
 import ru.mcs.spi.editor.style.EditorStyleService;
@@ -19,7 +18,7 @@ import ru.mcs.spi.settings.Configurable;
 /** Каркас bundled Canvas-редактора. Все вклады объявлены в plugin.yml и создаются по запросу хоста. */
 public final class MarkdownEditorPlugin implements Plugin {
 
-    static final String TOGGLE_MODE = "markdown.editor.toggleMode";
+    static final String TOGGLE_MODE = EditorActionIds.TOGGLE_MODE;
 
     private final MarkdownEditorState state = new MarkdownEditorState();
     private final MarkdownEditorRegistry registry = new MarkdownEditorRegistry();
@@ -28,6 +27,7 @@ public final class MarkdownEditorPlugin implements Plugin {
     private MarkdownParser parser;
     private EditorStyleService styles;
     private ExecutorService parserExecutor;
+    private EditorActionFactory actionFactory;
 
     @Override
     public void start(PluginContext context) {
@@ -41,6 +41,7 @@ public final class MarkdownEditorPlugin implements Plugin {
             return thread;
         });
         ctx.state().register("editor", Scope.APPLICATION, state);
+        actionFactory = new EditorActionFactory(ctx.i18n(), this::selectedEditor);
     }
 
     @Override
@@ -52,30 +53,14 @@ public final class MarkdownEditorPlugin implements Plugin {
 
     @Override
     public AnAction createAction(String id) {
-        if (!TOGGLE_MODE.equals(id)) {
-            return null;
-        }
-        return new AnAction(ctx.i18n().get("action.toggleMode")) {
-            @Override
-            public void actionPerformed(AnActionEvent e) {
-                selectedEditor().ifPresent(editor -> editor.setMode(editor.mode() == EditorMode.SOURCE
-                        ? EditorMode.WYSIWYG : EditorMode.SOURCE));
-            }
-
-            @Override
-            public void update(AnActionEvent e) {
-                Optional<MarkdownFileEditor> selected = selectedEditor();
-                e.getPresentation().setEnabledAndVisible(selected.isPresent());
-                selected.ifPresent(editor -> e.getPresentation().setText(ctx.i18n().get(
-                        editor.mode() == EditorMode.SOURCE ? "action.toCanvas" : "action.toSource")));
-            }
-        };
+        return actionFactory == null ? null : actionFactory.create(id);
     }
 
     @Override
     public FileEditorProvider createFileEditorProvider(String id) {
         return "markdown.editor".equals(id)
-                ? new MarkdownFileEditorProvider(state, registry, ctx.i18n(), fileStore, parser, parserExecutor, styles)
+                ? new MarkdownFileEditorProvider(state, registry, ctx.i18n(), fileStore, parser, parserExecutor, styles,
+                        ctx.actions())
                 : null;
     }
 

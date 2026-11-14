@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.editor.FileEditor;
 import ru.mcs.spi.editor.FileEditorProvider;
 import ru.mcs.spi.editor.MarkdownParser;
@@ -23,15 +24,22 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
     private final MarkdownParser parser;
     private final Executor parserExecutor;
     private final EditorStyleService styles;
+    private final ActionManager actions;
 
     MarkdownFileEditorProvider(MarkdownEditorState state, MarkdownEditorRegistry registry, I18n i18n,
                                AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor) {
-        this(state, registry, i18n, fileStore, parser, parserExecutor, null);
+        this(state, registry, i18n, fileStore, parser, parserExecutor, null, null);
     }
 
     MarkdownFileEditorProvider(MarkdownEditorState state, MarkdownEditorRegistry registry, I18n i18n,
                                AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
                                EditorStyleService styles) {
+        this(state, registry, i18n, fileStore, parser, parserExecutor, styles, null);
+    }
+
+    MarkdownFileEditorProvider(MarkdownEditorState state, MarkdownEditorRegistry registry, I18n i18n,
+                               AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
+                               EditorStyleService styles, ActionManager actions) {
         this.state = state;
         this.registry = registry;
         this.i18n = i18n;
@@ -39,6 +47,7 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
         this.parser = Objects.requireNonNull(parser, "parser");
         this.parserExecutor = Objects.requireNonNull(parserExecutor, "parserExecutor");
         this.styles = styles;
+        this.actions = actions;
     }
 
     @Override
@@ -60,6 +69,6 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
     @Override
     public FileEditor createEditor(Path file) {
         return new MarkdownFileEditor(file, state.defaultMode(), registry, i18n, fileStore, parser, parserExecutor,
-                styles);
+                styles, actions);
     }
 }

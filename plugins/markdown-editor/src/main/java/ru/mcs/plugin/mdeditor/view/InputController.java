@@ -15,6 +15,7 @@ public final class InputController {
     private final EditorCanvas canvas;
     private final ClipboardService clipboard;
     private boolean applyingEdit;
+    private boolean autoPairEnabled = true;
     private Float verticalGoalX;
 
     InputController(EditorCanvas canvas, ClipboardService clipboard) {
@@ -26,7 +27,46 @@ public final class InputController {
         if (document() == null || text == null || text.isEmpty()) {
             return;
         }
-        replaceSelection(normalizeLineEndings(text));
+        String normalized = normalizeLineEndings(text);
+        if (autoPairEnabled && normalized.length() == 1 && insertAutoPaired(normalized.charAt(0))) {
+            return;
+        }
+        replaceSelection(normalized);
+    }
+
+    public void setAutoPairEnabled(boolean enabled) {
+        autoPairEnabled = enabled;
+    }
+
+    public boolean autoPairEnabled() {
+        return autoPairEnabled;
+    }
+
+    private boolean insertAutoPaired(char ch) {
+        DocumentModel document = document();
+        Range selection = canvas.selectionRange();
+        int caret = canvas.caretOffset();
+        if (selection.length() == 0 && AutoPair.isClosing(ch) && caret < document.length()
+                && document.text().charAt(caret) == ch) {
+            moveCaret(caret + 1, false);
+            return true;
+        }
+        Character closing = AutoPair.closingFor(ch);
+        if (closing == null) {
+            return false;
+        }
+        if (selection.length() == 0) {
+            apply(new Insert(selection.start(), ch + String.valueOf(closing)));
+            moveCaret(selection.start() + 1, false);
+        } else {
+            String selected = document.text().subSequence(selection.start(), selection.end()).toString();
+            apply(Replace.of(selection.start(), selection.end(), ch + selected + closing));
+            canvas.setCaretState(selection.end() + 1, selection.start() + 1);
+            canvas.clearComposition();
+            canvas.ensureCaretVisible();
+            canvas.repaint();
+        }
+        return true;
     }
 
     public void replaceSelection(String text) {
@@ -59,6 +99,11 @@ public final class InputController {
         }
         int caret = canvas.caretOffset();
         if (caret == 0) {
+            return;
+        }
+        if (autoPairEnabled && AutoPair.isEmptyPair(document.text(), caret)) {
+            apply(Delete.of(caret - 1, caret + 1));
+            moveCaret(caret - 1, false);
             return;
         }
         int start = Character.offsetByCodePoints(document.text(), caret, -1);
@@ -152,7 +197,7 @@ public final class InputController {
         float x = verticalGoalX != null ? verticalGoalX : caret.x;
         verticalGoalX = x;
         int y = caret.y + canvas.lineHeight() / 2 + direction * canvas.lineHeight();
-        moveCaretPreservingGoal(canvas.hitTest(new Point(Math.round(x), y)), extendSelection);
+        moveCaretPreservingGoal(canvas.contentHitTest(new Point(Math.round(x), y)), extendSelection);
     }
 
     public void moveHome(boolean extendSelection, boolean documentStart) {
@@ -176,7 +221,7 @@ public final class InputController {
         Rectangle caret = canvas.caretRect(canvas.caretOffset());
         int page = Math.max(canvas.lineHeight(), canvas.visiblePageHeight() - canvas.lineHeight());
         int y = caret.y + canvas.lineHeight() / 2 + direction * page;
-        moveCaret(canvas.hitTest(new Point(caret.x, y)), extendSelection);
+        moveCaret(canvas.contentHitTest(new Point(caret.x, y)), extendSelection);
     }
 
     public void selectAll() {

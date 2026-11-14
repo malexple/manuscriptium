@@ -7,6 +7,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
+import ru.mcs.plugin.mdeditor.mode.FocusMode;
 import ru.mcs.plugin.mdeditor.model.DocumentModel;
 import ru.mcs.plugin.mdeditor.model.Range;
 import ru.mcs.plugin.mdeditor.render.BlockRenderer;
@@ -34,6 +35,7 @@ public final class MarkdownLayoutEngine {
     private final LayoutCache cache = new LayoutCache();
     private final BlockRenderer blockRenderer = new BlockRenderer();
     private final SourceBlockRenderer sourceRenderer = new SourceBlockRenderer();
+    private final FocusMode focusMode = new FocusMode();
 
     private DocumentModel document;
     private AstIndex ast;
@@ -67,6 +69,10 @@ public final class MarkdownLayoutEngine {
 
     public void setCaretOffset(int caretOffset) {
         this.caretOffset = caretOffset;
+    }
+
+    public void setFocusMode(boolean enabled) {
+        focusMode.setEnabled(enabled);
     }
 
     public void clear() {
@@ -109,13 +115,20 @@ public final class MarkdownLayoutEngine {
 
     public void paint(Graphics2D graphics, Rectangle clip, Range selection) {
         LayoutResult result = layout();
-        DrawSink sink = new Graphics2DDrawSink(graphics);
         List<BlockBox> visible = result.blocks().stream()
                 .filter(block -> block.y() <= clip.y + clip.height && block.y() + block.height() >= clip.y)
                 .toList();
+        ComputedStyle root = rootStyle();
         for (BlockBox block : visible) {
             if (!block.source()) {
-                blockRenderer.paintBackground(sink, block);
+                Graphics2D target = dimmed(graphics, block, root);
+                try {
+                    blockRenderer.paintBackground(new Graphics2DDrawSink(target), block);
+                } finally {
+                    if (target != graphics) {
+                        target.dispose();
+                    }
+                }
             }
         }
         if (selection != null && selection.length() > 0) {
@@ -125,10 +138,18 @@ public final class MarkdownLayoutEngine {
             }
         }
         for (BlockBox block : visible) {
-            if (block.source()) {
-                sourceRenderer.paint(sink, block);
-            } else {
-                blockRenderer.paintContent(sink, block);
+            Graphics2D target = dimmed(graphics, block, root);
+            try {
+                DrawSink sink = new Graphics2DDrawSink(target);
+                if (block.source()) {
+                    sourceRenderer.paint(sink, block);
+                } else {
+                    blockRenderer.paintContent(sink, block);
+                }
+            } finally {
+                if (target != graphics) {
+                    target.dispose();
+                }
             }
         }
     }
@@ -380,6 +401,10 @@ public final class MarkdownLayoutEngine {
             }
         }
         return -1;
+    }
+
+    private Graphics2D dimmed(Graphics2D graphics, BlockBox block, ComputedStyle root) {
+        return focusMode.isEnabled() && !block.source() ? focusMode.wrap(graphics, root) : graphics;
     }
 
     private Color selectionColor() {

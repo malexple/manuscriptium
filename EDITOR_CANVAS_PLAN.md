@@ -203,6 +203,14 @@ public record RenderedBlock(java.awt.image.BufferedImage image, String altText) 
 - Чек-лист: F-002…F-005, F-049, F-066, F-067; контекстное меню ПКМ через `ActionGroup` с условной видимостью по контексту; меню Paragraph/Format/Insert; палитра команд; keymap-профиль «Typora».
 - DoD: каждое действие вызывается из меню, горячей клавиши и палитры; тест `EditorContextMenuBuilder` проверяет состав меню по типу блока.
 
+**Принято в реализации E6:**
+- Единый реестр содержит 35 действий и три группы Paragraph/Format/Insert. Главное меню, ПКМ, `TyporaKeymap` и существующая `CommandPalette` (`Ctrl+Shift+A`) используют один `ActionManager`; `EditorActionDispatcher` выполняет `update` перед вызовом. Editor-specific палитра не дублируется.
+- Focus Mode применяет `--focus-mode-alpha` (по умолчанию `0.35`) к фону и содержимому неактивных блоков. Selection рисуется отдельно и вместе с кареткой остаётся полностью непрозрачным.
+- Typewriter Mode не меняет документ и внутренние координаты layout. Симметричные виртуальные отступы по половине viewport в preferred height позволяют центрировать первую и последнюю строки обычным неотрицательным `viewPosition`; отрисовка и hit testing смещаются на границе `EditorCanvas`. При выключении виртуальные отступы удаляются, а прокрутка восстанавливается в допустимый диапазон.
+- Auto Pair реализован в общем `InputController`: пары `()`, `[]`, `{}`, кавычки, backticks, `**` и `__`, пропуск closing-символа и Backspace пустой пары одинаково работают в Canvas и Source. Все команды форматирования, блоков, вставки и удаления применяются через `DocumentModel.apply`; selection сохраняется при Canvas ↔ Source.
+- ПКМ содержит Undo/Redo, clipboard, общие группы и условные Code Block/Table/Math/Image/Link по AST-контексту. Word Count использует `BreakIterator`, Unicode code points и reading time 200 слов/минуту; после диалога фокус возвращается активному Canvas.
+- Тесты покрывают действия, меню по типу блока, keymap, режимы, Auto Pair, первую/среднюю/последнюю строки Typewriter и координаты мыши. Production UI-приёмка проверяет меню, палитру, ПКМ paragraph/table/code/link, Focus, Typewriter, formatting, round trip selection, Undo/Redo, вставку таблицы, Auto Pair и File → Save. Дополнительно исправлен NPE Flexmark для table cell без alignment.
+
 ### Фаза E7. Виджеты
 - Классы: `ImageWidget`, `MathWidget` (`JLaTeXMath`), `TableWidget`, `CodeBlockWidget`, `CalloutWidget`, `FrontMatterWidget`, `WidgetRegistry`, `ImageCache`.
 - Чек-лист: картинки (относительные пути, ресайз, drag&drop, вставка из буфера), формулы inline и блочные, таблицы с редактированием структуры (Tab, добавить/удалить строки и столбцы, выравнивание), копирование/удаление ячеек; callouts; front matter как свёрнутая карточка с редактированием исходника; `BlockRendererExtension` и демо-плагин для `mermaid` (необязательный).

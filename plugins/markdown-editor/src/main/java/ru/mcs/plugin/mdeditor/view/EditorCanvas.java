@@ -16,15 +16,21 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.awt.im.InputMethodRequests;
 import java.net.URI;
 import java.util.List;
+import java.util.function.Supplier;
 import javax.swing.JComponent;
 import javax.swing.JViewport;
 import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import ru.mcs.plugin.mdeditor.action.EditorContext;
+import ru.mcs.plugin.mdeditor.action.EditorContextMenuBuilder;
 import ru.mcs.plugin.mdeditor.layout.MarkdownLayoutEngine;
+import ru.mcs.plugin.mdeditor.mode.FocusMode;
+import ru.mcs.plugin.mdeditor.mode.TypewriterMode;
 import ru.mcs.plugin.mdeditor.model.DocumentChange;
 import ru.mcs.plugin.mdeditor.model.DocumentListener;
 import ru.mcs.plugin.mdeditor.model.DocumentModel;
@@ -44,6 +50,8 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     private final SelectionPainter selectionPainter;
     private final ViewportController viewportController;
     private final ImeSupport imeSupport;
+    private final FocusMode focusMode = new FocusMode();
+    private final TypewriterMode typewriterMode = new TypewriterMode();
     private final DocumentListener documentListener = new DocumentListener() {
         @Override
         public void changed(DocumentChange change) {
@@ -62,6 +70,8 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     private DocumentModel document;
     private AstIndex ast;
     private EditorStyleService styles;
+    private EditorContextMenuBuilder contextMenuBuilder;
+    private Supplier<EditorContext> editorContext;
     private boolean disposed;
     private int caretOffset;
     private int selectionAnchor;
@@ -126,6 +136,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
                 textLayout.setWidth(getWidth());
                 markdownLayout.setWidth(getWidth());
                 revalidate();
+                typewriterMode.centerCaret(EditorCanvas.this);
                 repaint();
             }
         });
@@ -153,6 +164,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
             markdownLayout.clear();
         }
         revalidate();
+        typewriterMode.centerCaret(this);
         repaint();
     }
 
@@ -197,6 +209,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         this.ast = ast;
         markdownLayout.setAst(ast);
         revalidate();
+        typewriterMode.centerCaret(this);
         repaint();
     }
 
@@ -212,6 +225,59 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         return inputController;
     }
 
+    public void setFocusMode(boolean enabled) {
+        focusMode.setEnabled(enabled);
+        markdownLayout.setFocusMode(enabled);
+        repaint();
+    }
+
+    public boolean focusMode() {
+        return focusMode.isEnabled();
+    }
+
+    public void setTypewriterMode(boolean enabled) {
+        int removedTopPadding = enabled ? 0 : typewriterMode.topPadding(this);
+        typewriterMode.setEnabled(enabled);
+        revalidate();
+        if (enabled) {
+            typewriterMode.centerCaret(this);
+        } else {
+            typewriterMode.restoreViewport(this, removedTopPadding);
+        }
+    }
+
+    public boolean typewriterMode() {
+        return typewriterMode.isEnabled();
+    }
+
+    public void setAutoPairEnabled(boolean enabled) {
+        inputController.setAutoPairEnabled(enabled);
+    }
+
+    public boolean autoPairEnabled() {
+        return inputController.autoPairEnabled();
+    }
+
+    public void installContextMenu(EditorContextMenuBuilder builder, Supplier<EditorContext> context) {
+        contextMenuBuilder = builder;
+        editorContext = context;
+    }
+
+    void showContextMenu(MouseEvent event) {
+        if (contextMenuBuilder == null || editorContext == null || document == null) {
+            return;
+        }
+        requestFocusInWindow();
+        int offset = hitTest(event.getPoint());
+        Range selection = selectionRange();
+        if (offset < selection.start() || offset >= selection.end()) {
+            setCaretState(offset, offset);
+            repaint();
+        }
+        contextMenuBuilder.build(editorContext.get()).show(this, event.getX(), event.getY());
+        event.consume();
+    }
+
     ClipboardService clipboardService() {
         return clipboardService;
     }
@@ -223,6 +289,13 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     public void setCaretOffset(int offset) {
         setCaretState(offset, offset);
         clearComposition();
+        repaint();
+    }
+
+    public void setCaretSelection(int anchor, int caret) {
+        setCaretState(caret, anchor);
+        clearComposition();
+        ensureCaretVisible();
         repaint();
     }
 
@@ -246,15 +319,30 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         markdownLayout.setCaretOffset(offset);
         caretPainter.documentChanged();
         revalidate();
+        typewriterMode.centerCaret(this);
     }
 
     public int hitTest(Point point) {
+        return contentHitTest(contentPoint(point));
+    }
+
+    int contentHitTest(Point point) {
         return document == null ? 0 : markdownMode() ? markdownLayout.hitTest(point) : textLayout.hitTest(point);
+    }
+
+    private Point contentPoint(Point point) {
+        return new Point(point.x, point.y - typewriterMode.topPadding(this));
     }
 
     public Rectangle caretRect(int offset) {
         return document == null ? new Rectangle() : markdownMode()
                 ? markdownLayout.caretRect(offset) : textLayout.caretRect(offset);
+    }
+
+    Rectangle componentCaretRect(int offset) {
+        Rectangle caret = caretRect(offset);
+        caret.y += typewriterMode.topPadding(this);
+        return caret;
     }
 
     Color caretColor() {
@@ -277,7 +365,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         if (!markdownMode()) {
             return false;
         }
-        int offset = markdownLayout.taskCheckboxAt(point);
+        int offset = markdownLayout.taskCheckboxAt(contentPoint(point));
         if (offset < 0 || offset >= document.length()) {
             return false;
         }
@@ -296,7 +384,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         if (!markdownMode()) {
             return false;
         }
-        String target = markdownLayout.linkAt(point);
+        String target = markdownLayout.linkAt(contentPoint(point));
         if (target == null || !(target.startsWith("https://") || target.startsWith("http://"))
                 || !Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
             return false;
@@ -334,7 +422,11 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         if (document == null) {
             return;
         }
-        Rectangle caret = caretRect(caretOffset);
+        if (typewriterMode.isEnabled()) {
+            typewriterMode.centerCaret(this);
+            return;
+        }
+        Rectangle caret = componentCaretRect(caretOffset);
         caret.grow(12, 4);
         scrollRectToVisible(caret);
     }
@@ -419,6 +511,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     }
 
     private void paintDocument(Graphics2D graphics) {
+        graphics.translate(0, typewriterMode.topPadding(this));
         Rectangle clip = graphics.getClipBounds();
         if (clip == null) {
             clip = new Rectangle(0, 0, getWidth(), getHeight());
@@ -458,7 +551,8 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         if (document == null) {
             return new Dimension(800, 600);
         }
-        return new Dimension(800, markdownMode() ? markdownLayout.layout().height() : textLayout.preferredHeight());
+        int contentHeight = markdownMode() ? markdownLayout.layout().height() : textLayout.preferredHeight();
+        return new Dimension(800, contentHeight + typewriterMode.topPadding(this) + typewriterMode.bottomPadding(this));
     }
 
     @Override
@@ -503,6 +597,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         inputController.documentChanged(changes.getLast());
         caretPainter.documentChanged();
         revalidate();
+        typewriterMode.centerCaret(this);
         repaint();
     }
 

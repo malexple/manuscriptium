@@ -14,7 +14,7 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
 внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
 
-## Markdown Canvas Editor — E0–E5
+## Markdown Canvas Editor — E0–E6
 
 `.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
 текстового провайдера. Кнопки **Canvas** и **Source** внутри вкладки переключают представление без создания второй вкладки
@@ -86,6 +86,21 @@ hit test и selection используют отображение видимых
 ./gradlew :plugins:editor-styles:test --tests ru.mcs.plugin.editorstyle.MarkdownGoldenTest \
   -Dmanuscriptium.golden.update=plugins/editor-styles/src/test/resources/golden/linux
 ```
+
+### Режимы и действия E6
+
+**F8** включает Focus Mode, приглушая неактивные блоки без потери контраста selection и каретки. **F9** включает Typewriter
+Mode и удерживает строку каретки по вертикальному центру viewport, включая первую и последнюю строки документа. Оба режима
+доступны также через **View** и палитру команд **Ctrl+Shift+A**; текст и внутренняя Markdown-раскладка не изменяются.
+
+Меню **Paragraph**, **Format** и **Insert** содержат заголовки, inline-форматирование, списки, ссылки, код, таблицы, math,
+`hr` и изображения. ПКМ использует те же действия и добавляет блок-специфичную команду по контексту каретки, включая **Link**.
+Keymap-профиль Typora поддерживает, среди прочего, **Ctrl+B/I/U**, **Ctrl+K**, **Ctrl+0…6**, **Ctrl+Shift+Q**, **Ctrl+T**;
+на macOS вместо Ctrl используется Cmd. Полный список привязок находится в `TyporaKeymap`, а все команды доступны в палитре.
+
+**Ctrl+Shift+P** переключает Auto Pair для скобок, кавычек, backticks, `**` и `__` в Canvas и Source. **Ctrl+Shift+W** показывает
+слова, Unicode-символы, строки и оценку времени чтения для selection или всего документа. **Ctrl+Shift+D** удаляет текущий
+блок. Formatting, Undo/Redo, selection и сохранение работают над общей `DocumentModel` независимо от активного представления.
 
 ## Bundled-панели заметок и свойств
 

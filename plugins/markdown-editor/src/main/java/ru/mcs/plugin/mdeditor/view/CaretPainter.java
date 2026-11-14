@@ -16,7 +16,7 @@ final class CaretPainter {
         this.canvas = canvas;
         timer = new Timer(500, event -> {
             visible = !visible;
-            Rectangle caret = canvas.document() == null ? null : canvas.caretRect(canvas.caretOffset());
+            Rectangle caret = canvas.document() == null ? null : canvas.componentCaretRect(canvas.caretOffset());
             if (caret != null) {
                 canvas.repaint(caret.x - 2, caret.y - 1, caret.width + 4, caret.height + 2);
             }

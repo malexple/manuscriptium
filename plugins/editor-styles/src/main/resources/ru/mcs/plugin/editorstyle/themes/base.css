@@ -3,6 +3,7 @@
     --text-color: #24292f;
     --primary-color: #0969da;
     --select-text-bg-color: #b6d7ff;
+    --focus-mode-alpha: 0.35;
     --side-bar-bg-color: #f6f8fa;
     --active-file-bg-color: #e7f0fa;
     --item-hover-bg-color: #f0f3f6;

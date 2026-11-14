@@ -9,11 +9,55 @@ activation: onDemand
 i18n: ru/mcs/plugin/mdeditor/messages
 
 contributions:
+  actionGroups:
+    - id: MarkdownEditor.ParagraphMenu
+      text: "%menu.paragraph"
+      popup: true
+      groups: [MainMenu]
+    - id: MarkdownEditor.FormatMenu
+      text: "%menu.format"
+      popup: true
+      groups: [MainMenu]
+    - id: MarkdownEditor.InsertMenu
+      text: "%menu.insert"
+      popup: true
+      groups: [MainMenu]
   actions:
-    - id: markdown.editor.toggleMode
-      text: "%action.toggleMode"
-      icon: /ru/mcs/plugin/mdeditor/icons/notebook-text.svg
-      groups: [MainMenu.View, MainToolbar, EditorTabPopup]
+    - {id: markdown.editor.toggleMode, text: "%action.toggleMode", icon: /ru/mcs/plugin/mdeditor/icons/notebook-text.svg, groups: [MainMenu.View, MainToolbar, EditorTabPopup]}
+    - {id: markdown.editor.focusMode, text: "%action.focusMode.enable", groups: [MainMenu.View]}
+    - {id: markdown.editor.typewriterMode, text: "%action.typewriterMode.enable", groups: [MainMenu.View]}
+    - {id: markdown.editor.autoPair, text: "%action.autoPair.disable", groups: [MainMenu.View]}
+    - {id: markdown.editor.wordCount, text: "%action.wordCount", groups: [MainMenu.Tools]}
+    - {id: markdown.editor.undo, text: "%action.undo", groups: []}
+    - {id: markdown.editor.redo, text: "%action.redo", groups: []}
+    - {id: markdown.editor.cut, text: "%action.cut", groups: []}
+    - {id: markdown.editor.copy, text: "%action.copy", groups: []}
+    - {id: markdown.editor.paste, text: "%action.paste", groups: []}
+    - {id: markdown.editor.selectAll, text: "%action.selectAll", groups: []}
+    - {id: markdown.editor.deleteBlock, text: "%action.deleteBlock", groups: []}
+    - {id: markdown.editor.paragraph, text: "%action.paragraph", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.heading1, text: "%action.heading1", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.heading2, text: "%action.heading2", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.heading3, text: "%action.heading3", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.heading4, text: "%action.heading4", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.heading5, text: "%action.heading5", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.heading6, text: "%action.heading6", groups: [MarkdownEditor.ParagraphMenu]}
+    - {id: markdown.editor.bold, text: "%action.bold", groups: [MarkdownEditor.FormatMenu]}
+    - {id: markdown.editor.italic, text: "%action.italic", groups: [MarkdownEditor.FormatMenu]}
+    - {id: markdown.editor.underline, text: "%action.underline", groups: [MarkdownEditor.FormatMenu]}
+    - {id: markdown.editor.strikethrough, text: "%action.strikethrough", groups: [MarkdownEditor.FormatMenu]}
+    - {id: markdown.editor.inlineCode, text: "%action.inlineCode", groups: [MarkdownEditor.FormatMenu]}
+    - {id: markdown.editor.link, text: "%action.link", groups: [MarkdownEditor.FormatMenu]}
+    - {id: markdown.editor.clearFormatting, text: "%action.clearFormatting", groups: [MarkdownEditor.FormatMenu]}
+    - {id: markdown.editor.blockQuote, text: "%action.blockQuote", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.bulletList, text: "%action.bulletList", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.orderedList, text: "%action.orderedList", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.taskList, text: "%action.taskList", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.codeBlock, text: "%action.codeBlock", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.table, text: "%action.table", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.mathBlock, text: "%action.mathBlock", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.horizontalRule, text: "%action.horizontalRule", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.image, text: "%action.image", groups: [MarkdownEditor.InsertMenu]}
   fileEditors:
     - id: markdown.editor
       patterns: ["*.md"]

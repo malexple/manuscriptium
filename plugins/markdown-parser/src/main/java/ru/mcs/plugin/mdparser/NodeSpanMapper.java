@@ -119,7 +119,7 @@ final class NodeSpanMapper {
         if (node instanceof TaskListItem task) {
             result.put("done", Boolean.toString(task.isItemDoneMarker()));
         }
-        if (node instanceof TableCell cell) {
+        if (node instanceof TableCell cell && cell.getAlignment() != null) {
             result.put("alignment", cell.getAlignment().name().toLowerCase(java.util.Locale.ROOT));
         }
         return result;
