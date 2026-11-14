@@ -3,8 +3,10 @@ package ru.mcs.plugin.mdeditor;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import ru.mcs.spi.editor.FileEditor;
 import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.editor.MarkdownParser;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 
@@ -17,13 +19,17 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
     private final MarkdownEditorRegistry registry;
     private final I18n i18n;
     private final AtomicFileStore fileStore;
+    private final MarkdownParser parser;
+    private final Executor parserExecutor;
 
     MarkdownFileEditorProvider(MarkdownEditorState state, MarkdownEditorRegistry registry, I18n i18n,
-                               AtomicFileStore fileStore) {
+                               AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor) {
         this.state = state;
         this.registry = registry;
         this.i18n = i18n;
         this.fileStore = Objects.requireNonNull(fileStore, "fileStore");
+        this.parser = Objects.requireNonNull(parser, "parser");
+        this.parserExecutor = Objects.requireNonNull(parserExecutor, "parserExecutor");
     }
 
     @Override
@@ -44,6 +50,6 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
 
     @Override
     public FileEditor createEditor(Path file) {
-        return new MarkdownFileEditor(file, state.defaultMode(), registry, i18n, fileStore);
+        return new MarkdownFileEditor(file, state.defaultMode(), registry, i18n, fileStore, parser, parserExecutor);
     }
 }

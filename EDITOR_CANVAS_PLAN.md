@@ -159,6 +159,14 @@ public record RenderedBlock(java.awt.image.BufferedImage image, String altText) 
 - Чек-лист: источник позиций (spans) для каждого узла; инкрементальный `reparse` в пределах затронутых блоков; фон ≠ EDT.
 - DoD: корпус тестовых `.md` (CommonMark spec examples, Obsidian-конструкции) → ожидаемые `BlockSpan`; правка одного символа не вызывает полного парса (метрика числа перепарсенных блоков).
 
+**Принято в реализации E3:**
+- Flexmark 0.64.8 вынесен в самостоятельный bundled JPMS/JAR-плагин `plugins/markdown-parser` (`ru.mcs.plugin.mdparser`). `markdown-editor` объявляет `depends-on` и получает `MarkdownParser` из `ServiceRegistry`; `spi` и editor не имеют compile-time зависимости от Flexmark. Runtime-JAR библиотеки копируются в каталог parser-плагина в dev/jlink-образах.
+- `MarkdownParser`, `BlockKind`, `BlockSpan` и `AstIndex` находятся в `ru.mcs.spi.editor`. Spans используют нулевые UTF-16 offsets, полуоткрытый `end` и parser-neutral attributes; `AstIndex` — неизменяемый flat AST snapshot с бинарным поиском top-level блока.
+- Подключены официальные Flexmark-расширения Front Matter, Wikilink, Footnote, TaskList, Table и Strikethrough. Embed дополнительно распознаётся по неэкранированному `!` перед wikilink и включает его в span. Callout и math обрабатывает `ObsidianSpanProcessor`: официального `flexmark-ext-math` версии 0.64.8 в Maven Central нет, поэтому внешняя фиктивная зависимость не добавлена.
+- Incremental `reparse` использует top-level dirty-window, расширяет его на predecessor/successor при структурных правках, до закрытия незавершённого fence и до стабильной границы абзаца. Reference/footnote definitions консервативно вызывают full parse из-за глобального влияния на inline AST. Метрики содержат `parsedBlocks`, `reusedBlocks`, `fullParse`.
+- `MarkdownParseCoordinator` работает в общем однопоточном daemon executor плагина, coalesce’ит быстрые запросы и не обращается к `DocumentModel` из фона. Grouped undo использует full parse; результат публикуется на EDT только при совпадении версии и отбрасывается после `dispose`.
+- Corpus CommonMark/Obsidian хранится как `.md` + точные `.spans`. Четыре фиксированных seed по 250 последовательных randomized-правок сравнивают каждый incremental AST с полным; отдельные regressions покрывают границы блоков, изменённый prefix, UTF-16, escaped embed, fences и глобальные definitions.
+
 ### Фаза E4. Движок стилей
 - Классы: `CssParser`, `StyleSheet`, `StyleResolver`, `ComputedStyle`, `TyporaCssLoader`, `FontRegistry`, `ThemeCatalog`.
 - Чек-лист: подмножество из раздела 4, переменные, каскад, `*.user.css`, `CssDiagnostic`, встроенные темы Light/Dark в формате Typora-CSS (старые JSON-токены оболочки не трогать, но задать связку «тема оболочки → тема редактора»).

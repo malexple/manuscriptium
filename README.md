@@ -1,6 +1,6 @@
 # Manuscriptium
 
-Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, плагины и Vault: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки включены bundled-плагины Hello, Markdown Canvas Editor, «Заметки» и «Свойства».
+Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, плагины и Vault: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки включены bundled-плагины Hello, Markdown Canvas Editor, Markdown AST Parser, «Заметки» и «Свойства».
 
 ## Первый запуск 
 ```
@@ -14,7 +14,7 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
 внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
 
-## Markdown Canvas Editor — E0–E2
+## Markdown Canvas Editor — E0–E3
 
 `.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
 текстового провайдера. Кнопки **Canvas** и **Source** внутри вкладки переключают представление без создания второй вкладки
@@ -35,8 +35,15 @@ Save-point учитывает undo/redo и правки во время фоно
 используется. Поддержаны клавиатурный ввод, каретка и selection, drag/double/triple click, word wrap, Home/End/PageUp/PageDown,
 текстовый clipboard, undo/redo с системным menu shortcut (`Cmd` на macOS), IME и скролл с инерцией. Построчная раскладка
 изменяет только затронутые физические строки, а рисование ограничено viewport. Пока в обоих режимах отображается исходный
-Markdown без синтаксической раскладки; парсер и WYSIWYG относятся к E3–E5. Следующие фазы и критерии приёмки определены в
-`EDITOR_CANVAS_PLAN.md`, каталог поведения — в `TYPORA_FEATURES.md`.
+Markdown без синтаксической раскладки; WYSIWYG-раскладка относится к E5.
+
+В E3 bundled-плагин `plugins/markdown-parser` предоставляет Flexmark AST через JDK-only SPI. `BlockSpan` сохраняет нулевые
+полуоткрытые UTF-16 offsets и depth каждого узла; поддержаны Front Matter, wikilinks/embeds, callouts, footnotes, inline/block
+math, task lists, tables и strikethrough. `AstIndex` выполняет поиск блока по offset. Обычная правка перепарсивает только
+затронутые top-level блоки и переиспользует остальные; результаты вычисляются в общем daemon executor и применяются на EDT
+только при совпадении `DocumentModel.version()`. Собранный AST пока не меняет отображение исходного Markdown: стили и визуальная
+раскладка появятся в E4–E5. Следующие фазы и критерии приёмки определены в `EDITOR_CANVAS_PLAN.md`, каталог поведения — в
+`TYPORA_FEATURES.md`.
 
 ## Bundled-панели заметок и свойств
 

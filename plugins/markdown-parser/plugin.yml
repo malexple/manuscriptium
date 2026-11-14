@@ -1,0 +1,8 @@
+id: ru.mcs.plugin.mdparser
+name: Markdown AST Parser
+version: 0.1.0
+sdk-version: "0.9"
+module: ru.mcs.plugin.mdparser
+depends-on: []
+permissions: []
+activation: onDemand

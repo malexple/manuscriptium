@@ -10,6 +10,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import javax.swing.ButtonGroup;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -26,7 +27,9 @@ import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec;
 import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec.DecodedDocument;
 import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.FileEditor;
+import ru.mcs.spi.editor.MarkdownParser;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 
@@ -40,6 +43,8 @@ final class MarkdownFileEditor implements FileEditor {
     private final MarkdownEditorRegistry registry;
     private final I18n i18n;
     private final AtomicFileStore fileStore;
+    private final MarkdownParser parser;
+    private final Executor parserExecutor;
     private final JPanel root = new JPanel(new BorderLayout());
     private final CardLayout cards = new CardLayout();
     private final JPanel content = new JPanel(cards);
@@ -55,15 +60,18 @@ final class MarkdownFileEditor implements FileEditor {
     private volatile boolean disposed;
     private EditorMode mode;
     private DocumentModel document;
+    private MarkdownParseCoordinator parseCoordinator;
     private boolean modified;
     private CompletableFuture<Void> saveInFlight;
 
     MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
-                       AtomicFileStore fileStore) {
+                       AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor) {
         this.file = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
         this.registry = registry;
         this.i18n = i18n;
         this.fileStore = Objects.requireNonNull(fileStore, "fileStore");
+        this.parser = Objects.requireNonNull(parser, "parser");
+        this.parserExecutor = Objects.requireNonNull(parserExecutor, "parserExecutor");
 
         source.setName("markdown.editor.source");
         source.setStatus(i18n.get("source.loading"));
@@ -118,6 +126,7 @@ final class MarkdownFileEditor implements FileEditor {
                     document.addListener(documentListener);
                     source.setDocument(document);
                     canvas.setDocument(document);
+                    parseCoordinator = new MarkdownParseCoordinator(document, parser, parserExecutor);
                     canvas.setStatus(i18n.get("canvas.ready"));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -171,6 +180,10 @@ final class MarkdownFileEditor implements FileEditor {
 
     DocumentModel document() {
         return document;
+    }
+
+    AstIndex astIndex() {
+        return parseCoordinator == null ? null : parseCoordinator.index();
     }
 
     boolean isLoaded() {
@@ -302,6 +315,9 @@ final class MarkdownFileEditor implements FileEditor {
         }
         disposed = true;
         loader.cancel(true);
+        if (parseCoordinator != null) {
+            parseCoordinator.close();
+        }
         if (document != null) {
             document.removeListener(documentListener);
         }

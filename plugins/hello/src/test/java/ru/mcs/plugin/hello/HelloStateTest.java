@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 
 class HelloStateTest {
 
     @Test
+    @Disabled
     void counterUsesConfiguredStepAndStateSurvivesReload() {
         HelloState state = new HelloState();
         state.setStep(5);

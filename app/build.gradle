@@ -3,7 +3,7 @@ plugins {
     id 'org.beryx.jlink' version '4.2.0'
 }
 
-def bundledPlugins = ['hello', 'markdown-editor', 'notes', 'properties']
+def bundledPlugins = ['hello', 'markdown-editor', 'markdown-parser', 'notes', 'properties']
 bundledPlugins.each { evaluationDependsOn(":plugins:${it}") }
 
 dependencies {
@@ -25,6 +25,10 @@ tasks.register('systemPlugins', Sync) {
         dependsOn plugin.tasks.named('jar')
         from(plugin.tasks.named('jar')) { into id }
         from(plugin.file('plugin.yml')) { into id }
+        if (id == 'markdown-parser') {
+            dependsOn plugin.tasks.named('pluginRuntime')
+            from(plugin.tasks.named('pluginRuntime')) { into id }
+        }
     }
     into systemPluginsDir
 }

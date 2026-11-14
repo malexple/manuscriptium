@@ -276,7 +276,7 @@ class MarkdownFileEditorTest {
                                       AtomicFileStore fileStore) throws Exception {
         AtomicReference<MarkdownFileEditor> result = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> result.set(new MarkdownFileEditor(file, mode, registry, I18n.passthrough(),
-                fileStore)));
+                fileStore, new TestMarkdownParser(), TestMarkdownParser.EXECUTOR)));
         return result.get();
     }
 

@@ -3,7 +3,7 @@ name: Markdown Canvas Editor
 version: 0.1.0
 sdk-version: "0.9"
 module: ru.mcs.plugin.mdeditor
-depends-on: []
+depends-on: [ru.mcs.plugin.mdparser]
 permissions: []
 activation: onDemand
 i18n: ru/mcs/plugin/mdeditor/messages

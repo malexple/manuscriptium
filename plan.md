@@ -1,6 +1,6 @@
 # Manuscriptium — план реализации (plan.md)
 
-Версия документа: 1.4 (2026-11-13). Статус: Фазы 0–4 и Canvas-редактор E0–E2 завершены; следующий этап — E3, публикация Фазы 5 продолжится после E9.
+Версия документа: 1.5 (2026-11-14). Статус: Фазы 0–4 и Canvas-редактор E0–E3 завершены; следующий этап — E4, публикация Фазы 5 продолжится после E9.
 
 ## 1. Цель и приоритеты
 
@@ -285,16 +285,23 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
   selection мышью/клавиатурой, drag/double/triple click, word wrap, Home/End/PageUp/PageDown, clipboard, Ctrl/Cmd+Z/Y,
   IME и инерционный скролл. `DocumentLineIndex` и `TextLayoutEngine` перестраивают только затронутые строки, batch composite
   перестраивается один раз, рисование ограничено viewport; есть метрики кадра и тесты `hitTest`/`caretRect`, включая scale=2.
-- [ ] **E3–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
+- [x] **E3. Парсер и дерево блоков:** отдельный bundled `plugins/markdown-parser` на Flexmark 0.64.8; JDK-only SPI
+  `MarkdownParser`, `BlockSpan`, `BlockKind`, `AstIndex`; Front Matter, wikilinks/embeds, callouts, footnotes, math, task lists,
+  tables и strikethrough с точными UTF-16 spans. Incremental dirty-window переиспользует неизменённые блоки, а фоновый
+  `MarkdownParseCoordinator` публикует на EDT только актуальную версию. Corpus CommonMark/Obsidian и 1000 randomized-правок
+  сравниваются с полным AST; одиночная обычная правка перепарсивает один блок.
+- [ ] **E4–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
 
 Принятые решения: плагин не зависит от `core`; Obsidian-навигация и preview будут предоставлены через SPI-сервисы и адаптер
 `core`. `flexmark-java`, CSS-движок и `JLaTeXMath` становятся отдельными JAR-плагинами с JDK-only сервисными контрактами SPI
 и связями `depends-on`. F-007, F-008, полный F-060, F-062 и outline из F-100 перенесены в E9. Рендеринг проверяется метриками
 с встроенным шрифтом, записью `DrawSink` и платформенными golden-изображениями с допусками/diff-артефактами; пиксельное
 совпадение между ОС не требуется. В E0–E1 Source только читался; с E2 Canvas и Source редактируются и используют общую
-модель, отображая исходный Markdown до появления AST/WYSIWYG. Внутренний текст нормализован к LF, смешанные EOL не
+модель, отображая исходный Markdown до появления WYSIWYG-раскладки. Внутренний текст нормализован к LF, смешанные EOL не
 сохраняются без явной нормализации. Добавление `AtomicFileStore` и default-методов асинхронного сохранения бинарно
-совместимо с плагинами линии 0.9, поэтому `McsSdk.VERSION` и `sdk-version` остаются `0.9.0`/`0.9`; E2 не меняет SPI.
+совместимо с плагинами линии 0.9. В E3 parser-контракты добавлены в SPI аддитивно; `McsSdk.VERSION` и `sdk-version` остаются
+`0.9.0`/`0.9`. Flexmark и его runtime-JAR находятся только в отдельном plugin layer, `markdown-editor` получает parser через
+`ServiceRegistry` и `depends-on`, не приобретая compile-time зависимость на стороннюю библиотеку.
 
 ### Фаза 5. Публикация (после Canvas E0–E9)
 - Публикация: `StaticSiteExporter` (Hugo), `PublishingProfile`, валидация YAML, конвертация `![[img]]`, проверка `draft`, битые ссылки, JGit commit/push в фоне со статусом в статус-баре.
