@@ -1,0 +1,8 @@
+id: ru.mcs.plugin.editorstyle
+name: Typora Editor Styles
+version: 0.1.0
+sdk-version: "0.9"
+module: ru.mcs.plugin.editorstyle
+depends-on: []
+permissions: []
+activation: onDemand

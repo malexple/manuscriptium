@@ -11,6 +11,7 @@ import ru.mcs.spi.action.AnAction;
 import ru.mcs.spi.action.AnActionEvent;
 import ru.mcs.spi.editor.FileEditorProvider;
 import ru.mcs.spi.editor.MarkdownParser;
+import ru.mcs.spi.editor.style.EditorStyleService;
 import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
 import ru.mcs.spi.settings.Configurable;
@@ -25,6 +26,7 @@ public final class MarkdownEditorPlugin implements Plugin {
     private PluginContext ctx;
     private AtomicFileStore fileStore;
     private MarkdownParser parser;
+    private EditorStyleService styles;
     private ExecutorService parserExecutor;
 
     @Override
@@ -32,6 +34,7 @@ public final class MarkdownEditorPlugin implements Plugin {
         ctx = context;
         fileStore = context.services().get(AtomicFileStore.class);
         parser = context.services().get(MarkdownParser.class);
+        styles = context.services().get(EditorStyleService.class);
         parserExecutor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "manuscriptium-markdown-parser");
             thread.setDaemon(true);

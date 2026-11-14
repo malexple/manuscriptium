@@ -1,0 +1,13 @@
+:root {
+    --bg-color: #ffffff;
+    --text-color: #37352f;
+    --primary-color: #2563eb;
+    --control-text-color: #787774;
+    --side-bar-bg-color: #f7f7f5;
+    --code-bg: #f7f6f3;
+    --border-color: #e9e9e7;
+}
+#write { max-width: 780px; padding-top: 36px; }
+h1, h2, h3 { font-weight: 700; }
+p { line-height: 1.65; }
+blockquote { background-color: #f7f7f5; }

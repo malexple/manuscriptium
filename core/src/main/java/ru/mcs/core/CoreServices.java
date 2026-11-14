@@ -32,6 +32,7 @@ import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.core.vault.VaultPaths;
 import ru.mcs.core.vault.VaultState;
 import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.editor.style.ShellThemeService;
 import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
 
@@ -75,6 +76,7 @@ final class CoreServices {
         configurables.register(generalSettings);
         configurables.register(new AppearanceSettingsProvider(themes));
         services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
+        services.register(ShellThemeService.class, themes);
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);

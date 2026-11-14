@@ -19,13 +19,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import ru.mcs.core.settings.AppSettings;
+import ru.mcs.spi.editor.style.ShellThemeService;
 
 /** Темы приложения: FlatLaf + JSON-токены, системный режим и горячая перезагрузка файлов. */
-public final class McsThemeManager implements AutoCloseable {
+public final class McsThemeManager implements ShellThemeService, AutoCloseable {
 
     static final String SYSTEM = AppSettings.SYSTEM_THEME;
     private static final System.Logger LOG = System.getLogger(McsThemeManager.class.getName());
@@ -48,6 +52,7 @@ public final class McsThemeManager implements AutoCloseable {
     private final SystemThemeDetector detector;
     private final long osPollMs;
     private final Map<String, Object> tokenBackup = new HashMap<>();
+    private final Set<Consumer<Snapshot>> themeListeners = ConcurrentHashMap.newKeySet();
 
     private volatile Map<String, ThemeDefinition> themes = Map.of();
     private volatile boolean dark;
@@ -77,6 +82,16 @@ public final class McsThemeManager implements AutoCloseable {
 
     public boolean isDark() {
         return dark;
+    }
+
+    @Override
+    public void addThemeListener(Consumer<Snapshot> listener) {
+        themeListeners.add(listener);
+    }
+
+    @Override
+    public void removeThemeListener(Consumer<Snapshot> listener) {
+        themeListeners.remove(listener);
     }
 
     public List<ThemeInfo> getThemes() {
@@ -243,6 +258,14 @@ public final class McsThemeManager implements AutoCloseable {
             }
             dark = theme.dark();
             FlatLaf.updateUI();
+            Snapshot snapshot = new Snapshot(selectedTheme(), dark);
+            for (Consumer<Snapshot> listener : themeListeners) {
+                try {
+                    listener.accept(snapshot);
+                } catch (RuntimeException e) {
+                    LOG.log(System.Logger.Level.WARNING, "Editor theme listener failed", e);
+                }
+            }
         } catch (RuntimeException e) {
             LOG.log(System.Logger.Level.ERROR, "Cannot apply theme: " + theme.id(), e);
         }

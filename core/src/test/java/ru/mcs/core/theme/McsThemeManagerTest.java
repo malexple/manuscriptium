@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -74,6 +75,20 @@ class McsThemeManagerTest {
             await(FlatLaf::isLafDark, "dark FlatLaf base");
             assertThat(settings.theme()).isEqualTo(AppSettings.SYSTEM_THEME);
         }
+    }
+
+    @Test
+    void shellThemeListenersReceiveEffectiveDarkMode() throws Exception {
+        AppSettings settings = new AppSettings();
+        McsThemeManager manager = new McsThemeManager(settings, directory, () -> Optional.of(false), 50);
+        AtomicReference<ru.mcs.spi.editor.style.ShellThemeService.Snapshot> received = new AtomicReference<>();
+        manager.addThemeListener(received::set);
+
+        SwingUtilities.invokeAndWait(() -> manager.setTheme("dark"));
+
+        assertThat(received.get()).isNotNull();
+        assertThat(received.get().selectedId()).isEqualTo("dark");
+        assertThat(received.get().dark()).isTrue();
     }
 
     private static String customTheme(String foreground) {

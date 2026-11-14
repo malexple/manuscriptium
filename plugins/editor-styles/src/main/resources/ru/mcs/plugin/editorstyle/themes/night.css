@@ -1,0 +1,13 @@
+:root {
+    --bg-color: #1e222a;
+    --text-color: #d8dee9;
+    --primary-color: #7aa2f7;
+    --control-text-color: #9aa5b1;
+    --side-bar-bg-color: #252a34;
+    --code-bg: #282e3a;
+    --border-color: #414958;
+    --select-text-bg-color: #365075;
+}
+#write { background-color: var(--bg-color); }
+blockquote { border-left: 4px solid #7aa2f7; }
+a:hover { color: #99b8ff; }

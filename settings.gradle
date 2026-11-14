@@ -1,3 +1,4 @@
 rootProject.name = 'manuscriptium'
 
-include 'spi', 'core', 'app', 'plugins:hello', 'plugins:markdown-editor', 'plugins:markdown-parser', 'plugins:notes', 'plugins:properties'
+include 'spi', 'core', 'app', 'plugins:hello', 'plugins:markdown-editor',
+        'plugins:markdown-parser', 'plugins:editor-styles', 'plugins:notes', 'plugins:properties'

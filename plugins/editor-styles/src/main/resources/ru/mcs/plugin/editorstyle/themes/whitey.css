@@ -1,0 +1,12 @@
+:root {
+    --bg-color: #fefefe;
+    --text-color: #303030;
+    --primary-color: #316caa;
+    --control-text-color: #737373;
+    --side-bar-bg-color: #f5f5f5;
+    --code-bg: #f7f7f7;
+    --border-color: #dddddd;
+}
+#write { font-family: Serif; max-width: 800px; }
+h1 { border-bottom: 0; }
+blockquote { background-color: transparent; }

@@ -1,0 +1,12 @@
+:root {
+    --bg-color: #f5f8fc;
+    --text-color: #233247;
+    --primary-color: #2563a9;
+    --control-text-color: #607086;
+    --side-bar-bg-color: #e9f0f8;
+    --code-bg: #eaf1f8;
+    --border-color: #c5d5e5;
+}
+#write { max-width: 840px; padding-left: 40px; padding-right: 40px; }
+h1 { color: #1d4f82; }
+pre { border-radius: 8px; }

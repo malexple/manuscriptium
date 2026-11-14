@@ -1,0 +1,13 @@
+:root {
+    --bg-color: #ffffff;
+    --text-color: #2c3e50;
+    --primary-color: #42b983;
+    --control-text-color: #627180;
+    --side-bar-bg-color: #f3f7f5;
+    --code-bg: #f2f7f5;
+    --border-color: #d7e5de;
+}
+#write { max-width: 880px; }
+h1, h2 { color: #34495e; }
+blockquote { border-left: 4px solid #42b983; }
+a:hover { color: #35a472; }

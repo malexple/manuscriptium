@@ -1,0 +1,72 @@
+:root {
+    --bg-color: #ffffff;
+    --text-color: #24292f;
+    --primary-color: #0969da;
+    --select-text-bg-color: #b6d7ff;
+    --side-bar-bg-color: #f6f8fa;
+    --active-file-bg-color: #e7f0fa;
+    --item-hover-bg-color: #f0f3f6;
+    --control-text-color: #57606a;
+    --code-bg: #f6f8fa;
+    --border-color: #d0d7de;
+}
+#write {
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    font-family: SansSerif;
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 32px;
+}
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-color);
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 24px 0 16px;
+}
+h1 { font-size: 32px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+h2 { font-size: 24px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); }
+h3 { font-size: 20px; }
+h4 { font-size: 16px; }
+h5 { font-size: 14px; }
+h6 { font-size: 13px; color: var(--control-text-color); }
+p { margin: 0 0 16px; }
+blockquote {
+    color: var(--control-text-color);
+    margin: 0 0 16px;
+    padding: 4px 16px;
+    border-left: 4px solid var(--border-color);
+    background-color: var(--side-bar-bg-color);
+}
+code, .md-fences, .md-end-block {
+    font-family: Monospaced;
+    background-color: var(--code-bg);
+    border-radius: 4px;
+}
+pre {
+    font-family: Monospaced;
+    font-size: 14px;
+    line-height: 1.45;
+    margin: 0 0 16px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--code-bg);
+}
+a { color: var(--primary-color); text-decoration: underline; }
+a:hover { color: var(--primary-color); text-decoration: underline; }
+strong { font-weight: 700; }
+em { font-style: italic; }
+del { color: var(--control-text-color); text-decoration: line-through; }
+ul, ol { margin: 0 0 16px; padding-left: 32px; }
+li { margin-bottom: 4px; }
+table { width: 100%; margin-bottom: 16px; border: 1px solid var(--border-color); }
+th, td { padding: 6px 12px; border-bottom: 1px solid var(--border-color); text-align: left; }
+th { font-weight: 600; background-color: var(--side-bar-bg-color); }
+tr:nth-child(even) { background-color: var(--side-bar-bg-color); }
+hr { margin: 24px 0; border: 0; border-bottom: 2px solid var(--border-color); }
+img { max-width: 100%; }
+/* Диагностика должна быть нефатальной и видимой в журнале темы. */
+p { text-rendering: optimizeLegibility; }

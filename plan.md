@@ -1,6 +1,6 @@
 # Manuscriptium — план реализации (plan.md)
 
-Версия документа: 1.5 (2026-11-14). Статус: Фазы 0–4 и Canvas-редактор E0–E3 завершены; следующий этап — E4, публикация Фазы 5 продолжится после E9.
+Версия документа: 1.6 (2026-11-14). Статус: Фазы 0–4 и Canvas-редактор E0–E4 завершены; следующий этап — E5, публикация Фазы 5 продолжится после E9.
 
 ## 1. Цель и приоритеты
 
@@ -290,7 +290,14 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
   tables и strikethrough с точными UTF-16 spans. Incremental dirty-window переиспользует неизменённые блоки, а фоновый
   `MarkdownParseCoordinator` публикует на EDT только актуальную версию. Corpus CommonMark/Obsidian и 1000 randomized-правок
   сравниваются с полным AST; одиночная обычная правка перепарсивает один блок.
-- [ ] **E4–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
+- [x] **E4. Движок стилей:** отдельный bundled `plugins/editor-styles` (`ru.mcs.plugin.editorstyle`) предоставляет
+  `EditorStyleService` через JDK-only SPI. Поддержаны Typora-подобный CSS, каскад `DEFAULT → THEME → BASE_USER → THEME_USER`,
+  переменные, селекторы, типизированный `ComputedStyle`, локальные `@font-face` и нефатальные `CssDiagnostic`. Девять тем
+  (`github`, `newsprint`, `night`, `pixyll`, `whitey`, `vue`, `lapis`, `onedark`, `notion`) загружаются без ошибок; в auto-режиме
+  Light/Dark оболочки отображаются в `github`/`night`. Пользовательские `base.user.css` и `{theme}.user.css` читаются из
+  `<home>/editor-themes`; CSS и шрифты загружаются вне EDT. Canvas пока отображает исходный Markdown — применение стилей при
+  раскладке относится к E5.
+- [ ] **E5–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
 
 Принятые решения: плагин не зависит от `core`; Obsidian-навигация и preview будут предоставлены через SPI-сервисы и адаптер
 `core`. `flexmark-java`, CSS-движок и `JLaTeXMath` становятся отдельными JAR-плагинами с JDK-only сервисными контрактами SPI
@@ -301,7 +308,12 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
 сохраняются без явной нормализации. Добавление `AtomicFileStore` и default-методов асинхронного сохранения бинарно
 совместимо с плагинами линии 0.9. В E3 parser-контракты добавлены в SPI аддитивно; `McsSdk.VERSION` и `sdk-version` остаются
 `0.9.0`/`0.9`. Flexmark и его runtime-JAR находятся только в отдельном plugin layer, `markdown-editor` получает parser через
-`ServiceRegistry` и `depends-on`, не приобретая compile-time зависимость на стороннюю библиотеку.
+`ServiceRegistry` и `depends-on`, не приобретая compile-time зависимость на стороннюю библиотеку. В E4 CSS-движок выделен в
+самостоятельный plugin layer, использующий только JDK и SPI; старые JSON/FlatLaf-темы оболочки сохранены. `ShellThemeService` —
+read-only bridge из `core` с listeners, а явный выбор editor theme отключает автоматическое Light/Dark-отображение. Каскад сортирует
+декларации по `!important`, specificity, origin, порядку правила и декларации. Локальные шрифты разрешаются только внутри каталога
+темы; внешние URL и неподдерживаемые CSS-конструкции дают диагностику, но не останавливают загрузку. Editor style state хранится
+в application state и не попадает в синхронизируемый Vault.
 
 ### Фаза 5. Публикация (после Canvas E0–E9)
 - Публикация: `StaticSiteExporter` (Hugo), `PublishingProfile`, валидация YAML, конвертация `![[img]]`, проверка `draft`, битые ссылки, JGit commit/push в фоне со статусом в статус-баре.

@@ -1,0 +1,12 @@
+:root {
+    --bg-color: #f8f5ef;
+    --text-color: #2f2f2f;
+    --primary-color: #425a70;
+    --control-text-color: #6d6a63;
+    --side-bar-bg-color: #eee9df;
+    --code-bg: #eeeae2;
+    --border-color: #c9c1b4;
+}
+#write { font-family: Serif; max-width: 760px; padding-top: 32px; }
+h1, h2 { font-family: Serif; font-weight: 400; }
+blockquote { font-style: italic; }

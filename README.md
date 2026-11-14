@@ -1,6 +1,6 @@
 # Manuscriptium
 
-Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, плагины и Vault: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки включены bundled-плагины Hello, Markdown Canvas Editor, Markdown AST Parser, «Заметки» и «Свойства».
+Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, плагины и Vault: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки включены bundled-плагины Hello, Markdown Canvas Editor, Markdown AST Parser, Typora Editor Styles, «Заметки» и «Свойства».
 
 ## Первый запуск 
 ```
@@ -14,7 +14,7 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
 внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
 
-## Markdown Canvas Editor — E0–E3
+## Markdown Canvas Editor — E0–E4
 
 `.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
 текстового провайдера. Кнопки **Canvas** и **Source** внутри вкладки переключают представление без создания второй вкладки
@@ -41,9 +41,30 @@ Markdown без синтаксической раскладки; WYSIWYG-рас�
 полуоткрытые UTF-16 offsets и depth каждого узла; поддержаны Front Matter, wikilinks/embeds, callouts, footnotes, inline/block
 math, task lists, tables и strikethrough. `AstIndex` выполняет поиск блока по offset. Обычная правка перепарсивает только
 затронутые top-level блоки и переиспользует остальные; результаты вычисляются в общем daemon executor и применяются на EDT
-только при совпадении `DocumentModel.version()`. Собранный AST пока не меняет отображение исходного Markdown: стили и визуальная
-раскладка появятся в E4–E5. Следующие фазы и критерии приёмки определены в `EDITOR_CANVAS_PLAN.md`, каталог поведения — в
-`TYPORA_FEATURES.md`.
+только при совпадении `DocumentModel.version()`. Собранный AST и вычисленные стили пока не меняют отображение исходного Markdown:
+визуальная WYSIWYG-раскладка появится в E5. Следующие фазы и критерии приёмки определены в `EDITOR_CANVAS_PLAN.md`, каталог
+поведения — в `TYPORA_FEATURES.md`.
+
+### Темы редактора E4
+
+Bundled-плагин `plugins/editor-styles` загружает девять Typora-подобных CSS-тем: `github`, `newsprint`, `night`, `pixyll`,
+`whitey`, `vue`, `lapis`, `onedark` и `notion`. В автоматическом режиме светлая тема оболочки выбирает `github`, тёмная — `night`;
+явный выбор темы редактора через `EditorStyleService` отключает это автоматическое следование. JSON-токены и переключение
+FlatLaf-тем оболочки не изменены.
+
+Плагин предоставляет JDK-only `EditorStyleService` с типизированным `ComputedStyle`. CSS-движок поддерживает каскад и `!important`,
+type/id/class/`:root`/`:hover`/`:nth-child(odd|even)`, descendant- и child-комбинаторы, группы селекторов, переменные `--name` и
+`var()`, размеры, цвета, отступы, границы, шрифты и локальные `@font-face`. Неподдерживаемые свойства и конструкции попадают в журнал
+как `CssDiagnostic` и не прерывают загрузку остальной темы. CSS и TTF/OTF-шрифты загружаются в daemon executor вне EDT; внешние
+font URL не загружаются, а локальные файлы разрешаются только внутри каталога темы.
+
+Пользовательские переопределения необязательны и размещаются в `<home>/editor-themes/`:
+
+- `base.user.css` — для всех тем;
+- `{theme}.user.css`, например `github.user.css` — только для выбранной темы.
+
+Итоговый порядок слоёв: `DEFAULT → THEME → BASE_USER → THEME_USER`. Выбранный режим (`auto` или id темы) сохраняется в application
+state. На этапе E4 отдельного UI выбора темы и журнала диагностик ещё нет; темы применяются к `ComputedStyle`, но не к раскладке Canvas.
 
 ## Bundled-панели заметок и свойств
 
