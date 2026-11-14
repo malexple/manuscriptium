@@ -40,8 +40,10 @@ final class DefaultStyleResolver implements StyleResolver {
         StyleElement target = new StyleElement(state.tag() == null ? tag(kind) : state.tag(),
                 state.id(), classes, state.childIndex());
         Match root = match(sheet, StyleElement.of("root"), false, List.of());
+        Match write = match(sheet, new StyleElement("div", "write", List.of(), 0), false, List.of());
         Match element = match(sheet, target, state.hover(), state.ancestors());
         Map<String, String> rawVariables = new HashMap<>(root.variables);
+        rawVariables.putAll(write.variables);
         rawVariables.putAll(element.variables);
         Map<String, String> variables = new LinkedHashMap<>();
         for (String name : rawVariables.keySet()) {
@@ -53,6 +55,7 @@ final class DefaultStyleResolver implements StyleResolver {
         }
         Builder builder = new Builder();
         applyRoot(root.declarations, variables, builder);
+        applyRoot(write.declarations, variables, builder);
         apply(element.declarations, variables, builder, false);
         return builder.build(variables);
     }

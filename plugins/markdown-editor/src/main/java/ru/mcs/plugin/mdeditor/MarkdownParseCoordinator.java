@@ -3,6 +3,7 @@ package ru.mcs.plugin.mdeditor;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import javax.swing.SwingUtilities;
 import ru.mcs.plugin.mdeditor.model.DocumentChange;
 import ru.mcs.plugin.mdeditor.model.DocumentListener;
@@ -18,6 +19,7 @@ final class MarkdownParseCoordinator implements DocumentListener, AutoCloseable 
     private final DocumentModel document;
     private final MarkdownParser parser;
     private final Executor executor;
+    private final Consumer<AstIndex> indexListener;
     private final Object lock = new Object();
 
     private ParseRequest pending;
@@ -27,9 +29,15 @@ final class MarkdownParseCoordinator implements DocumentListener, AutoCloseable 
     private volatile boolean closed;
 
     MarkdownParseCoordinator(DocumentModel document, MarkdownParser parser, Executor executor) {
+        this(document, parser, executor, index -> { });
+    }
+
+    MarkdownParseCoordinator(DocumentModel document, MarkdownParser parser, Executor executor,
+                             Consumer<AstIndex> indexListener) {
         this.document = Objects.requireNonNull(document, "document");
         this.parser = Objects.requireNonNull(parser, "parser");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.indexListener = Objects.requireNonNull(indexListener, "indexListener");
         document.addListener(this);
         request(null);
     }
@@ -116,6 +124,7 @@ final class MarkdownParseCoordinator implements DocumentListener, AutoCloseable 
     private void apply(ParseResult result) {
         if (!closed && result.version() == document.version()) {
             index = new AstIndex(result);
+            indexListener.accept(index);
         }
     }
 

@@ -47,7 +47,7 @@ final class CaretPainter {
             return;
         }
         Rectangle caret = canvas.caretRect(canvas.caretOffset());
-        graphics.setColor(canvas.getForeground());
+        graphics.setColor(canvas.caretColor());
         graphics.fillRect(caret.x, caret.y + 1, Math.max(1, caret.width), Math.max(1, caret.height - 2));
     }
 

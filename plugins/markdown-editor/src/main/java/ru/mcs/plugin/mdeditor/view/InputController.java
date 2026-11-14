@@ -151,8 +151,7 @@ public final class InputController {
         Rectangle caret = canvas.caretRect(canvas.caretOffset());
         float x = verticalGoalX != null ? verticalGoalX : caret.x;
         verticalGoalX = x;
-        int y = caret.y + canvas.textLayout().lineHeight() / 2
-                + direction * canvas.textLayout().lineHeight();
+        int y = caret.y + canvas.lineHeight() / 2 + direction * canvas.lineHeight();
         moveCaretPreservingGoal(canvas.hitTest(new Point(Math.round(x), y)), extendSelection);
     }
 
@@ -160,14 +159,14 @@ public final class InputController {
         if (document() == null) {
             return;
         }
-        moveCaret(documentStart ? 0 : canvas.textLayout().homeOffset(canvas.caretOffset()), extendSelection);
+        moveCaret(documentStart ? 0 : canvas.homeOffset(canvas.caretOffset()), extendSelection);
     }
 
     public void moveEnd(boolean extendSelection, boolean documentEnd) {
         if (document() == null) {
             return;
         }
-        moveCaret(documentEnd ? document().length() : canvas.textLayout().endOffset(canvas.caretOffset()), extendSelection);
+        moveCaret(documentEnd ? document().length() : canvas.endOffset(canvas.caretOffset()), extendSelection);
     }
 
     public void movePage(int direction, boolean extendSelection) {
@@ -175,9 +174,8 @@ public final class InputController {
             return;
         }
         Rectangle caret = canvas.caretRect(canvas.caretOffset());
-        int page = Math.max(canvas.textLayout().lineHeight(), canvas.visiblePageHeight()
-                - canvas.textLayout().lineHeight());
-        int y = caret.y + canvas.textLayout().lineHeight() / 2 + direction * page;
+        int page = Math.max(canvas.lineHeight(), canvas.visiblePageHeight() - canvas.lineHeight());
+        int y = caret.y + canvas.lineHeight() / 2 + direction * page;
         moveCaret(canvas.hitTest(new Point(caret.x, y)), extendSelection);
     }
 

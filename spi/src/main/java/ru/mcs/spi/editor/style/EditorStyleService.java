@@ -22,4 +22,11 @@ public interface EditorStyleService {
     ComputedStyle resolve(BlockKind kind, List<String> classes, ElementState state);
 
     Font font(ComputedStyle style, float sizePx);
+
+    /** Вызывается после атомарной публикации нового StyleSheet; поток определяется реализацией. */
+    default void addChangeListener(Runnable listener) {
+    }
+
+    default void removeChangeListener(Runnable listener) {
+    }
 }

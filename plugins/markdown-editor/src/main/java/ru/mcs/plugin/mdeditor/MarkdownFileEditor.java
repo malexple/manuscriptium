@@ -30,6 +30,7 @@ import ru.mcs.plugin.mdeditor.view.EditorCanvas;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.FileEditor;
 import ru.mcs.spi.editor.MarkdownParser;
+import ru.mcs.spi.editor.style.EditorStyleService;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 
@@ -66,6 +67,12 @@ final class MarkdownFileEditor implements FileEditor {
 
     MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
                        AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor) {
+        this(file, initialMode, registry, i18n, fileStore, parser, parserExecutor, null);
+    }
+
+    MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
+                       AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
+                       EditorStyleService styles) {
         this.file = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
         this.registry = registry;
         this.i18n = i18n;
@@ -73,6 +80,9 @@ final class MarkdownFileEditor implements FileEditor {
         this.parser = Objects.requireNonNull(parser, "parser");
         this.parserExecutor = Objects.requireNonNull(parserExecutor, "parserExecutor");
 
+        if (styles != null) {
+            canvas.setEditorStyles(styles);
+        }
         source.setName("markdown.editor.source");
         source.setStatus(i18n.get("source.loading"));
         canvas.setStatus(i18n.get("canvas.loading"));
@@ -126,7 +136,12 @@ final class MarkdownFileEditor implements FileEditor {
                     document.addListener(documentListener);
                     source.setDocument(document);
                     canvas.setDocument(document);
-                    parseCoordinator = new MarkdownParseCoordinator(document, parser, parserExecutor);
+                    parseCoordinator = new MarkdownParseCoordinator(document, parser, parserExecutor,
+                            index -> {
+                                if (!disposed) {
+                                    canvas.setAstIndex(index);
+                                }
+                            });
                     canvas.setStatus(i18n.get("canvas.ready"));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

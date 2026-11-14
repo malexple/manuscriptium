@@ -75,7 +75,7 @@ public final class MarkdownEditorPlugin implements Plugin {
     @Override
     public FileEditorProvider createFileEditorProvider(String id) {
         return "markdown.editor".equals(id)
-                ? new MarkdownFileEditorProvider(state, registry, ctx.i18n(), fileStore, parser, parserExecutor)
+                ? new MarkdownFileEditorProvider(state, registry, ctx.i18n(), fileStore, parser, parserExecutor, styles)
                 : null;
     }
 

@@ -1,6 +1,6 @@
 # Manuscriptium — план реализации (plan.md)
 
-Версия документа: 1.6 (2026-11-14). Статус: Фазы 0–4 и Canvas-редактор E0–E4 завершены; следующий этап — E5, публикация Фазы 5 продолжится после E9.
+Версия документа: 1.7 (2026-11-14). Статус: Фазы 0–4 и Canvas-редактор E0–E5 завершены; следующий этап — E6, публикация Фазы 5 продолжится после E9.
 
 ## 1. Цель и приоритеты
 
@@ -295,9 +295,17 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
   переменные, селекторы, типизированный `ComputedStyle`, локальные `@font-face` и нефатальные `CssDiagnostic`. Девять тем
   (`github`, `newsprint`, `night`, `pixyll`, `whitey`, `vue`, `lapis`, `onedark`, `notion`) загружаются без ошибок; в auto-режиме
   Light/Dark оболочки отображаются в `github`/`night`. Пользовательские `base.user.css` и `{theme}.user.css` читаются из
-  `<home>/editor-themes`; CSS и шрифты загружаются вне EDT. Canvas пока отображает исходный Markdown — применение стилей при
-  раскладке относится к E5.
-- [ ] **E5–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
+  `<home>/editor-themes`; CSS и шрифты загружаются вне EDT.
+- [x] **E5. Раскладка и WYSIWYG-текст:** Canvas использует `MarkdownLayoutEngine` поверх общей `DocumentModel`, Source —
+  прежний `TextLayoutEngine`. Актуальный Flexmark AST раскладывает заголовки, абзацы, цитаты, вложенные и ordered/task lists,
+  `hr`, inline-стили/ссылки/код и fenced code с простой theme-aware подсветкой. Markdown-маркеры скрыты только вне активного
+  top-level блока; при вводе до нового AST текущая версия документа показывается как исходник. `InlineRun` сохраняет карту
+  видимых UTF-16 boundaries в исходные offsets; hit test, каретка и selection согласованы при wrap и Unicode. Раскладка
+  кэшируется по версии, ширине и активному блоку; `#write` получает `max-width`, центрирование и наследуемую типографику.
+  Векторный checkbox заменяет один символ task через `Replace`, Ctrl/Cmd+Click открывает только HTTP/HTTPS. Метрики со
+  встроенным Liberation Sans, `DrawSink` command tests и девять Linux goldens при scale=2 проверяют рендеринг; diff-файлы
+  сохраняются при mismatch. На 5000 строках p95 рисования видимого кадра после warmup остаётся < 16 мс.
+- [ ] **E6–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
 
 Принятые решения: плагин не зависит от `core`; Obsidian-навигация и preview будут предоставлены через SPI-сервисы и адаптер
 `core`. `flexmark-java`, CSS-движок и `JLaTeXMath` становятся отдельными JAR-плагинами с JDK-only сервисными контрактами SPI
@@ -313,7 +321,9 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
 read-only bridge из `core` с listeners, а явный выбор editor theme отключает автоматическое Light/Dark-отображение. Каскад сортирует
 декларации по `!important`, specificity, origin, порядку правила и декларации. Локальные шрифты разрешаются только внутри каталога
 темы; внешние URL и неподдерживаемые CSS-конструкции дают диагностику, но не останавливают загрузку. Editor style state хранится
-в application state и не попадает в синхронизируемый Vault.
+в application state и не попадает в синхронизируемый Vault. В E5 `EditorStyleService` аддитивно получил change listeners;
+перезагрузка темы инвалидирует layout на EDT, а `dispose()` отписывает Canvas. Production-зависимости между editor/style плагинами
+не появилось: golden-тесты используют только test-only связь Gradle.
 
 ### Фаза 5. Публикация (после Canvas E0–E9)
 - Публикация: `StaticSiteExporter` (Hugo), `PublishingProfile`, валидация YAML, конвертация `![[img]]`, проверка `draft`, битые ссылки, JGit commit/push в фоне со статусом в статус-баре.

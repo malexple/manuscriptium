@@ -3,6 +3,8 @@ package ru.mcs.plugin.editorstyle;
 import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -31,6 +33,7 @@ final class DefaultEditorStyleService implements EditorStyleService, AutoCloseab
         return thread;
     });
     private final Consumer<ShellThemeService.Snapshot> themeListener = this::shellThemeChanged;
+    private final CopyOnWriteArrayList<Runnable> changeListeners = new CopyOnWriteArrayList<>();
 
     private volatile boolean shellDark;
     private volatile boolean closed;
@@ -87,6 +90,19 @@ final class DefaultEditorStyleService implements EditorStyleService, AutoCloseab
         loaded.sheet().diagnostics().forEach(diagnostic -> logger.accept(
                 diagnostic.level() + " " + diagnostic.source() + ":" + diagnostic.line()
                         + " " + diagnostic.message()));
+        for (Runnable listener : changeListeners) {
+            listener.run();
+        }
+    }
+
+    @Override
+    public void addChangeListener(Runnable listener) {
+        changeListeners.addIfAbsent(Objects.requireNonNull(listener, "listener"));
+    }
+
+    @Override
+    public void removeChangeListener(Runnable listener) {
+        changeListeners.remove(listener);
     }
 
     @Override
@@ -138,6 +154,7 @@ final class DefaultEditorStyleService implements EditorStyleService, AutoCloseab
     public void close() {
         closed = true;
         shell.removeThemeListener(themeListener);
+        changeListeners.clear();
         executor.shutdownNow();
     }
 }

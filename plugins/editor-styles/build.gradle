@@ -2,8 +2,17 @@ dependencies {
     compileOnly project(':spi')
 
     testImplementation project(':spi')
+    // Golden-тесты реальных CSS-тем рисуют публичный E5 layout; production-зависимости между плагинами нет.
+    testImplementation project(':plugins:markdown-editor')
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
+}
+
+tasks.named('test', Test) {
+    def goldenUpdate = System.getProperty('manuscriptium.golden.update')
+    if (goldenUpdate != null) {
+        systemProperty 'manuscriptium.golden.update', goldenUpdate
+    }
 }

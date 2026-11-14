@@ -74,6 +74,21 @@ class StyleResolverTest {
     }
 
     @Test
+    void writeAncestorSuppliesInheritedTypographyButNotBackground() {
+        StyleSheet sheet = sheet("""
+                #write { color: #eeeeee; background-color: #111111; font-family: serif; font-size: 19px; }
+                p { font-size: 12px; }
+                """);
+
+        ComputedStyle paragraph = resolver.resolve(BlockKind.PARAGRAPH, List.of(), ElementState.DEFAULT, sheet);
+
+        assertThat(paragraph.color()).isEqualTo(new Color(0xeeeeee));
+        assertThat(paragraph.fontFamilies()).contains("serif");
+        assertThat(paragraph.fontSizePx()).isEqualTo(12);
+        assertThat(paragraph.backgroundColor().getAlpha()).isZero();
+    }
+
+    @Test
     void variableFallbackAndNonfatalDiagnosticsWork() {
         StyleSheet sheet = sheet("""
                 :root { --known: #010203; --cycle: var(--cycle); }

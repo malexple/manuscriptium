@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import ru.mcs.spi.editor.style.ShellThemeService;
 
@@ -39,6 +40,27 @@ class EditorStyleServiceTest {
             awaitTheme(service, "vue");
             shell.setDark(true);
             assertThat(service.selectedTheme()).isEqualTo("vue");
+        } finally {
+            service.close();
+        }
+    }
+
+    @Test
+    void notifiesListenersAfterPublishingSnapshotAndSupportsUnsubscribe() {
+        DefaultEditorStyleService service = new DefaultEditorStyleService(new EditorStyleState(),
+                new FakeShellTheme(), message -> { });
+        AtomicInteger notifications = new AtomicInteger();
+        Runnable listener = () -> {
+            assertThat(service.styleSheet().rules()).isNotEmpty();
+            notifications.incrementAndGet();
+        };
+        try {
+            service.addChangeListener(listener);
+            service.reload();
+            assertThat(notifications).hasValue(1);
+            service.removeChangeListener(listener);
+            service.reload();
+            assertThat(notifications).hasValue(1);
         } finally {
             service.close();
         }

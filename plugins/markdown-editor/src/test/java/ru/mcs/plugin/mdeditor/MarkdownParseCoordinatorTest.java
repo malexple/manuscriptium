@@ -116,6 +116,30 @@ class MarkdownParseCoordinatorTest {
     }
 
     @Test
+    void publishesCurrentIndexToListenerOnEdt() throws Exception {
+        TestMarkdownParser parser = new TestMarkdownParser();
+        CountDownLatch published = new CountDownLatch(1);
+        AtomicReference<AstIndex> callbackIndex = new AtomicReference<>();
+        AtomicReference<String> callbackThread = new AtomicReference<>();
+        AtomicReference<MarkdownParseCoordinator> coordinator = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> coordinator.set(new MarkdownParseCoordinator(
+                new DocumentModelImpl("text", DocumentProperties.utf8(LineEnding.LF, false)),
+                parser, TestMarkdownParser.EXECUTOR, index -> {
+                    callbackThread.set(Thread.currentThread().getName());
+                    callbackIndex.set(index);
+                    published.countDown();
+                })));
+        try {
+            assertThat(published.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(callbackIndex.get()).isSameAs(coordinator.get().index());
+            assertThat(callbackIndex.get().version()).isZero();
+            assertThat(callbackThread.get()).startsWith("AWT-EventQueue");
+        } finally {
+            SwingUtilities.invokeAndWait(coordinator.get()::close);
+        }
+    }
+
+    @Test
     void closePreventsQueuedResultFromBeingPublished() throws Exception {
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch continueParse = new CountDownLatch(1);

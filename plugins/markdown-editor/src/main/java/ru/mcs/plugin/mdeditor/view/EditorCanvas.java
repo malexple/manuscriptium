@@ -9,6 +9,7 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Desktop;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusAdapter;
@@ -16,21 +17,27 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.im.InputMethodRequests;
+import java.net.URI;
 import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JViewport;
 import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import ru.mcs.plugin.mdeditor.layout.MarkdownLayoutEngine;
 import ru.mcs.plugin.mdeditor.model.DocumentChange;
 import ru.mcs.plugin.mdeditor.model.DocumentListener;
 import ru.mcs.plugin.mdeditor.model.DocumentModel;
 import ru.mcs.plugin.mdeditor.model.Range;
+import ru.mcs.plugin.mdeditor.model.Replace;
+import ru.mcs.spi.editor.AstIndex;
+import ru.mcs.spi.editor.style.EditorStyleService;
 
 /** Собственный lightweight Source-редактор: построчный рендер, ввод, selection, caret, IME и clipboard. */
 public final class EditorCanvas extends JComponent implements Scrollable {
 
     private final TextLayoutEngine textLayout = new TextLayoutEngine();
+    private final MarkdownLayoutEngine markdownLayout = new MarkdownLayoutEngine();
     private final ClipboardService clipboardService;
     private final InputController inputController;
     private final CaretPainter caretPainter;
@@ -49,8 +56,13 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         }
     };
 
+    private final Runnable styleListener = this::editorStylesChanged;
+
     private String status = "";
     private DocumentModel document;
+    private AstIndex ast;
+    private EditorStyleService styles;
+    private boolean disposed;
     private int caretOffset;
     private int selectionAnchor;
     private volatile long lastFrameNanos;
@@ -112,6 +124,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
             @Override
             public void componentResized(ComponentEvent event) {
                 textLayout.setWidth(getWidth());
+                markdownLayout.setWidth(getWidth());
                 revalidate();
                 repaint();
             }
@@ -132,9 +145,12 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         if (document != null) {
             status = "";
             textLayout.setDocument(document);
+            markdownLayout.setContext(document, ast, styles);
+            markdownLayout.setWidth(getWidth());
             document.addListener(documentListener);
         } else {
             textLayout.clear();
+            markdownLayout.clear();
         }
         revalidate();
         repaint();
@@ -142,6 +158,54 @@ public final class EditorCanvas extends JComponent implements Scrollable {
 
     public DocumentModel document() {
         return document;
+    }
+
+    public void setEditorStyles(EditorStyleService styles) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            throw new IllegalStateException("Editor styles must be attached on EDT");
+        }
+        if (this.styles != null) {
+            this.styles.removeChangeListener(styleListener);
+        }
+        this.styles = styles;
+        if (styles != null) {
+            styles.addChangeListener(styleListener);
+        }
+        markdownLayout.setContext(document, ast, styles);
+        revalidate();
+        repaint();
+    }
+
+    private void editorStylesChanged() {
+        if (SwingUtilities.isEventDispatchThread()) {
+            refreshEditorStyles();
+        } else {
+            SwingUtilities.invokeLater(this::refreshEditorStyles);
+        }
+    }
+
+    private void refreshEditorStyles() {
+        if (disposed || styles == null) {
+            return;
+        }
+        markdownLayout.setContext(document, ast, styles);
+        revalidate();
+        repaint();
+    }
+
+    public void setAstIndex(AstIndex ast) {
+        this.ast = ast;
+        markdownLayout.setAst(ast);
+        revalidate();
+        repaint();
+    }
+
+    public long markdownLayoutCount() {
+        return markdownLayout.layoutCount();
+    }
+
+    private boolean markdownMode() {
+        return document != null && styles != null;
     }
 
     public InputController input() {
@@ -179,15 +243,82 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         }
         caretOffset = offset;
         selectionAnchor = anchor;
+        markdownLayout.setCaretOffset(offset);
         caretPainter.documentChanged();
+        revalidate();
     }
 
     public int hitTest(Point point) {
-        return document == null ? 0 : textLayout.hitTest(point);
+        return document == null ? 0 : markdownMode() ? markdownLayout.hitTest(point) : textLayout.hitTest(point);
     }
 
     public Rectangle caretRect(int offset) {
-        return document == null ? new Rectangle() : textLayout.caretRect(offset);
+        return document == null ? new Rectangle() : markdownMode()
+                ? markdownLayout.caretRect(offset) : textLayout.caretRect(offset);
+    }
+
+    Color caretColor() {
+        return markdownMode() ? markdownLayout.foreground() : getForeground();
+    }
+
+    int lineHeight() {
+        return markdownMode() ? markdownLayout.lineHeightAt(caretOffset) : textLayout.lineHeight();
+    }
+
+    int homeOffset(int offset) {
+        return markdownMode() ? markdownLayout.homeOffset(offset) : textLayout.homeOffset(offset);
+    }
+
+    int endOffset(int offset) {
+        return markdownMode() ? markdownLayout.endOffset(offset) : textLayout.endOffset(offset);
+    }
+
+    boolean toggleTaskAt(Point point) {
+        if (!markdownMode()) {
+            return false;
+        }
+        int offset = markdownLayout.taskCheckboxAt(point);
+        if (offset < 0 || offset >= document.length()) {
+            return false;
+        }
+        char current = document.text().charAt(offset);
+        if (current != ' ' && current != 'x' && current != 'X') {
+            return false;
+        }
+        document.apply(Replace.of(offset, offset + 1, current == ' ' ? "x" : " "));
+        setCaretState(offset + 1, offset + 1);
+        ensureCaretVisible();
+        repaint();
+        return true;
+    }
+
+    boolean openLinkAt(Point point) {
+        if (!markdownMode()) {
+            return false;
+        }
+        String target = markdownLayout.linkAt(point);
+        if (target == null || !(target.startsWith("https://") || target.startsWith("http://"))
+                || !Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            return false;
+        }
+        try {
+            URI uri = URI.create(target);
+            Thread opener = new Thread(() -> browse(uri), "manuscriptium-link-opener");
+            opener.setDaemon(true);
+            opener.start();
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    private void browse(URI uri) {
+        try {
+            Desktop.getDesktop().browse(uri);
+        } catch (Exception e) {
+            System.getLogger(EditorCanvas.class.getName()).log(System.Logger.Level.WARNING,
+                    "Cannot open link " + uri, e);
+        }
     }
 
     TextLayoutEngine textLayout() {
@@ -232,11 +363,21 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     }
 
     public void dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        if (styles != null) {
+            styles.removeChangeListener(styleListener);
+            styles = null;
+        }
         if (document != null) {
             document.removeListener(documentListener);
             document = null;
         }
         textLayout.clear();
+        markdownLayout.clear();
+        ast = null;
         caretOffset = 0;
         selectionAnchor = 0;
         caretPainter.dispose();
@@ -261,7 +402,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         super.paintComponent(graphics);
         Graphics2D g = (Graphics2D) graphics.create();
         try {
-            g.setColor(getBackground());
+            g.setColor(markdownMode() ? markdownLayout.background() : getBackground());
             g.fillRect(0, 0, getWidth(), getHeight());
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
@@ -281,6 +422,12 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         Rectangle clip = graphics.getClipBounds();
         if (clip == null) {
             clip = new Rectangle(0, 0, getWidth(), getHeight());
+        }
+        if (markdownMode()) {
+            markdownLayout.paint(graphics, clip, selectionRange());
+            imeSupport.paint(graphics);
+            caretPainter.paint(graphics);
+            return;
         }
         List<TextLayoutEngine.VisualLine> lines = textLayout.visibleLines(clip);
         selectionPainter.paint(graphics, lines);
@@ -311,7 +458,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         if (document == null) {
             return new Dimension(800, 600);
         }
-        return new Dimension(800, textLayout.preferredHeight());
+        return new Dimension(800, markdownMode() ? markdownLayout.layout().height() : textLayout.preferredHeight());
     }
 
     @Override
@@ -321,12 +468,13 @@ public final class EditorCanvas extends JComponent implements Scrollable {
 
     @Override
     public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
-        return textLayout.lineHeight();
+        return lineHeight();
     }
 
     @Override
     public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
-        return Math.max(textLayout.lineHeight(), visibleRect.height - textLayout.lineHeight());
+        int lineHeight = lineHeight();
+        return Math.max(lineHeight, visibleRect.height - lineHeight);
     }
 
     @Override
@@ -347,6 +495,10 @@ public final class EditorCanvas extends JComponent implements Scrollable {
             textLayout.changed(changes.getFirst());
         } else {
             textLayout.reload();
+        }
+        if (markdownMode()) {
+            ast = null;
+            markdownLayout.setAst(null);
         }
         inputController.documentChanged(changes.getLast());
         caretPainter.documentChanged();

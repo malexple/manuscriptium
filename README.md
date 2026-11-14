@@ -14,7 +14,7 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
 внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
 
-## Markdown Canvas Editor — E0–E4
+## Markdown Canvas Editor — E0–E5
 
 `.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
 текстового провайдера. Кнопки **Canvas** и **Source** внутри вкладки переключают представление без создания второй вкладки
@@ -34,15 +34,15 @@ Save-point учитывает undo/redo и правки во время фоно
 В E2 оба режима используют редактируемый собственный lightweight canvas и общую `DocumentModel`; `JTextArea` больше не
 используется. Поддержаны клавиатурный ввод, каретка и selection, drag/double/triple click, word wrap, Home/End/PageUp/PageDown,
 текстовый clipboard, undo/redo с системным menu shortcut (`Cmd` на macOS), IME и скролл с инерцией. Построчная раскладка
-изменяет только затронутые физические строки, а рисование ограничено viewport. Пока в обоих режимах отображается исходный
-Markdown без синтаксической раскладки; WYSIWYG-раскладка относится к E5.
+изменяет только затронутые физические строки, а рисование ограничено viewport. Source сохраняет эту исходную раскладку;
+Canvas начиная с E5 использует отдельный WYSIWYG layout над той же моделью документа.
 
 В E3 bundled-плагин `plugins/markdown-parser` предоставляет Flexmark AST через JDK-only SPI. `BlockSpan` сохраняет нулевые
 полуоткрытые UTF-16 offsets и depth каждого узла; поддержаны Front Matter, wikilinks/embeds, callouts, footnotes, inline/block
 math, task lists, tables и strikethrough. `AstIndex` выполняет поиск блока по offset. Обычная правка перепарсивает только
 затронутые top-level блоки и переиспользует остальные; результаты вычисляются в общем daemon executor и применяются на EDT
-только при совпадении `DocumentModel.version()`. Собранный AST и вычисленные стили пока не меняют отображение исходного Markdown:
-визуальная WYSIWYG-раскладка появится в E5. Следующие фазы и критерии приёмки определены в `EDITOR_CANVAS_PLAN.md`, каталог
+только при совпадении `DocumentModel.version()`. В E5 актуальный AST управляет блочной раскладкой Canvas; устаревший AST после
+ввода не применяется к новой версии документа. Следующие фазы и критерии приёмки определены в `EDITOR_CANVAS_PLAN.md`, каталог
 поведения — в `TYPORA_FEATURES.md`.
 
 ### Темы редактора E4
@@ -64,7 +64,28 @@ font URL не загружаются, а локальные файлы разр�
 - `{theme}.user.css`, например `github.user.css` — только для выбранной темы.
 
 Итоговый порядок слоёв: `DEFAULT → THEME → BASE_USER → THEME_USER`. Выбранный режим (`auto` или id темы) сохраняется в application
-state. На этапе E4 отдельного UI выбора темы и журнала диагностик ещё нет; темы применяются к `ComputedStyle`, но не к раскладке Canvas.
+state. Отдельного UI выбора editor theme и журнала диагностик пока нет; переключение Light/Dark оболочки обновляет Canvas через
+change listeners `EditorStyleService`.
+
+### WYSIWYG-раскладка E5
+
+Canvas отображает заголовки, абзацы, цитаты, вложенные и нумерованные списки, task list, `hr`, inline-стили, ссылки, inline-код
+и блоки кода с простой подсветкой. Markdown-маркеры скрываются в неактивных блоках; блок под кареткой показывается как исходник.
+Source Mode всегда содержит полный исходный Markdown. Оба режима редактируют общую `DocumentModel`, поэтому ввод, selection,
+undo/redo и сохранение не разделяются между представлениями.
+
+`#write` ограничивает ширину и центрирует текст; раскладка кэшируется по версии документа, ширине и активному блоку. Каретка,
+hit test и selection используют отображение видимых UTF-16 boundaries в исходные offsets, включая Unicode и перенос строк.
+Векторный checkbox переключает один символ `[ ]`/`[x]`; Ctrl/Cmd+Click открывает только HTTP/HTTPS-ссылки.
+
+Проверка рендеринга включает метрики со встроенным Liberation Sans, `DrawSink` command tests и девять Linux goldens при scale=2.
+При расхождении создаются `actual.png`, `expected.png` и `diff.png` в `plugins/editor-styles/build/reports/golden-diff/`.
+Для пересоздания Linux-эталонов из корня проекта:
+
+```
+./gradlew :plugins:editor-styles:test --tests ru.mcs.plugin.editorstyle.MarkdownGoldenTest \
+  -Dmanuscriptium.golden.update=plugins/editor-styles/src/test/resources/golden/linux
+```
 
 ## Bundled-панели заметок и свойств
 

@@ -23,6 +23,15 @@ public final class MouseController extends MouseAdapter {
         }
         canvas.requestFocusInWindow();
         canvas.clearComposition();
+        if (event.getClickCount() == 1 && canvas.toggleTaskAt(event.getPoint())) {
+            event.consume();
+            return;
+        }
+        if (event.getClickCount() == 1 && (event.isControlDown() || event.isMetaDown())
+                && canvas.openLinkAt(event.getPoint())) {
+            event.consume();
+            return;
+        }
         int offset = canvas.hitTest(event.getPoint());
         if (event.getClickCount() >= 3) {
             input.selectLine(offset);
