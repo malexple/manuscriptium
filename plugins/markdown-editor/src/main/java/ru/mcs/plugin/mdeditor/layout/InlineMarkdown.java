@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.style.ComputedStyle;
 import ru.mcs.spi.editor.style.EditorStyleService;
@@ -30,13 +31,23 @@ final class InlineMarkdown {
 
     static InlineContent render(String raw, int start, int end, InlineContent.Style style,
                                 EditorStyleService styles) {
+        return render(raw, start, end, style, styles, null);
+    }
+
+    static InlineContent render(String raw, int start, int end, InlineContent.Style style,
+                                EditorStyleService styles, WidgetRegistry widgets) {
         InlineContent result = new InlineContent();
-        parse(raw, start, end, style, styles, result);
+        parse(raw, start, end, style, styles, widgets, result);
         return result;
     }
 
     static InlineContent quote(String raw, int start, int end, InlineContent.Style style,
                                EditorStyleService styles) {
+        return quote(raw, start, end, style, styles, null);
+    }
+
+    static InlineContent quote(String raw, int start, int end, InlineContent.Style style,
+                               EditorStyleService styles, WidgetRegistry widgets) {
         InlineContent result = new InlineContent();
         for (SourceLine line : lines(raw, start, end)) {
             int content = line.start();
@@ -52,7 +63,7 @@ final class InlineMarkdown {
                     content++;
                 }
             }
-            parse(raw, content, line.end(), style, styles, result);
+            parse(raw, content, line.end(), style, styles, widgets, result);
             appendNewline(raw, line, result, style);
         }
         return result;
@@ -60,6 +71,11 @@ final class InlineMarkdown {
 
     static InlineContent list(String raw, int start, int end, InlineContent.Style style,
                               EditorStyleService styles, boolean ordered) {
+        return list(raw, start, end, style, styles, ordered, null);
+    }
+
+    static InlineContent list(String raw, int start, int end, InlineContent.Style style,
+                              EditorStyleService styles, boolean ordered, WidgetRegistry widgets) {
         InlineContent result = new InlineContent();
         for (SourceLine line : lines(raw, start, end)) {
             int p = line.start();
@@ -74,7 +90,7 @@ final class InlineMarkdown {
                 if (p > line.start()) {
                     result.appendMapped("  ", line.start(), p, style);
                 }
-                parse(raw, p, line.end(), style, styles, result);
+                parse(raw, p, line.end(), style, styles, widgets, result);
                 appendNewline(raw, line, result, style);
                 continue;
             }
@@ -111,7 +127,7 @@ final class InlineMarkdown {
                 };
             }
             result.appendMapped(prefix, markerStart, Math.max(markerEnd, taskOffset + 2), prefixStyle);
-            parse(raw, content, line.end(), style, styles, result);
+            parse(raw, content, line.end(), style, styles, widgets, result);
             appendNewline(raw, line, result, style);
         }
         return result;
@@ -178,7 +194,7 @@ final class InlineMarkdown {
     }
 
     private static void parse(String raw, int start, int end, InlineContent.Style style,
-                              EditorStyleService styles, InlineContent out) {
+                              EditorStyleService styles, WidgetRegistry widgets, InlineContent out) {
         int i = start;
         while (i < end) {
             char ch = raw.charAt(i);
@@ -186,6 +202,16 @@ final class InlineMarkdown {
                 out.appendMapped(raw.substring(i + 1, i + 2), i, i + 2, style);
                 i += 2;
                 continue;
+            }
+            if (ch == '$' && widgets != null && (i + 1 >= end || raw.charAt(i + 1) != '$')) {
+                int close = inlineMathEnd(raw, i + 1, end);
+                if (close > i + 1) {
+                    String latex = raw.substring(i + 1, close);
+                    out.appendAtom(widgets.inlineMath(latex, style.font().getSize2D(), style.computed().color()),
+                            i, close + 1, style);
+                    i = close + 1;
+                    continue;
+                }
             }
             if (ch == '`') {
                 int ticks = runLength(raw, i, end, '`');
@@ -210,7 +236,7 @@ final class InlineMarkdown {
                         default -> style.withFont(style.font().deriveFont(Font.ITALIC));
                     };
                     InlineContent nested = new InlineContent();
-                    parse(raw, i + paired.length(), close, nestedStyle, styles, nested);
+                    parse(raw, i + paired.length(), close, nestedStyle, styles, widgets, nested);
                     out.append(nested, i, close + paired.length());
                     i = close + paired.length();
                     continue;
@@ -229,7 +255,7 @@ final class InlineMarkdown {
                             label.appendMapped("🖼 " + raw.substring(labelStart, labelEnd), i, close + 1, style);
                         } else {
                             parse(raw, labelStart, labelEnd, new InlineContent.Style(linkStyle.computed(),
-                                    linkStyle.font(), target, -1, false), styles, label);
+                                    linkStyle.font(), target, -1, false), styles, widgets, label);
                         }
                         out.append(label, i, close + 1);
                         i = close + 1;
@@ -257,7 +283,7 @@ final class InlineMarkdown {
                 int close = raw.indexOf("</u>", i + 3);
                 if (close > i + 3 && close < end) {
                     InlineContent nested = new InlineContent();
-                    parse(raw, i + 3, close, decorated(style, TextDecoration.UNDERLINE), styles, nested);
+                    parse(raw, i + 3, close, decorated(style, TextDecoration.UNDERLINE), styles, widgets, nested);
                     out.append(nested, i, close + 4);
                     i = close + 4;
                     continue;
@@ -289,8 +315,21 @@ final class InlineMarkdown {
 
     private static boolean startsConstruct(String raw, int offset, int end) {
         char ch = raw.charAt(offset);
-        return ch == '\\' || ch == '`' || ch == '*' || ch == '_' || ch == '~' || ch == '[' || ch == '<'
+        return ch == '\\' || ch == '`' || ch == '$' || ch == '*' || ch == '_' || ch == '~' || ch == '[' || ch == '<'
                 || ch == '!' && offset + 1 < end && raw.charAt(offset + 1) == '[';
+    }
+
+    private static int inlineMathEnd(String raw, int start, int end) {
+        for (int index = start; index < end && raw.charAt(index) != '\n' && raw.charAt(index) != '\r'; index++) {
+            char character = raw.charAt(index);
+            if (character == '\\') {
+                index++;
+            } else if (character == '$' && index > start && !Character.isWhitespace(raw.charAt(index - 1))
+                    && (index + 1 >= end || raw.charAt(index + 1) != '$')) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private static String pairedMarker(String raw, int offset, int end) {

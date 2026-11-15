@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.editor.FileEditor;
 import ru.mcs.spi.editor.FileEditorProvider;
@@ -25,6 +26,7 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
     private final Executor parserExecutor;
     private final EditorStyleService styles;
     private final ActionManager actions;
+    private final WidgetRegistry widgets;
 
     MarkdownFileEditorProvider(MarkdownEditorState state, MarkdownEditorRegistry registry, I18n i18n,
                                AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor) {
@@ -40,6 +42,12 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
     MarkdownFileEditorProvider(MarkdownEditorState state, MarkdownEditorRegistry registry, I18n i18n,
                                AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
                                EditorStyleService styles, ActionManager actions) {
+        this(state, registry, i18n, fileStore, parser, parserExecutor, styles, actions, null);
+    }
+
+    MarkdownFileEditorProvider(MarkdownEditorState state, MarkdownEditorRegistry registry, I18n i18n,
+                               AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
+                               EditorStyleService styles, ActionManager actions, WidgetRegistry widgets) {
         this.state = state;
         this.registry = registry;
         this.i18n = i18n;
@@ -48,6 +56,7 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
         this.parserExecutor = Objects.requireNonNull(parserExecutor, "parserExecutor");
         this.styles = styles;
         this.actions = actions;
+        this.widgets = widgets;
     }
 
     @Override
@@ -69,6 +78,6 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
     @Override
     public FileEditor createEditor(Path file) {
         return new MarkdownFileEditor(file, state.defaultMode(), registry, i18n, fileStore, parser, parserExecutor,
-                styles, actions);
+                styles, actions, widgets);
     }
 }

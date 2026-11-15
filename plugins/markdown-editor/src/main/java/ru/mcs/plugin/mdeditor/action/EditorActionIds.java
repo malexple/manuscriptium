@@ -46,6 +46,15 @@ public final class EditorActionIds {
     public static final String MATH_BLOCK = PREFIX + "mathBlock";
     public static final String HORIZONTAL_RULE = PREFIX + "horizontalRule";
     public static final String IMAGE = PREFIX + "image";
+    public static final String TABLE_ADD_ROW = PREFIX + "tableAddRow";
+    public static final String TABLE_REMOVE_ROW = PREFIX + "tableRemoveRow";
+    public static final String TABLE_ADD_COLUMN = PREFIX + "tableAddColumn";
+    public static final String TABLE_REMOVE_COLUMN = PREFIX + "tableRemoveColumn";
+    public static final String TABLE_ALIGN_LEFT = PREFIX + "tableAlignLeft";
+    public static final String TABLE_ALIGN_CENTER = PREFIX + "tableAlignCenter";
+    public static final String TABLE_ALIGN_RIGHT = PREFIX + "tableAlignRight";
+    public static final String TABLE_COPY_CELL = PREFIX + "tableCopyCell";
+    public static final String TABLE_CLEAR_CELL = PREFIX + "tableClearCell";
 
     public static final List<String> ALL = List.of(
             TOGGLE_MODE, FOCUS_MODE, TYPEWRITER_MODE, AUTO_PAIR, WORD_COUNT,
@@ -54,7 +63,9 @@ public final class EditorActionIds {
             PARAGRAPH, heading(1), heading(2), heading(3), heading(4), heading(5), heading(6),
             BOLD, ITALIC, UNDERLINE, STRIKETHROUGH, INLINE_CODE, LINK, CLEAR_FORMATTING,
             BLOCK_QUOTE, BULLET_LIST, ORDERED_LIST, TASK_LIST, CODE_BLOCK, TABLE, MATH_BLOCK,
-            HORIZONTAL_RULE, IMAGE);
+            HORIZONTAL_RULE, IMAGE,
+            TABLE_ADD_ROW, TABLE_REMOVE_ROW, TABLE_ADD_COLUMN, TABLE_REMOVE_COLUMN,
+            TABLE_ALIGN_LEFT, TABLE_ALIGN_CENTER, TABLE_ALIGN_RIGHT, TABLE_COPY_CELL, TABLE_CLEAR_CELL);
 
     private EditorActionIds() {
     }

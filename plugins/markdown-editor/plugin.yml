@@ -3,7 +3,7 @@ name: Markdown Canvas Editor
 version: 0.1.0
 sdk-version: "0.9"
 module: ru.mcs.plugin.mdeditor
-depends-on: [ru.mcs.plugin.mdparser, ru.mcs.plugin.editorstyle]
+depends-on: [ru.mcs.plugin.mdparser, ru.mcs.plugin.editorstyle, ru.mcs.plugin.math]
 permissions: []
 activation: onDemand
 i18n: ru/mcs/plugin/mdeditor/messages
@@ -22,6 +22,10 @@ contributions:
       text: "%menu.insert"
       popup: true
       groups: [MainMenu]
+    - id: MarkdownEditor.TableMenu
+      text: "%menu.table"
+      popup: true
+      groups: [MarkdownEditor.FormatMenu]
   actions:
     - {id: markdown.editor.toggleMode, text: "%action.toggleMode", icon: /ru/mcs/plugin/mdeditor/icons/notebook-text.svg, groups: [MainMenu.View, MainToolbar, EditorTabPopup]}
     - {id: markdown.editor.focusMode, text: "%action.focusMode.enable", groups: [MainMenu.View]}
@@ -62,6 +66,15 @@ contributions:
     - {id: markdown.editor.mathBlock, text: "%action.mathBlock", groups: [MarkdownEditor.InsertMenu]}
     - {id: markdown.editor.horizontalRule, text: "%action.horizontalRule", groups: [MarkdownEditor.InsertMenu]}
     - {id: markdown.editor.image, text: "%action.image", groups: [MarkdownEditor.InsertMenu]}
+    - {id: markdown.editor.tableAddRow, text: "%action.tableAddRow", groups: [MarkdownEditor.TableMenu]}
+    - {id: markdown.editor.tableRemoveRow, text: "%action.tableRemoveRow", groups: [MarkdownEditor.TableMenu]}
+    - {id: markdown.editor.tableAddColumn, text: "%action.tableAddColumn", groups: [MarkdownEditor.TableMenu]}
+    - {id: markdown.editor.tableRemoveColumn, text: "%action.tableRemoveColumn", groups: [MarkdownEditor.TableMenu]}
+    - {id: markdown.editor.tableAlignLeft, text: "%action.tableAlignLeft", groups: [MarkdownEditor.TableMenu]}
+    - {id: markdown.editor.tableAlignCenter, text: "%action.tableAlignCenter", groups: [MarkdownEditor.TableMenu]}
+    - {id: markdown.editor.tableAlignRight, text: "%action.tableAlignRight", groups: [MarkdownEditor.TableMenu]}
+    - {id: markdown.editor.tableCopyCell, text: "%action.tableCopyCell", groups: [MarkdownEditor.TableMenu]}
+    - {id: markdown.editor.tableClearCell, text: "%action.tableClearCell", groups: [MarkdownEditor.TableMenu]}
   fileEditors:
     - id: markdown.editor
       patterns: ["*.md"]

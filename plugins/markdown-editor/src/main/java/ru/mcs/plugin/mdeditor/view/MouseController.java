@@ -10,6 +10,7 @@ public final class MouseController extends MouseAdapter {
     private final EditorCanvas canvas;
     private final InputController input;
     private boolean dragging;
+    private boolean resizingImage;
 
     MouseController(EditorCanvas canvas, InputController input) {
         this.canvas = canvas;
@@ -28,6 +29,12 @@ public final class MouseController extends MouseAdapter {
         }
         canvas.requestFocusInWindow();
         canvas.clearComposition();
+        if (event.getClickCount() == 1 && canvas.beginImageResize(event.getPoint())) {
+            resizingImage = true;
+            dragging = false;
+            event.consume();
+            return;
+        }
         if (event.getClickCount() == 1 && canvas.toggleTaskAt(event.getPoint())) {
             event.consume();
             return;
@@ -54,6 +61,10 @@ public final class MouseController extends MouseAdapter {
 
     @Override
     public void mouseDragged(MouseEvent event) {
+        if (resizingImage) {
+            event.consume();
+            return;
+        }
         if (!dragging || canvas.document() == null) {
             return;
         }
@@ -66,6 +77,12 @@ public final class MouseController extends MouseAdapter {
 
     @Override
     public void mouseReleased(MouseEvent event) {
+        if (resizingImage) {
+            resizingImage = false;
+            canvas.finishImageResize(event.getPoint());
+            event.consume();
+            return;
+        }
         if (event.isPopupTrigger()) {
             canvas.showContextMenu(event);
         }

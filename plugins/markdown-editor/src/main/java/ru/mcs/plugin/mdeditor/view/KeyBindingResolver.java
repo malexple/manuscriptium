@@ -51,7 +51,13 @@ public final class KeyBindingResolver {
         bind(canvas, key(KeyEvent.VK_DELETE, 0), "delete", input::deleteForward);
         bind(canvas, key(KeyEvent.VK_DELETE, wordMask), "deleteNextWord", input::deleteNextWord);
         bind(canvas, key(KeyEvent.VK_ENTER, 0), "newline", () -> input.insertText("\n"));
-        bind(canvas, key(KeyEvent.VK_TAB, 0), "tab", () -> input.insertText("\t"));
+        bind(canvas, key(KeyEvent.VK_TAB, 0), "tab", () -> {
+            if (!canvas.navigateTable(1)) {
+                input.insertText("\t");
+            }
+        });
+        bind(canvas, key(KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK), "previousTableCell",
+                () -> canvas.navigateTable(-1));
         bind(canvas, key(KeyEvent.VK_A, shortcutMask), "selectAll", input::selectAll);
         bind(canvas, key(KeyEvent.VK_C, shortcutMask), "copy", input::copy);
         bind(canvas, key(KeyEvent.VK_X, shortcutMask), "cut", input::cut);

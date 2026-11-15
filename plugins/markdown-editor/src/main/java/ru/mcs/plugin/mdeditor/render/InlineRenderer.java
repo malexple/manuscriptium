@@ -20,7 +20,12 @@ public final class InlineRenderer {
             if (run.taskOffset() >= 0) {
                 paintTaskCheckbox(sink, run, line);
             }
-            sink.drawText(run.textLayout(), run.text(), run.x(), run.baseline(), run.font(), run.color());
+            if (run.image() != null) {
+                sink.drawImage(run.image(), run.x(), run.baseline() - run.image().getHeight(),
+                        run.image().getWidth(), run.image().getHeight());
+            } else {
+                sink.drawText(run.textLayout(), run.text(), run.x(), run.baseline(), run.font(), run.color());
+            }
             int lineY = run.baseline() + 2;
             if (run.style().textDecorations().contains(TextDecoration.UNDERLINE)) {
                 sink.drawLine(run.x(), lineY, run.x() + Math.round(run.advance()), lineY, 1, run.color());

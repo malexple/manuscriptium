@@ -43,6 +43,9 @@ public final class BlockRenderer {
         paintBorder(sink, block, style.borders().top(), 0);
         paintBorder(sink, block, style.borders().right(), 1);
         paintBorder(sink, block, style.borders().bottom(), 2);
+        if (block.widget() != null) {
+            block.widget().paint(sink, block.contentX(), block.contentY(), block.contentWidth());
+        }
         for (LineBox line : block.lines()) {
             inlineRenderer.paint(sink, line);
         }

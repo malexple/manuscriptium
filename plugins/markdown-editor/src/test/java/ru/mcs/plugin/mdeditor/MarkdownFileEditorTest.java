@@ -44,17 +44,23 @@ class MarkdownFileEditorTest {
             assertThat(editor.source().document()).isSameAs(editor.document());
             assertThat(SwingUtilities.getAncestorOfClass(javax.swing.JScrollPane.class, editor.canvas())).isNotNull();
             assertThat(SwingUtilities.getAncestorOfClass(javax.swing.JScrollPane.class, editor.source())).isNotNull();
+            assertThat(editor.canvas().getDropTarget()).isNotNull();
+            assertThat(editor.source().getDropTarget()).isNull();
             assertThat(sourceText(editor)).isEqualTo(markdown);
             assertThat(editor.isModified()).isFalse();
 
             SwingUtilities.invokeAndWait(() -> editor.setMode(EditorMode.SOURCE));
             assertThat(editor.mode()).isEqualTo(EditorMode.SOURCE);
             assertThat(editor.getComponent()).isSameAs(original);
+            assertThat(editor.canvas().getDropTarget()).isNull();
+            assertThat(editor.source().getDropTarget()).isNotNull();
             assertThat(sourceText(editor)).isEqualTo(markdown);
 
             SwingUtilities.invokeAndWait(() -> editor.setMode(EditorMode.WYSIWYG));
             assertThat(editor.mode()).isEqualTo(EditorMode.WYSIWYG);
             assertThat(editor.getComponent()).isSameAs(original);
+            assertThat(editor.canvas().getDropTarget()).isNotNull();
+            assertThat(editor.source().getDropTarget()).isNull();
             assertThat(registry.size()).isEqualTo(1);
         } finally {
             SwingUtilities.invokeAndWait(editor::dispose);

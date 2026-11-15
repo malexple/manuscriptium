@@ -66,6 +66,18 @@ final class EditorActionFactory {
             case EditorActionIds.MATH_BLOCK -> command(id, EditorCommands::insertMathBlock);
             case EditorActionIds.HORIZONTAL_RULE -> command(id, EditorCommands::insertHorizontalRule);
             case EditorActionIds.IMAGE -> command(id, EditorCommands::insertImage);
+            case EditorActionIds.TABLE_ADD_ROW -> command(id, editor -> editor.activeCanvas().addTableRow());
+            case EditorActionIds.TABLE_REMOVE_ROW -> command(id, editor -> editor.activeCanvas().removeTableRow());
+            case EditorActionIds.TABLE_ADD_COLUMN -> command(id, editor -> editor.activeCanvas().addTableColumn());
+            case EditorActionIds.TABLE_REMOVE_COLUMN -> command(id, editor -> editor.activeCanvas().removeTableColumn());
+            case EditorActionIds.TABLE_ALIGN_LEFT -> command(id, editor -> editor.activeCanvas().alignTableColumn(
+                    ru.mcs.plugin.mdeditor.widget.TableModel.Alignment.LEFT));
+            case EditorActionIds.TABLE_ALIGN_CENTER -> command(id, editor -> editor.activeCanvas().alignTableColumn(
+                    ru.mcs.plugin.mdeditor.widget.TableModel.Alignment.CENTER));
+            case EditorActionIds.TABLE_ALIGN_RIGHT -> command(id, editor -> editor.activeCanvas().alignTableColumn(
+                    ru.mcs.plugin.mdeditor.widget.TableModel.Alignment.RIGHT));
+            case EditorActionIds.TABLE_COPY_CELL -> command(id, editor -> editor.activeCanvas().input().copyTableCell());
+            case EditorActionIds.TABLE_CLEAR_CELL -> command(id, editor -> editor.activeCanvas().input().clearTableCell());
             default -> null;
         };
     }

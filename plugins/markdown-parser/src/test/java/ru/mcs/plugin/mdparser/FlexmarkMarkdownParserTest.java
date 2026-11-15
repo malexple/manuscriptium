@@ -64,6 +64,17 @@ class FlexmarkMarkdownParserTest {
     }
 
     @Test
+    void recognizesSingleLineDisplayMathWithoutCreatingInlineMath() {
+        String markdown = "Before\n\n$$E = mc^2$$\n\nAfter";
+
+        ParseResult result = parser.parse(markdown, 12);
+
+        assertSource(result, BlockKind.MATH_BLOCK, markdown, "$$E = mc^2$$");
+        assertThat(spans(result, BlockKind.MATH_INLINE)).isEmpty();
+        assertAllOffsetsValid(result, markdown.length());
+    }
+
+    @Test
     void parsesTableCellsWithoutExplicitAlignment() {
         String markdown = "| Name | Value |\n| --- | --- |\n| A | 1 |";
 

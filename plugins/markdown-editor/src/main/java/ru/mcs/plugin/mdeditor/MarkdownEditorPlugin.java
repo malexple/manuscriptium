@@ -5,10 +5,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.swing.JComponent;
 import ru.mcs.plugin.mdeditor.action.EditorActionIds;
+import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.Plugin;
 import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.action.AnAction;
+import ru.mcs.spi.editor.BlockRendererExtensionRegistry;
 import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.editor.MathRenderingService;
 import ru.mcs.spi.editor.MarkdownParser;
 import ru.mcs.spi.editor.style.EditorStyleService;
 import ru.mcs.spi.service.AtomicFileStore;
@@ -27,6 +30,8 @@ public final class MarkdownEditorPlugin implements Plugin {
     private MarkdownParser parser;
     private EditorStyleService styles;
     private ExecutorService parserExecutor;
+    private ExecutorService widgetExecutor;
+    private WidgetRegistry widgets;
     private EditorActionFactory actionFactory;
 
     @Override
@@ -40,6 +45,14 @@ public final class MarkdownEditorPlugin implements Plugin {
             thread.setDaemon(true);
             return thread;
         });
+        widgetExecutor = Executors.newFixedThreadPool(2, runnable -> {
+            Thread thread = new Thread(runnable, "manuscriptium-widget-loader");
+            thread.setDaemon(true);
+            return thread;
+        });
+        widgets = new WidgetRegistry(widgetExecutor, context.services().find(MathRenderingService.class).orElse(null));
+        context.services().register(WidgetRegistry.class, widgets);
+        context.services().register(BlockRendererExtensionRegistry.class, widgets);
         ctx.state().register("editor", Scope.APPLICATION, state);
         actionFactory = new EditorActionFactory(ctx.i18n(), this::selectedEditor);
     }
@@ -48,6 +61,9 @@ public final class MarkdownEditorPlugin implements Plugin {
     public void stop() {
         if (parserExecutor != null) {
             parserExecutor.shutdownNow();
+        }
+        if (widgetExecutor != null) {
+            widgetExecutor.shutdownNow();
         }
     }
 
@@ -60,7 +76,7 @@ public final class MarkdownEditorPlugin implements Plugin {
     public FileEditorProvider createFileEditorProvider(String id) {
         return "markdown.editor".equals(id)
                 ? new MarkdownFileEditorProvider(state, registry, ctx.i18n(), fileStore, parser, parserExecutor, styles,
-                        ctx.actions())
+                        ctx.actions(), widgets)
                 : null;
     }
 

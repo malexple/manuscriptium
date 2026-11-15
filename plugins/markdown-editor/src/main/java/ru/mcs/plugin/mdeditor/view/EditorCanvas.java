@@ -17,14 +17,24 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetAdapter;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
 import java.awt.im.InputMethodRequests;
+import java.awt.image.BufferedImage;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Supplier;
 import javax.swing.JComponent;
 import javax.swing.JViewport;
 import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
 import javax.swing.UIManager;
 import ru.mcs.plugin.mdeditor.action.EditorContext;
 import ru.mcs.plugin.mdeditor.action.EditorContextMenuBuilder;
@@ -35,7 +45,10 @@ import ru.mcs.plugin.mdeditor.model.DocumentChange;
 import ru.mcs.plugin.mdeditor.model.DocumentListener;
 import ru.mcs.plugin.mdeditor.model.DocumentModel;
 import ru.mcs.plugin.mdeditor.model.Range;
+import ru.mcs.plugin.mdeditor.model.Insert;
 import ru.mcs.plugin.mdeditor.model.Replace;
+import ru.mcs.plugin.mdeditor.widget.ImageWidget;
+import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.style.EditorStyleService;
 
@@ -65,14 +78,20 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     };
 
     private final Runnable styleListener = this::editorStylesChanged;
+    private final Runnable widgetListener = this::widgetsChanged;
 
     private String status = "";
     private DocumentModel document;
     private AstIndex ast;
     private EditorStyleService styles;
+    private WidgetRegistry widgets;
+    private Path baseDirectory;
+    private ImageInputService imageInput;
+    private ImageResize imageResize;
     private EditorContextMenuBuilder contextMenuBuilder;
     private Supplier<EditorContext> editorContext;
     private boolean disposed;
+    private boolean nativeImageDropEnabled;
     private int caretOffset;
     private int selectionAnchor;
     private volatile long lastFrameNanos;
@@ -104,6 +123,8 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         MouseController mouseController = new MouseController(this, inputController);
         addMouseListener(mouseController);
         addMouseMotionListener(mouseController);
+        setTransferHandler(new ImageTransferHandler());
+        setNativeImageDropEnabled(true);
         new KeyBindingResolver().install(this, inputController);
         enableInputMethods(true);
         addInputMethodListener(imeSupport);
@@ -205,12 +226,154 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         repaint();
     }
 
+    public void setWidgets(WidgetRegistry widgets, Path baseDirectory) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            throw new IllegalStateException("Editor widgets must be attached on EDT");
+        }
+        if (this.widgets != null) {
+            this.widgets.removeChangeListener(widgetListener);
+        }
+        this.widgets = widgets;
+        this.baseDirectory = baseDirectory;
+        imageInput = widgets == null ? null : new ImageInputService(widgets.executor());
+        if (widgets != null) {
+            widgets.addChangeListener(widgetListener);
+        }
+        markdownLayout.setWidgets(widgets, baseDirectory);
+        revalidate();
+        repaint();
+    }
+
+    private void widgetsChanged() {
+        if (SwingUtilities.isEventDispatchThread()) {
+            refreshWidgets();
+        } else {
+            SwingUtilities.invokeLater(this::refreshWidgets);
+        }
+    }
+
+    private void refreshWidgets() {
+        if (disposed || widgets == null) {
+            return;
+        }
+        markdownLayout.invalidate();
+        revalidate();
+        repaint();
+    }
+
+    void insertImageMarkdown(long version, int offset, String markdown) {
+        if (disposed || document == null || document.version() != version) {
+            return;
+        }
+        int target = Math.max(0, Math.min(offset, document.length()));
+        String prefix = target > 0 && document.text().charAt(target - 1) != '\n' ? "\n" : "";
+        String suffix = target < document.length() && document.text().charAt(target) != '\n' ? "\n" : "";
+        String insertion = prefix + markdown + suffix;
+        document.apply(new Insert(target, insertion));
+        setCaretState(target + insertion.length(), target + insertion.length());
+        ensureCaretVisible();
+        repaint();
+    }
+
+    void importImages(List<Path> files, BufferedImage image, int offset) {
+        if (imageInput != null && document != null) {
+            imageInput.insert(this, baseDirectory, offset, files, image);
+        }
+    }
+
+    /**
+     * Активирует native DnD только для видимой карточки редактора. Два lightweight drop-target
+     * в CardLayout используют одно heavyweight окно; их одновременная регистрация снимает XdndAware.
+     */
+    public void setNativeImageDropEnabled(boolean enabled) {
+        if (nativeImageDropEnabled == enabled) {
+            return;
+        }
+        nativeImageDropEnabled = enabled;
+        setDropTarget(enabled
+                ? new DropTarget(this, DnDConstants.ACTION_COPY, new ImageDropTargetListener(), true) : null);
+    }
+
+    boolean beginImageResize(Point point) {
+        if (!markdownMode()) {
+            return false;
+        }
+        Point content = contentPoint(point);
+        for (var block : markdownLayout.layout().blocks()) {
+            if (block.widget() instanceof ImageWidget image && image.resizeHandleAt(content)) {
+                imageResize = new ImageResize(image, content, document.version());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void finishImageResize(Point point) {
+        if (imageResize == null) {
+            return;
+        }
+        ImageResize resize = imageResize;
+        imageResize = null;
+        if (document == null || document.version() != resize.version) {
+            return;
+        }
+        int width = resize.widget.resizeWidth(contentPoint(point), resize.pressed);
+        String replacement = resize.widget.resizedSource(width);
+        document.apply(Replace.of(resize.widget.sourceStart(), resize.widget.sourceEnd(), replacement));
+        int caret = Math.min(document.length(), resize.widget.sourceStart() + replacement.length());
+        setCaretState(caret, caret);
+        repaint();
+    }
+
     public void setAstIndex(AstIndex ast) {
         this.ast = ast;
         markdownLayout.setAst(ast);
         revalidate();
         typewriterMode.centerCaret(this);
         repaint();
+    }
+
+    AstIndex astIndex() {
+        return ast;
+    }
+
+    public boolean navigateTable(int direction) {
+        return TableController.navigate(this, direction);
+    }
+
+    public boolean addTableRow() {
+        TableController.Location location = TableController.location(this);
+        return location != null && TableController.edit(this, table -> table.addRow(location.row()));
+    }
+
+    public boolean removeTableRow() {
+        TableController.Location location = TableController.location(this);
+        return location != null && TableController.edit(this, table -> table.removeRow(location.row()));
+    }
+
+    public boolean addTableColumn() {
+        TableController.Location location = TableController.location(this);
+        return location != null && TableController.edit(this, table -> table.addColumn(location.column()));
+    }
+
+    public boolean removeTableColumn() {
+        TableController.Location location = TableController.location(this);
+        return location != null && TableController.edit(this, table -> table.removeColumn(location.column()));
+    }
+
+    public boolean alignTableColumn(ru.mcs.plugin.mdeditor.widget.TableModel.Alignment alignment) {
+        TableController.Location location = TableController.location(this);
+        return location != null && TableController.edit(this, table -> table.align(location.column(), alignment));
+    }
+
+    public boolean clearTableCell() {
+        TableController.Location location = TableController.location(this);
+        return location != null && TableController.edit(this,
+                table -> table.setCell(location.row(), location.column(), ""));
+    }
+
+    public String tableCellAtCaret() {
+        return TableController.cell(this);
     }
 
     public long markdownLayoutCount() {
@@ -459,10 +622,17 @@ public final class EditorCanvas extends JComponent implements Scrollable {
             return;
         }
         disposed = true;
+        setNativeImageDropEnabled(false);
         if (styles != null) {
             styles.removeChangeListener(styleListener);
             styles = null;
         }
+        if (widgets != null) {
+            widgets.removeChangeListener(widgetListener);
+            widgets = null;
+        }
+        imageResize = null;
+        imageInput = null;
         if (document != null) {
             document.removeListener(documentListener);
             document = null;
@@ -481,6 +651,95 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     public void setFont(Font font) {
         super.setFont(font);
         textLayout.setFont(font);
+    }
+
+    private record ImageResize(ImageWidget widget, Point pressed, long version) {
+    }
+
+    private boolean canImportImages(Transferable transferable) {
+        return transferable != null && canImportImages(transferable.getTransferDataFlavors());
+    }
+
+    private boolean canImportImages(DataFlavor[] flavors) {
+        if (document == null || imageInput == null || flavors == null) {
+            return false;
+        }
+        for (DataFlavor flavor : flavors) {
+            if (DataFlavor.javaFileListFlavor.equals(flavor) || DataFlavor.imageFlavor.equals(flavor)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean importTransferable(Transferable transferable, int offset) {
+        if (!canImportImages(transferable)) {
+            return false;
+        }
+        try {
+            List<Path> files = List.of();
+            if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                @SuppressWarnings("unchecked")
+                List<java.io.File> dropped = (List<java.io.File>) transferable
+                        .getTransferData(DataFlavor.javaFileListFlavor);
+                files = dropped.stream().map(java.io.File::toPath).toList();
+            }
+            BufferedImage image = transferable.isDataFlavorSupported(DataFlavor.imageFlavor)
+                    ? (BufferedImage) transferable.getTransferData(DataFlavor.imageFlavor) : null;
+            importImages(files, image, offset);
+            return true;
+        } catch (Exception error) {
+            setStatus("Cannot import image: " + error.getMessage());
+            return false;
+        }
+    }
+
+    private final class ImageDropTargetListener extends DropTargetAdapter {
+        @Override
+        public void dragEnter(DropTargetDragEvent event) {
+            acceptDrag(event);
+        }
+
+        @Override
+        public void dragOver(DropTargetDragEvent event) {
+            acceptDrag(event);
+        }
+
+        private void acceptDrag(DropTargetDragEvent event) {
+            if (canImportImages(event.getCurrentDataFlavors())) {
+                event.acceptDrag(DnDConstants.ACTION_COPY);
+            } else {
+                event.rejectDrag();
+            }
+        }
+
+        @Override
+        public void drop(DropTargetDropEvent event) {
+            if (!canImportImages(event.getCurrentDataFlavors())) {
+                event.rejectDrop();
+                return;
+            }
+            event.acceptDrop(DnDConstants.ACTION_COPY);
+            boolean imported = importTransferable(event.getTransferable(), hitTest(event.getLocation()));
+            event.dropComplete(imported);
+        }
+    }
+
+    private final class ImageTransferHandler extends TransferHandler {
+        @Override
+        public boolean canImport(TransferSupport support) {
+            return canImportImages(support.getTransferable());
+        }
+
+        @Override
+        public boolean importData(TransferSupport support) {
+            if (!canImport(support)) {
+                return false;
+            }
+            int offset = support.isDrop()
+                    ? hitTest(support.getDropLocation().getDropPoint()) : caretOffset;
+            return importTransferable(support.getTransferable(), offset);
+        }
     }
 
     @Override

@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.font.TextLayout;
+import java.awt.image.BufferedImage;
 
 /** Экранный DrawSink поверх Graphics2D. */
 public final class Graphics2DDrawSink implements DrawSink {
@@ -45,5 +46,10 @@ public final class Graphics2DDrawSink implements DrawSink {
         graphics.setFont(font);
         graphics.setColor(color);
         layout.draw(graphics, x, baseline);
+    }
+
+    @Override
+    public void drawImage(BufferedImage image, int x, int y, int width, int height) {
+        graphics.drawImage(image, x, y, Math.max(1, width), Math.max(1, height), null);
     }
 }

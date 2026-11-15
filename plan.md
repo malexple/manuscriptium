@@ -1,6 +1,6 @@
 # Manuscriptium — план реализации (plan.md)
 
-Версия документа: 1.9 (2026-11-15). Статус: Фазы 0–4 и Canvas-редактор E0–E6 завершены; следующий этап — E7, публикация Фазы 5 продолжится после E9.
+Версия документа: 1.10 (2026-11-15). Статус: Фазы 0–4 и Canvas-редактор E0–E7 завершены; следующий этап — E8, публикация Фазы 5 продолжится после E9.
 
 ## 1. Цель и приоритеты
 
@@ -315,7 +315,18 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
   Toggle Case, Duplicate/Delete Line и Extend Selection с IntelliJ-подобными Ctrl+U/D/Y/W; Enter в Canvas сразу показывает
   новую пустую строку и перемещает на неё каретку до фонового обновления AST. После актуального AST каретка сохраняется
   на новой physical line в конце документа и между параграфами; regression-тесты покрывают оба состояния layout.
-- [ ] **E7–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
+- [x] **E7. Виджеты:** `WidgetRegistry` создаёт lightweight-виджеты только для неактивных блоков; активный блок сохраняет
+  source-редактирование, Enter, selection и IME. Реализованы изображения с безопасными note-relative путями, асинхронный
+  `ImageCache` с LRU по RGBA-байтам, resize через version-checked `Replace`, drag&drop и clipboard file/image import в `assets`
+  без overwrite. Отдельный JPMS/JAR-плагин `plugins/math-renderer` скрывает JLaTeXMath за `MathRenderingService`; inline math —
+  неделимый atom, поддержаны однострочные и многострочные display blocks. `TableWidget` редактирует структуру одним `Replace`
+  только внутри фактического source-диапазона таблицы; девять действий доступны из Format → Table, keymap и палитры. Добавлены
+  callouts, front matter card, code widget и JDK-only `BlockRendererExtension`. Для CardLayout активен один native drop-target:
+  скрытая карточка отключается, чтобы совместное heavyweight окно не теряло `XdndAware`. Delayed async-тесты, table prefix/suffix,
+  девять Linux goldens, clean build, bundled/external smoke и packaged UI-сценарии пройдены, включая настоящий XDND и Enter
+  до/после публикации AST. Смешанные inline-изображения внутри текстового абзаца пока отображаются как исходник; mermaid demo
+  необязателен и не создавался.
+- [ ] **E8–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
 
 Принятые решения: плагин не зависит от `core`; Obsidian-навигация и preview будут предоставлены через SPI-сервисы и адаптер
 `core`. `flexmark-java`, CSS-движок и `JLaTeXMath` становятся отдельными JAR-плагинами с JDK-only сервисными контрактами SPI
@@ -339,6 +350,14 @@ read-only bridge из `core` с listeners, а явный выбор editor theme
 виртуальные отступы в preferred height и смещает только границу отрисовки/hit testing: внутренние координаты layout и текст
 остаются прежними, а стандартный `JScrollPane` работает без отрицательной `viewPosition`. Production-зависимость
 `markdown-editor → core` по-прежнему отсутствует.
+
+В E7 SPI аддитивно получило только JDK-типы: `BlockRendererExtension`, `BlockRenderRequest`, `RenderedBlock` и
+`MathRenderingService`; `McsSdk.VERSION`/`sdk-version` остаются `0.9.0`/`0.9`. JLaTeXMath и его runtime находятся только в
+plugin layer `ru.mcs.plugin.math`, а `markdown-editor` получает сервис через `ServiceRegistry` и `depends-on`. Все виджетные
+мутации проходят через `DocumentModel.apply`; фоновые результаты публикуют invalidation на EDT и игнорируются после `dispose`.
+`ImageInputService` всегда relativize-ит от каталога заметки, а не от `assets`, и не перезаписывает существующие файлы. Native
+DnD координируется видимой карточкой Canvas/Source, но clipboard продолжает работать в обоих через общий `TransferHandler`.
+Тестовый `ImageTransferHandler` и XDND listener используют один `importTransferable`, чтобы пути и обработка ошибок не расходились.
 
 ### Фаза 5. Публикация (после Canvas E0–E9)
 - Публикация: `StaticSiteExporter` (Hugo), `PublishingProfile`, валидация YAML, конвертация `![[img]]`, проверка `draft`, битые ссылки, JGit commit/push в фоне со статусом в статус-баре.

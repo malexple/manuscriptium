@@ -66,6 +66,11 @@ final class ObsidianSpanProcessor {
         while (lineStart < source.length()) {
             int lineEnd = lineEnd(source, lineStart);
             int content = skipIndent(source, lineStart, lineEnd);
+            if (isSingleLineMath(source, content, lineEnd)) {
+                replaceMathBlock(segments, baseOffset + content, baseOffset + lineEnd);
+                lineStart = nextLine(source, lineEnd);
+                continue;
+            }
             if (!isMathDelimiter(source, content, lineEnd)) {
                 lineStart = nextLine(source, lineEnd);
                 continue;
@@ -77,19 +82,33 @@ final class ObsidianSpanProcessor {
             }
             int absoluteStart = baseOffset + content;
             int absoluteEnd = baseOffset + lineEnd(source, closing);
-            int first = segmentAtStart(segments, absoluteStart);
-            if (first >= 0) {
-                int after = first + 1;
-                while (after < segments.size() && segments.get(after).start < absoluteEnd) {
-                    after++;
-                }
-                BlockSpan math = new BlockSpan(BlockKind.MATH_BLOCK, absoluteStart, absoluteEnd, 1,
-                        Map.of("display", "block"));
-                segments.subList(first, after).clear();
-                segments.add(first, new Segment(List.of(math)));
-            }
+            replaceMathBlock(segments, absoluteStart, absoluteEnd);
             lineStart = nextLine(source, lineEnd(source, closing));
         }
+    }
+
+    private static void replaceMathBlock(List<Segment> segments, int absoluteStart, int absoluteEnd) {
+        int first = segmentAtStart(segments, absoluteStart);
+        if (first < 0) {
+            return;
+        }
+        int after = first + 1;
+        while (after < segments.size() && segments.get(after).start < absoluteEnd) {
+            after++;
+        }
+        BlockSpan math = new BlockSpan(BlockKind.MATH_BLOCK, absoluteStart, absoluteEnd, 1,
+                Map.of("display", "block"));
+        segments.subList(first, after).clear();
+        segments.add(first, new Segment(List.of(math)));
+    }
+
+    private static boolean isSingleLineMath(String source, int start, int lineEnd) {
+        int end = lineEnd;
+        while (end > start && (source.charAt(end - 1) == ' ' || source.charAt(end - 1) == '\t')) {
+            end--;
+        }
+        return end - start >= 5 && source.startsWith("$$", start) && source.startsWith("$$", end - 2)
+                && !escaped(source, end - 2) && !source.substring(start + 2, end - 2).isBlank();
     }
 
     private static void addInlineMath(String source, int baseOffset, List<Segment> segments) {

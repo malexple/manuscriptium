@@ -66,6 +66,16 @@ public final class TyporaKeymap {
         bind(canvas, KeyEvent.VK_M, shortcutShift(), EditorActionIds.MATH_BLOCK);
         bind(canvas, KeyEvent.VK_H, shortcutShift(), EditorActionIds.HORIZONTAL_RULE);
         bind(canvas, KeyEvent.VK_I, shortcutShift(), EditorActionIds.IMAGE);
+        int tableMask = shortcut() | InputEvent.ALT_DOWN_MASK;
+        bind(canvas, KeyEvent.VK_DOWN, tableMask, EditorActionIds.TABLE_ADD_ROW);
+        bind(canvas, KeyEvent.VK_UP, tableMask, EditorActionIds.TABLE_REMOVE_ROW);
+        bind(canvas, KeyEvent.VK_RIGHT, tableMask, EditorActionIds.TABLE_ADD_COLUMN);
+        bind(canvas, KeyEvent.VK_LEFT, tableMask, EditorActionIds.TABLE_REMOVE_COLUMN);
+        bind(canvas, KeyEvent.VK_L, tableMask, EditorActionIds.TABLE_ALIGN_LEFT);
+        bind(canvas, KeyEvent.VK_C, tableMask, EditorActionIds.TABLE_ALIGN_CENTER);
+        bind(canvas, KeyEvent.VK_R, tableMask, EditorActionIds.TABLE_ALIGN_RIGHT);
+        bind(canvas, KeyEvent.VK_C, tableMask | InputEvent.SHIFT_DOWN_MASK, EditorActionIds.TABLE_COPY_CELL);
+        bind(canvas, KeyEvent.VK_BACK_SPACE, tableMask, EditorActionIds.TABLE_CLEAR_CELL);
     }
 
     private int shortcut() {

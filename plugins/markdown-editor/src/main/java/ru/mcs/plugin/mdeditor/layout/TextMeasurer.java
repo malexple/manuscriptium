@@ -31,6 +31,14 @@ final class TextMeasurer {
     List<LineBox> layout(InlineContent content, int x, int y, boolean preserveTrailingEmptyLine) {
         currentSourceOffset = content.sourceStart(0);
         for (InlineContent.Segment segment : content.segments()) {
+            // Atom — один неделимый объект, даже если его LaTeX fallback содержит пробелы.
+            // Иначе каждый текстовый token получит тот же image и формула нарисуется повторно.
+            if (segment.atom() != null) {
+                endedWithNewline = false;
+                addToken(segment);
+                currentSourceOffset = segment.sourceOffsets()[segment.text().length()];
+                continue;
+            }
             int tokenStart = 0;
             int index = 0;
             while (index < segment.text().length()) {
@@ -76,8 +84,8 @@ final class TextMeasurer {
             int height = 0;
             for (InlineRun run : line.runs()) {
                 LineMetrics metrics = run.font().getLineMetrics(run.text(), RENDER_CONTEXT);
-                ascent = Math.max(ascent, Math.round(metrics.getAscent()));
-                height = Math.max(height, Math.round(metrics.getHeight()));
+                ascent = Math.max(ascent, Math.max(Math.round(metrics.getAscent()), run.imageHeight()));
+                height = Math.max(height, Math.max(Math.round(metrics.getHeight()), run.imageHeight()));
                 height = Math.max(height, (int) Math.round(run.style().lineHeightPx()));
             }
             if (line.runs().isEmpty()) {
@@ -94,6 +102,14 @@ final class TextMeasurer {
 
     private void addToken(InlineContent.Segment token) {
         TextLayout layout = new TextLayout(token.text(), token.style().font(), RENDER_CONTEXT);
+        if (token.atom() != null && token.atom().image() != null) {
+            int imageWidth = token.atom().image().getWidth();
+            if (currentWidth + imageWidth > width && !currentRuns.isEmpty()) {
+                finishLine();
+            }
+            addRun(token, layout);
+            return;
+        }
         if (currentWidth + layout.getAdvance() <= width || currentRuns.isEmpty()
                 && layout.getAdvance() <= width) {
             addRun(token, layout);
@@ -140,8 +156,9 @@ final class TextMeasurer {
     private void addRun(InlineContent.Segment token, TextLayout layout) {
         currentRuns.add(new InlineRun(token.text(), token.sourceOffsets(), layout, token.style().font(),
                 token.style().computed(), token.style().linkTarget(), token.style().taskOffset(),
-                token.style().taskChecked()));
-        currentWidth += layout.getAdvance();
+                token.style().taskChecked(), token.atom()));
+        currentWidth += token.atom() != null && token.atom().image() != null
+                ? token.atom().image().getWidth() : layout.getAdvance();
         currentSourceOffset = token.sourceOffsets()[token.sourceOffsets().length - 1];
     }
 

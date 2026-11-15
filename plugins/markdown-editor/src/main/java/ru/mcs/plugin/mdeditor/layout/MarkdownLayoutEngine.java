@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import ru.mcs.plugin.mdeditor.mode.FocusMode;
@@ -14,6 +15,8 @@ import ru.mcs.plugin.mdeditor.render.BlockRenderer;
 import ru.mcs.plugin.mdeditor.render.DrawSink;
 import ru.mcs.plugin.mdeditor.render.Graphics2DDrawSink;
 import ru.mcs.plugin.mdeditor.render.SourceBlockRenderer;
+import ru.mcs.plugin.mdeditor.widget.BlockWidget;
+import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;
@@ -40,6 +43,8 @@ public final class MarkdownLayoutEngine {
     private DocumentModel document;
     private AstIndex ast;
     private EditorStyleService styles;
+    private WidgetRegistry widgets;
+    private Path baseDirectory;
     private int width = DEFAULT_WIDTH;
     private int caretOffset;
     private LayoutResult current;
@@ -48,6 +53,13 @@ public final class MarkdownLayoutEngine {
         this.document = document;
         this.ast = ast;
         this.styles = styles;
+        cache.clear();
+        current = null;
+    }
+
+    public void setWidgets(WidgetRegistry widgets, Path baseDirectory) {
+        this.widgets = widgets;
+        this.baseDirectory = baseDirectory;
         cache.clear();
         current = null;
     }
@@ -73,6 +85,11 @@ public final class MarkdownLayoutEngine {
 
     public void setFocusMode(boolean enabled) {
         focusMode.setEnabled(enabled);
+    }
+
+    public void invalidate() {
+        cache.clear();
+        current = null;
     }
 
     public void clear() {
@@ -325,16 +342,28 @@ public final class MarkdownLayoutEngine {
             int contentEnd = source ? span.end() : trimmedEnd(raw, span.start(), span.end());
             InlineContent.Style base = new InlineContent.Style(style, styles.font(style,
                     (float) style.fontSizePx()), null, -1, false);
-            InlineContent content = content(raw, span, contentEnd, style, base, source, level);
-            List<LineBox> lines = new TextMeasurer(innerWidth, base).layout(content, innerX, innerY, source);
-            int linesHeight = lines.stream().mapToInt(LineBox::height).sum();
+            Color rootBackground = root.backgroundColor();
+            boolean dark = rootBackground != null && rootBackground.getRed() * 0.299
+                    + rootBackground.getGreen() * 0.587 + rootBackground.getBlue() * 0.114 < 128;
+            BlockWidget widget = !source && widgets != null ? widgets.create(raw, span, contentEnd,
+                    innerWidth, dark, style, base.font(), baseDirectory) : null;
+            List<LineBox> lines;
+            int linesHeight;
+            if (widget != null) {
+                lines = List.of();
+                linesHeight = widget.height(innerWidth);
+            } else {
+                InlineContent content = content(raw, span, contentEnd, style, base, source, level);
+                lines = new TextMeasurer(innerWidth, base).layout(content, innerX, innerY, source);
+                linesHeight = lines.stream().mapToInt(LineBox::height).sum();
+            }
             if (span.kind() == BlockKind.THEMATIC_BREAK) {
                 linesHeight = Math.max(4, linesHeight / 2);
             }
             int height = borderTop + borderBottom + vertical(style.padding(), style.fontSizePx()) + linesHeight;
             BlockBox box = new BlockBox(span, style, lines, source,
-                    span.attributes().getOrDefault("info", ""));
-            box.place(blockX, y + marginTop, blockWidth, Math.max(1, height), innerX, innerWidth);
+                    span.attributes().getOrDefault("info", ""), widget);
+            box.place(blockX, y + marginTop, blockWidth, Math.max(1, height), innerX, innerY, innerWidth);
             boxes.add(box);
             y += marginTop + height + marginBottom;
         }
@@ -365,14 +394,14 @@ public final class MarkdownLayoutEngine {
                 }
                 int contentEnd = atx ? closingHeadingEnd(raw, contentStart, end)
                         : setextHeadingEnd(raw, start, end);
-                InlineContent content = InlineMarkdown.render(raw, contentStart, contentEnd, base, styles);
+                InlineContent content = InlineMarkdown.render(raw, contentStart, contentEnd, base, styles, widgets);
                 InlineContent mapped = new InlineContent();
                 mapped.append(content, start, contentEnd);
                 yield mapped;
             }
-            case BLOCK_QUOTE, CALLOUT -> InlineMarkdown.quote(raw, start, end, base, styles);
-            case BULLET_LIST -> InlineMarkdown.list(raw, start, end, base, styles, false);
-            case ORDERED_LIST -> InlineMarkdown.list(raw, start, end, base, styles, true);
+            case BLOCK_QUOTE, CALLOUT -> InlineMarkdown.quote(raw, start, end, base, styles, widgets);
+            case BULLET_LIST -> InlineMarkdown.list(raw, start, end, base, styles, false, widgets);
+            case ORDERED_LIST -> InlineMarkdown.list(raw, start, end, base, styles, true, widgets);
             case FENCED_CODE -> {
                 int codeStart = raw.indexOf('\n', start);
                 codeStart = codeStart < 0 || codeStart >= end ? end : codeStart + 1;
@@ -383,7 +412,7 @@ public final class MarkdownLayoutEngine {
             case INDENTED_CODE, FRONT_MATTER, MATH_BLOCK, TABLE, HTML_BLOCK, HTML_COMMENT ->
                     InlineMarkdown.code(raw, start, end, base, styles, "");
             case THEMATIC_BREAK -> new InlineContent();
-            default -> InlineMarkdown.render(raw, start, end, base, styles);
+            default -> InlineMarkdown.render(raw, start, end, base, styles, widgets);
         };
     }
 

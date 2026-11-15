@@ -4,10 +4,12 @@ import java.awt.Font;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.awt.image.BufferedImage;
+import java.util.function.Supplier;
 import ru.mcs.spi.editor.style.ComputedStyle;
 
 /** Видимый текст, стили и монотонная карта границ в исходный Markdown. */
-final class InlineContent {
+public final class InlineContent {
 
     record Style(ComputedStyle computed, Font font, String linkTarget, int taskOffset, boolean taskChecked) {
         Style withFont(Font newFont) {
@@ -15,14 +17,36 @@ final class InlineContent {
         }
     }
 
-    record Segment(String text, int[] sourceOffsets, Style style) {
+    public static final class Atom {
+        private final Supplier<BufferedImage> image;
+        private final String fallbackText;
+
+        public Atom(Supplier<BufferedImage> image, String fallbackText) {
+            this.image = image;
+            this.fallbackText = fallbackText;
+        }
+
+        public BufferedImage image() {
+            return image.get();
+        }
+
+        public String fallbackText() {
+            return fallbackText;
+        }
+    }
+
+    record Segment(String text, int[] sourceOffsets, Style style, Atom atom) {
+        Segment(String text, int[] sourceOffsets, Style style) {
+            this(text, sourceOffsets, style, null);
+        }
+
         Segment {
             sourceOffsets = Arrays.copyOf(sourceOffsets, sourceOffsets.length);
         }
 
         Segment slice(int start, int end) {
             return new Segment(text.substring(start, end),
-                    Arrays.copyOfRange(sourceOffsets, start, end + 1), style);
+                    Arrays.copyOfRange(sourceOffsets, start, end + 1), style, atom);
         }
     }
 
@@ -54,6 +78,15 @@ final class InlineContent {
         segments.add(new Segment(visible, map, style));
     }
 
+    void appendAtom(Atom atom, int sourceStart, int sourceEnd, Style style) {
+        String visible = atom.fallbackText().isEmpty() ? " " : atom.fallbackText();
+        int[] map = new int[visible.length() + 1];
+        for (int index = 0; index <= visible.length(); index++) {
+            map[index] = sourceStart + (int) Math.round((double) index * (sourceEnd - sourceStart) / visible.length());
+        }
+        segments.add(new Segment(visible, map, style, atom));
+    }
+
     void append(InlineContent other, int sourceStart, int sourceEnd) {
         if (other.segments.isEmpty()) {
             return;
@@ -63,11 +96,11 @@ final class InlineContent {
         Segment firstSegment = segments.get(first);
         int[] firstMap = firstSegment.sourceOffsets();
         firstMap[0] = sourceStart;
-        segments.set(first, new Segment(firstSegment.text(), firstMap, firstSegment.style()));
+        segments.set(first, new Segment(firstSegment.text(), firstMap, firstSegment.style(), firstSegment.atom()));
         Segment lastSegment = segments.getLast();
         int[] lastMap = lastSegment.sourceOffsets();
         lastMap[lastMap.length - 1] = sourceEnd;
-        segments.set(segments.size() - 1, new Segment(lastSegment.text(), lastMap, lastSegment.style()));
+        segments.set(segments.size() - 1, new Segment(lastSegment.text(), lastMap, lastSegment.style(), lastSegment.atom()));
     }
 
     List<Segment> segments() {

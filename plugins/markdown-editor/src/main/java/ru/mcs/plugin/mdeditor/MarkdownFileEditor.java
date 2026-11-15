@@ -30,6 +30,7 @@ import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec;
 import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec.DecodedDocument;
 import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
@@ -85,6 +86,12 @@ final class MarkdownFileEditor implements FileEditor {
     MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
                        AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
                        EditorStyleService styles, ActionManager actions) {
+        this(file, initialMode, registry, i18n, fileStore, parser, parserExecutor, styles, actions, null);
+    }
+
+    MarkdownFileEditor(Path file, EditorMode initialMode, MarkdownEditorRegistry registry, I18n i18n,
+                       AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor,
+                       EditorStyleService styles, ActionManager actions, WidgetRegistry widgets) {
         this.file = Objects.requireNonNull(file, "file").toAbsolutePath().normalize();
         this.registry = registry;
         this.i18n = i18n;
@@ -94,6 +101,10 @@ final class MarkdownFileEditor implements FileEditor {
 
         if (styles != null) {
             canvas.setEditorStyles(styles);
+        }
+        if (widgets != null) {
+            canvas.setWidgets(widgets, this.file.getParent());
+            source.setWidgets(widgets, this.file.getParent());
         }
         source.setName("markdown.editor.source");
         source.setStatus(i18n.get("source.loading"));
@@ -108,6 +119,9 @@ final class MarkdownFileEditor implements FileEditor {
         }
         content.add(new JScrollPane(canvas), CANVAS_CARD);
         content.add(new JScrollPane(source), SOURCE_CARD);
+        // CardLayout делит одно native окно: активный drop-target должен быть только у видимой карточки.
+        canvas.setNativeImageDropEnabled(false);
+        source.setNativeImageDropEnabled(false);
 
         canvasButton = modeButton("markdown.editor.mode.canvas", i18n.get("mode.canvas"));
         sourceButton = modeButton("markdown.editor.mode.source", i18n.get("mode.source"));
@@ -194,7 +208,11 @@ final class MarkdownFileEditor implements FileEditor {
             var selection = previous.selectionRange();
             next.setCaretSelection(selection.start(), selection.end());
         }
+        if (previous != next) {
+            previous.setNativeImageDropEnabled(false);
+        }
         cards.show(content, sourceMode ? SOURCE_CARD : CANVAS_CARD);
+        next.setNativeImageDropEnabled(true);
         sourceButton.setSelected(sourceMode);
         canvasButton.setSelected(!sourceMode);
         next.requestFocusInWindow();

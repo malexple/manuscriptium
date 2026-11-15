@@ -1,6 +1,6 @@
 # Manuscriptium
 
-Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, плагины и Vault: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки включены bundled-плагины Hello, Markdown Canvas Editor, Markdown AST Parser, Typora Editor Styles, «Заметки» и «Свойства».
+Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, плагины и Vault: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки включены bundled-плагины Hello, Markdown Canvas Editor, Markdown AST Parser, Typora Editor Styles, JLaTeXMath Renderer, «Заметки» и «Свойства».
 
 ## Первый запуск 
 ```
@@ -14,7 +14,7 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
 внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
 
-## Markdown Canvas Editor — E0–E6
+## Markdown Canvas Editor — E0–E7
 
 `.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
 текстового провайдера. Кнопки **Canvas** и **Source** внутри вкладки переключают представление без создания второй вкладки
@@ -108,6 +108,38 @@ selection от слова до соседних слов и всей строк�
 **Ctrl+Shift+P** переключает Auto Pair для скобок, кавычек, backticks, `**` и `__` в Canvas и Source. **Ctrl+Shift+W** показывает
 слова, Unicode-символы, строки и оценку времени чтения для selection или всего документа. **Ctrl+Shift+D** удаляет текущий
 блок. Formatting, Undo/Redo, selection и сохранение работают над общей `DocumentModel` независимо от активного представления.
+
+### Виджеты и изображения E7
+
+`WidgetRegistry` создаёт lightweight-виджеты для неактивных блоков: изображения, inline/block math, таблицы, callouts,
+front matter и код. Виджет занимает обычную высоту в `LayoutResult` и рисуется через `DrawSink`, не становясь тяжёлым Swing
+child component. Активный блок остаётся исходником, поэтому каретка, Enter, selection и IME сохраняют поведение E6.
+
+Блочные Markdown-изображения и Obsidian `![[image]]` загружаются вне EDT через `ImageCache` с LRU-лимитом фактических
+RGBA-байтов. Разрешены только относительные пути, которые после `normalize()` остаются внутри каталога заметки. Resize за
+угловой handle применяет `Replace` только к исходнику изображения при неизменной версии документа и сериализуется как
+`![alt|320](assets/image.png)` или `![[assets/image.png|320]]`. Смешанные inline-изображения внутри текстового абзаца пока
+остаются текстовым отображением.
+
+Drag&drop и вставка file list копируют файлы в `assets`; изображение из буфера сохраняется как PNG. Коллизии разрешаются без
+overwrite: `photo.png`, `photo-1.png` и далее. В Markdown вставляется путь относительно каталога заметки, например
+`![](assets/clipboard-image.png)`. Для Canvas/Source активен ровно один native drop-target: скрытая карточка `CardLayout` его
+отключает, поскольку оба lightweight-редактора делят одно heavyweight окно. Это сохраняет настоящий XDND на Linux и предотвращает
+снятие `XdndAware` с окна.
+
+Bundled-плагин `plugins/math-renderer` скрывает JLaTeXMath в своём JPMS plugin layer и предоставляет JDK-only
+`MathRenderingService`. Inline math является неделимым `InlineContent.Atom` с source offsets, hit test, caret mapping и selection;
+LaTeX fallback с пробелами не разбивает формулу на повторные изображения. Поддержаны `$…$`, однострочный `$$…$$` и многострочный
+display block. Рендеринг выполняется вне EDT.
+
+Таблица поддерживает Tab-навигацию, добавление/удаление строк и столбцов, выравнивание, копирование и очистку ячейки. Девять
+команд добавлены в **Format → Table**, палитру и Typora keymap. Каждая структурная операция применяет один `Replace` к фактическому
+source-диапазону таблицы и сохраняет prefix/suffix документа неизменными; форматирование separator-строки самой таблицы может
+нормализоваться. Callouts и front matter отображаются карточками; исходник front matter доступен при активации блока.
+
+JDK-only `BlockRendererExtension` принимает `BlockRenderRequest` и асинхронно возвращает `RenderedBlock`, не раскрывая Flexmark
+или JLaTeXMath в SPI. Необязательный mermaid demo-плагин не создавался. Delayed decoder/renderer-тесты подтверждают отзывчивость
+EDT, а packaged UI-приёмка покрывает resize, таблицы, clipboard file/image, настоящий межпроцессный XDND-drop и Enter до/после AST.
 
 ## Bundled-панели заметок и свойств
 

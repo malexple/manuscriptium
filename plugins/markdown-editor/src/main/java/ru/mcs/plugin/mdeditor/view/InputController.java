@@ -237,6 +237,17 @@ public final class InputController {
         }
     }
 
+    public void copyTableCell() {
+        String cell = canvas.tableCellAtCaret();
+        if (cell != null) {
+            clipboard.copy(cell);
+        }
+    }
+
+    public void clearTableCell() {
+        canvas.clearTableCell();
+    }
+
     public void cut() {
         String selected = selectedText();
         if (!selected.isEmpty()) {
@@ -246,6 +257,16 @@ public final class InputController {
     }
 
     public void paste() {
+        var image = clipboard.image();
+        if (image.isPresent()) {
+            canvas.importImages(java.util.List.of(), image.get(), canvas.caretOffset());
+            return;
+        }
+        var files = clipboard.files();
+        if (!files.isEmpty()) {
+            canvas.importImages(files, null, canvas.caretOffset());
+            return;
+        }
         clipboard.paste().ifPresent(this::insertText);
     }
 

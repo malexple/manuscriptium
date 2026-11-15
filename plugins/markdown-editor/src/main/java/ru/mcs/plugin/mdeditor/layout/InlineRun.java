@@ -19,11 +19,17 @@ public final class InlineRun {
     private final String linkTarget;
     private final int taskOffset;
     private final boolean taskChecked;
+    private final InlineContent.Atom atom;
     private int x;
     private int baseline;
 
     InlineRun(String text, int[] sourceOffsets, TextLayout layout, Font font, ComputedStyle style,
               String linkTarget, int taskOffset, boolean taskChecked) {
+        this(text, sourceOffsets, layout, font, style, linkTarget, taskOffset, taskChecked, null);
+    }
+
+    InlineRun(String text, int[] sourceOffsets, TextLayout layout, Font font, ComputedStyle style,
+              String linkTarget, int taskOffset, boolean taskChecked, InlineContent.Atom atom) {
         this.text = text;
         this.sourceOffsets = Arrays.copyOf(sourceOffsets, sourceOffsets.length);
         this.layout = layout;
@@ -32,6 +38,7 @@ public final class InlineRun {
         this.linkTarget = linkTarget;
         this.taskOffset = taskOffset;
         this.taskChecked = taskChecked;
+        this.atom = atom;
         if (text.length() + 1 != sourceOffsets.length) {
             throw new IllegalArgumentException("Every visible UTF-16 boundary needs a source offset");
         }
@@ -79,7 +86,19 @@ public final class InlineRun {
     }
 
     public float advance() {
-        return layout.getAdvance();
+        return image() == null ? layout.getAdvance() : image().getWidth();
+    }
+
+    public InlineContent.Atom atom() {
+        return atom;
+    }
+
+    public java.awt.image.BufferedImage image() {
+        return atom == null ? null : atom.image();
+    }
+
+    public int imageHeight() {
+        return image() == null ? 0 : image().getHeight();
     }
 
     public int sourceStart() {
@@ -116,11 +135,17 @@ public final class InlineRun {
     }
 
     public int hitOffset(float localX, float localY) {
+        if (image() != null) {
+            return localX < advance() / 2 ? sourceStart() : sourceEnd();
+        }
         TextHitInfo hit = layout.hitTestChar(localX, localY);
         return sourceOffset(hit.getInsertionIndex());
     }
 
     public float caretX(int sourceOffset) {
+        if (image() != null) {
+            return sourceOffset <= sourceStart() ? x : x + advance();
+        }
         int visible = visibleIndex(sourceOffset);
         TextHitInfo hit = visible == text.length() && !text.isEmpty()
                 ? TextHitInfo.trailing(visible - 1) : TextHitInfo.leading(visible);
