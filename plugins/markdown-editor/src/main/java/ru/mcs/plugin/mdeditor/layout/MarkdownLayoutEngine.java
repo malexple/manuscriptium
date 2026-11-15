@@ -297,8 +297,12 @@ public final class MarkdownLayoutEngine {
         int contentWidth = Math.max(1, writeWidth - horizontal(root.padding(), root.fontSizePx()));
         int y = px(root.padding().top(), root.fontSizePx(), root.fontSizePx());
         List<BlockBox> boxes = new ArrayList<>(spans.size());
-        for (BlockSpan span : spans) {
-            boolean source = span.start() == activeStart;
+        for (int index = 0; index < spans.size(); index++) {
+            BlockSpan astSpan = spans.get(index);
+            boolean source = astSpan.start() == activeStart;
+            // Flexmark не создаёт top-level блоки для пустых строк. Во время редактирования
+            // эти physical lines принадлежат активному source-блоку, включая строку каретки.
+            BlockSpan span = source ? editingSpan(raw, spans, index) : astSpan;
             int level = span.kind() == BlockKind.HEADING ? headingLevel(raw, span) : 0;
             ElementState state = new ElementState(level > 0 ? "h" + level : null, "", false, 0, WRITE_ANCESTORS);
             ComputedStyle style = styles.resolve(span.kind(), List.of(), state);
@@ -398,11 +402,30 @@ public final class MarkdownLayoutEngine {
         }
         for (BlockSpan span : spans) {
             if (caretOffset >= span.start() && (caretOffset < span.end()
+                    || caretOffset == span.start() && caretOffset == span.end()
                     || caretOffset == document.length() && span.end() == document.length())) {
                 return span.start();
             }
         }
-        return -1;
+        // Каретка может находиться после span.end() на только что созданной пустой строке
+        // или между двумя AST-блоками. Ближайший левый блок становится активным source-блоком;
+        // для ведущих пустых строк активен первый блок.
+        for (int index = 0; index < spans.size(); index++) {
+            if (caretOffset < spans.get(index).start()) {
+                return index == 0 ? spans.getFirst().start() : spans.get(index - 1).start();
+            }
+        }
+        return spans.getLast().start();
+    }
+
+    private static BlockSpan editingSpan(String raw, List<BlockSpan> spans, int index) {
+        BlockSpan span = spans.get(index);
+        int start = index == 0 ? 0 : span.start();
+        int end = index + 1 < spans.size() ? spans.get(index + 1).start() : raw.length();
+        if (start == span.start() && end == span.end()) {
+            return span;
+        }
+        return new BlockSpan(span.kind(), start, end, span.depth(), span.attributes());
     }
 
     private Graphics2D dimmed(Graphics2D graphics, BlockBox block, ComputedStyle root) {

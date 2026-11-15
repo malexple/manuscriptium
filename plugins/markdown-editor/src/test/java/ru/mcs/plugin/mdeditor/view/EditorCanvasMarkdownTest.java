@@ -86,6 +86,72 @@ class EditorCanvasMarkdownTest {
     }
 
     @Test
+    void enterAtEndKeepsCaretOnEmptyNextLineAfterAstArrives() throws Exception {
+        String markdown = "Body";
+        SwingUtilities.invokeAndWait(() -> {
+            EditorCanvas canvas = new EditorCanvas();
+            try {
+                DocumentModelImpl document = document(markdown);
+                canvas.setSize(800, 600);
+                canvas.setEditorStyles(new TestEditorStyleService());
+                canvas.setDocument(document);
+                canvas.setAstIndex(ast(markdown,
+                        new BlockSpan(BlockKind.PARAGRAPH, 0, markdown.length(), 1)));
+                canvas.setCaretOffset(document.length());
+                int previousY = canvas.caretRect(canvas.caretOffset()).y;
+                canvas.input().insertText("\n");
+                int immediateY = canvas.caretRect(canvas.caretOffset()).y;
+                String changed = document.text().toString();
+
+                canvas.setAstIndex(ast(changed, document.version(),
+                        new BlockSpan(BlockKind.PARAGRAPH, 0, 4, 1)));
+
+                assertThat(immediateY).isGreaterThan(previousY);
+                assertThat(canvas.caretRect(canvas.caretOffset()).y)
+                        .as("AST paragraph ends before the trailing newline; caret must remain on the empty line")
+                        .isEqualTo(immediateY);
+            } finally {
+                canvas.dispose();
+            }
+        });
+    }
+
+    @Test
+    void enterBetweenParagraphsKeepsCaretOnBlankLineAfterAstArrives() throws Exception {
+        String markdown = "one\n\ntwo";
+        SwingUtilities.invokeAndWait(() -> {
+            EditorCanvas canvas = new EditorCanvas();
+            try {
+                DocumentModelImpl document = document(markdown);
+                canvas.setSize(800, 600);
+                canvas.setEditorStyles(new TestEditorStyleService());
+                canvas.setDocument(document);
+                canvas.setAstIndex(ast(markdown,
+                        new BlockSpan(BlockKind.PARAGRAPH, 0, 3, 1),
+                        new BlockSpan(BlockKind.PARAGRAPH, 5, 8, 1)));
+                canvas.setCaretOffset(3);
+                int previousY = canvas.caretRect(canvas.caretOffset()).y;
+                canvas.input().insertText("\n");
+                int immediateY = canvas.caretRect(canvas.caretOffset()).y;
+                String changed = document.text().toString();
+
+                canvas.setAstIndex(ast(changed, document.version(),
+                        new BlockSpan(BlockKind.PARAGRAPH, 0, 3, 1),
+                        new BlockSpan(BlockKind.PARAGRAPH, 6, 9, 1)));
+
+                assertThat(changed).isEqualTo("one\n\n\ntwo");
+                assertThat(canvas.caretOffset()).isEqualTo(4);
+                assertThat(immediateY).isGreaterThan(previousY);
+                assertThat(canvas.caretRect(canvas.caretOffset()).y)
+                        .as("caret in an AST gap belongs to the new blank physical line")
+                        .isEqualTo(immediateY);
+            } finally {
+                canvas.dispose();
+            }
+        });
+    }
+
+    @Test
     void backgroundThemeReloadInvalidatesLayoutOnEdtAndDisposeUnsubscribes() throws Exception {
         String markdown = "one\n\ntwo";
         TestEditorStyleService styles = new TestEditorStyleService();
@@ -144,10 +210,14 @@ class EditorCanvasMarkdownTest {
     }
 
     private static AstIndex ast(String markdown, BlockSpan... blocks) {
+        return ast(markdown, 0, blocks);
+    }
+
+    private static AstIndex ast(String markdown, long version, BlockSpan... blocks) {
         List<BlockSpan> spans = new ArrayList<>();
         spans.add(new BlockSpan(BlockKind.DOCUMENT, 0, markdown.length(), 0));
         spans.addAll(List.of(blocks));
-        return new AstIndex(new Result(0, spans, new ParseMetrics(blocks.length, 0, true)));
+        return new AstIndex(new Result(version, spans, new ParseMetrics(blocks.length, 0, true)));
     }
 
     private record Result(long version, List<BlockSpan> spans, ParseMetrics metrics) implements ParseResult {

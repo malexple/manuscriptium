@@ -39,8 +39,10 @@ final class TextMeasurer {
                     if (tokenStart < index) {
                         addToken(segment.slice(tokenStart, index));
                     }
-                    currentSourceOffset = segment.sourceOffsets()[index + 1];
+                    // Пустая строка относится к offset перед завершающим её '\n'.
+                    // Offset после перевода строки становится началом следующей physical line.
                     finishLine();
+                    currentSourceOffset = segment.sourceOffsets()[index + 1];
                     endedWithNewline = true;
                     index++;
                     tokenStart = index;
