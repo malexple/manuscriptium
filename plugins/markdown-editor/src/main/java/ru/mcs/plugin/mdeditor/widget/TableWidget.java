@@ -14,17 +14,20 @@ public final class TableWidget extends AbstractBlockWidget {
     private final TableModel table;
     private final ComputedStyle style;
     private final Font font;
+    private final String caption;
 
-    TableWidget(int start, int end, String source, ComputedStyle style, Font font) {
+    TableWidget(int start, int end, String source, ComputedStyle style, Font font, String caption) {
         super(start, end);
         this.table = TableModel.parse(source);
         this.style = style;
         this.font = font.deriveFont(Math.max(13f, font.getSize2D()));
+        this.caption = caption;
     }
 
     @Override
     public int height(int width) {
-        return table == null ? WidgetText.lineHeight(font) + 16 : table.rowCount() * ROW_HEIGHT;
+        int content = table == null ? WidgetText.lineHeight(font) + 16 : table.rowCount() * ROW_HEIGHT;
+        return content + (caption == null ? 0 : WidgetText.lineHeight(font) + 4);
     }
 
     @Override
@@ -65,8 +68,13 @@ public final class TableWidget extends AbstractBlockWidget {
             }
             sink.drawLine(bounds.x + bounds.width, y, bounds.x + bounds.width, y + ROW_HEIGHT, 1, border);
         }
-        sink.drawLine(bounds.x, bounds.y + bounds.height, bounds.x + bounds.width,
-                bounds.y + bounds.height, 1, border);
+        int tableHeight = table.rowCount() * ROW_HEIGHT;
+        sink.drawLine(bounds.x, bounds.y + tableHeight, bounds.x + bounds.width,
+                bounds.y + tableHeight, 1, border);
+        if (caption != null) {
+            WidgetText.draw(sink, caption, font, style.color(), bounds.x,
+                    bounds.y + bounds.height - WidgetText.lineHeight(font) + WidgetText.baseline(font));
+        }
     }
 
     public TableModel table() {

@@ -15,6 +15,8 @@ import ru.mcs.plugin.mdeditor.render.BlockRenderer;
 import ru.mcs.plugin.mdeditor.render.DrawSink;
 import ru.mcs.plugin.mdeditor.render.Graphics2DDrawSink;
 import ru.mcs.plugin.mdeditor.render.SourceBlockRenderer;
+import ru.mcs.plugin.mdeditor.reference.CitationIndex;
+import ru.mcs.plugin.mdeditor.reference.CrossReferenceIndex;
 import ru.mcs.plugin.mdeditor.widget.BlockWidget;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.AstIndex;
@@ -45,6 +47,7 @@ public final class MarkdownLayoutEngine {
     private EditorStyleService styles;
     private WidgetRegistry widgets;
     private Path baseDirectory;
+    private Path noteFile;
     private int width = DEFAULT_WIDTH;
     private int caretOffset;
     private LayoutResult current;
@@ -58,8 +61,13 @@ public final class MarkdownLayoutEngine {
     }
 
     public void setWidgets(WidgetRegistry widgets, Path baseDirectory) {
+        setWidgets(widgets, baseDirectory, null);
+    }
+
+    public void setWidgets(WidgetRegistry widgets, Path baseDirectory, Path noteFile) {
         this.widgets = widgets;
         this.baseDirectory = baseDirectory;
+        this.noteFile = noteFile;
         cache.clear();
         current = null;
     }
@@ -300,6 +308,8 @@ public final class MarkdownLayoutEngine {
 
     private LayoutResult rebuild(List<BlockSpan> spans, int activeStart) {
         String raw = document.text().toString();
+        CrossReferenceIndex references = CrossReferenceIndex.scan(raw);
+        CitationIndex citations = widgets == null ? CitationIndex.EMPTY : widgets.citations(raw, noteFile);
         ComputedStyle root = rootStyle();
         int viewport = Math.max(1, width);
         int rootHorizontal = horizontal(root.padding(), root.fontSizePx()) + horizontal(root.margin(), root.fontSizePx());
@@ -345,15 +355,16 @@ public final class MarkdownLayoutEngine {
             Color rootBackground = root.backgroundColor();
             boolean dark = rootBackground != null && rootBackground.getRed() * 0.299
                     + rootBackground.getGreen() * 0.587 + rootBackground.getBlue() * 0.114 < 128;
-            BlockWidget widget = !source && widgets != null ? widgets.create(raw, span, contentEnd,
-                    innerWidth, dark, style, base.font(), baseDirectory) : null;
+            int referenceEnd = widgetReferenceEnd(raw, spans, index, contentEnd);
+            BlockWidget widget = !source && widgets != null ? widgets.create(raw, span, contentEnd, referenceEnd,
+                    innerWidth, dark, style, base.font(), baseDirectory, noteFile, references) : null;
             List<LineBox> lines;
             int linesHeight;
             if (widget != null) {
                 lines = List.of();
                 linesHeight = widget.height(innerWidth);
             } else {
-                InlineContent content = content(raw, span, contentEnd, style, base, source, level);
+                InlineContent content = content(raw, span, contentEnd, style, base, source, level, references, citations);
                 lines = new TextMeasurer(innerWidth, base).layout(content, innerX, innerY, source);
                 linesHeight = lines.stream().mapToInt(LineBox::height).sum();
             }
@@ -367,12 +378,52 @@ public final class MarkdownLayoutEngine {
             boxes.add(box);
             y += marginTop + height + marginBottom;
         }
+        List<String> bibliography = citations.bibliography(raw);
+        if (!bibliography.isEmpty()) {
+            ComputedStyle style = styles.resolve(BlockKind.PARAGRAPH, List.of(),
+                    new ElementState(null, "", false, 0, WRITE_ANCESTORS));
+            InlineContent.Style base = new InlineContent.Style(style, styles.font(style, (float) style.fontSizePx()),
+                    null, -1, false);
+            InlineContent content = new InlineContent();
+            String title = widgets == null ? "Bibliography" : widgets.bibliographyTitle();
+            content.appendRaw(title + "\n", raw.length(),
+                    base.withFont(base.font().deriveFont(Font.BOLD, base.font().getSize2D() + 2f)));
+            for (String entry : bibliography) {
+                content.appendRaw("• " + entry + "\n", raw.length(), base);
+            }
+            List<LineBox> lines = new TextMeasurer(contentWidth, base).layout(content, contentX, y, false);
+            int height = Math.max(1, lines.stream().mapToInt(LineBox::height).sum());
+            BlockBox box = new BlockBox(new BlockSpan(BlockKind.PARAGRAPH, raw.length(), raw.length(), 1),
+                    style, lines, false, "", null);
+            box.place(contentX, y, contentWidth, height, contentX, y, contentWidth);
+            boxes.add(box);
+            y += height;
+        }
         y += px(root.padding().bottom(), root.fontSizePx(), root.fontSizePx());
         return new LayoutResult(document.version(), width, writeX, writeWidth, Math.max(y, 1), boxes);
     }
 
+    private static int widgetReferenceEnd(String raw, List<BlockSpan> spans, int index, int contentEnd) {
+        BlockSpan span = spans.get(index);
+        String kind = switch (span.kind()) {
+            case TABLE -> "tbl";
+            case PARAGRAPH, IMAGE, IMAGE_REFERENCE, WIKI_IMAGE, EMBED -> "fig";
+            default -> null;
+        };
+        if (kind == null || index + 1 >= spans.size()) {
+            return contentEnd;
+        }
+        BlockSpan next = spans.get(index + 1);
+        if (!raw.substring(contentEnd, next.start()).isBlank()) {
+            return contentEnd;
+        }
+        String anchor = raw.substring(next.start(), Math.min(next.end(), raw.length())).strip();
+        return anchor.matches("\\{#" + kind + ":[A-Za-z0-9_.-]+}") ? next.end() : contentEnd;
+    }
+
     private InlineContent content(String raw, BlockSpan span, int end, ComputedStyle style,
-                                  InlineContent.Style base, boolean source, int headingLevel) {
+                                  InlineContent.Style base, boolean source, int headingLevel,
+                                  CrossReferenceIndex references, CitationIndex citations) {
         int start = span.start();
         if (source) {
             Font mono = new Font(Font.MONOSPACED, Font.PLAIN, Math.max(12, base.font().getSize()));
@@ -394,14 +445,19 @@ public final class MarkdownLayoutEngine {
                 }
                 int contentEnd = atx ? closingHeadingEnd(raw, contentStart, end)
                         : setextHeadingEnd(raw, start, end);
-                InlineContent content = InlineMarkdown.render(raw, contentStart, contentEnd, base, styles, widgets);
+                InlineContent content = InlineMarkdown.render(raw, contentStart, contentEnd, base, styles, widgets,
+                        references, citations);
                 InlineContent mapped = new InlineContent();
+                String number = references.labelAt(start);
+                if (number != null) {
+                    mapped.appendRaw(number + " ", start, base);
+                }
                 mapped.append(content, start, contentEnd);
                 yield mapped;
             }
-            case BLOCK_QUOTE, CALLOUT -> InlineMarkdown.quote(raw, start, end, base, styles, widgets);
-            case BULLET_LIST -> InlineMarkdown.list(raw, start, end, base, styles, false, widgets);
-            case ORDERED_LIST -> InlineMarkdown.list(raw, start, end, base, styles, true, widgets);
+            case BLOCK_QUOTE, CALLOUT -> InlineMarkdown.quote(raw, start, end, base, styles, widgets, references, citations);
+            case BULLET_LIST -> InlineMarkdown.list(raw, start, end, base, styles, false, widgets, references, citations);
+            case ORDERED_LIST -> InlineMarkdown.list(raw, start, end, base, styles, true, widgets, references, citations);
             case FENCED_CODE -> {
                 int codeStart = raw.indexOf('\n', start);
                 codeStart = codeStart < 0 || codeStart >= end ? end : codeStart + 1;
@@ -412,7 +468,7 @@ public final class MarkdownLayoutEngine {
             case INDENTED_CODE, FRONT_MATTER, MATH_BLOCK, TABLE, HTML_BLOCK, HTML_COMMENT ->
                     InlineMarkdown.code(raw, start, end, base, styles, "");
             case THEMATIC_BREAK -> new InlineContent();
-            default -> InlineMarkdown.render(raw, start, end, base, styles, widgets);
+            default -> InlineMarkdown.render(raw, start, end, base, styles, widgets, references, citations);
         };
     }
 

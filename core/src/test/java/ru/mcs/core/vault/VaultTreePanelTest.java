@@ -85,6 +85,55 @@ class VaultTreePanelTest {
         });
     }
 
+    @Test
+    void physicalAndVirtualPopupsDispatchBranchStatistics() throws Exception {
+        FileEditorManagerImpl editors = new FileEditorManagerImpl();
+        AtomicReference<Path> physical = new AtomicReference<>();
+        AtomicReference<String> viewId = new AtomicReference<>();
+        AtomicReference<List<Integer>> nodePath = new AtomicReference<>();
+        ViewTreePanel.StatisticsHandler statistics = new ViewTreePanel.StatisticsHandler() {
+            @Override
+            public void physical(Path file) {
+                physical.set(file);
+            }
+
+            @Override
+            public void view(String id, List<Integer> path) {
+                viewId.set(id);
+                nodePath.set(path);
+            }
+        };
+        VaultTreePanel panel = new VaultTreePanel(
+                editors,
+                (view, source, file, target, clone) -> { },
+                directory -> { },
+                (file, view, name, target) -> { },
+                (file, sourceView, sourcePath, targetView, name, targetPath) -> { },
+                (view, path) -> { }, statistics);
+        VaultNote note = new VaultNote(tmp.resolve("note.md"), "note.md", "Note");
+        ViewDefinition view = new ViewDefinition("tree", "Tree", tmp.resolve("tree.yml"),
+                List.of(ViewEntry.file("note.md", null, true, List.of())));
+
+        SwingUtilities.invokeAndWait(() -> panel.setVault(tmp,
+                new VaultSnapshot(List.of(note), List.of(view), List.of())));
+        await(() -> {
+            DefaultMutableTreeNode root = (DefaultMutableTreeNode) panel.physicalTree().getModel().getRoot();
+            return root.getChildCount() == 1 && "note.md".equals(root.getChildAt(0).toString());
+        });
+        SwingUtilities.invokeAndWait(() -> {
+            JPopupMenu physicalPopup = popup(panel);
+            item(physicalPopup, Messages.get("branch.statistics")).doClick();
+            ViewTreePanel viewPanel = (ViewTreePanel) panel.tabs().getComponentAt(1);
+            DefaultMutableTreeNode root = (DefaultMutableTreeNode) viewPanel.tree().getModel().getRoot();
+            JPopupMenu viewPopup = viewPanel.popup(VaultTreeModel.path(root));
+            item(viewPopup, Messages.get("branch.statistics")).doClick();
+        });
+
+        assertThat(physical.get()).isEqualTo(note.file());
+        assertThat(viewId.get()).isEqualTo("tree");
+        assertThat(nodePath.get()).isEmpty();
+    }
+
     private static JPopupMenu popup(VaultTreePanel panel) {
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) panel.physicalTree().getModel().getRoot();
         DefaultMutableTreeNode note = (DefaultMutableTreeNode) root.getChildAt(0);

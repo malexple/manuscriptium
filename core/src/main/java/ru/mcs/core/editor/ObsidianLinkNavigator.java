@@ -46,6 +46,14 @@ public final class ObsidianLinkNavigator implements ObsidianNavigation {
         generation.incrementAndGet();
     }
 
+    Path vaultRoot() {
+        return root;
+    }
+
+    List<Path> vaultNotes() {
+        return notes;
+    }
+
     @Override
     public void open(Path source, ObsidianSyntax.Link link, JComponent anchor) {
         Path vaultRoot = root;

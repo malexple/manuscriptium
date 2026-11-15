@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -15,6 +16,7 @@ import ru.mcs.core.editor.SessionStore;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.core.notification.NotificationManagerImpl;
+import ru.mcs.core.service.AtomicFileStoreImpl;
 import ru.mcs.core.state.StateManagerImpl;
 import ru.mcs.core.statusbar.StatusBarModel;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
@@ -38,6 +40,7 @@ public final class VaultController implements AutoCloseable {
     private final StatusBarModel statusBar;
     private final NotificationManagerImpl notifications;
     private final ObsidianLinkNavigator obsidianLinks;
+    private final BranchStatistics branchStatistics;
     private final VaultTreePanel treePanel;
     private final VaultSearchPanel searchPanel;
 
@@ -59,8 +62,19 @@ public final class VaultController implements AutoCloseable {
         this.notifications = notifications;
         this.obsidianLinks = obsidianLinks;
         this.obsidianLinks.setStatusHandler(statusBar::setMessage);
+        this.branchStatistics = new BranchStatistics(new AtomicFileStoreImpl(), ForkJoinPool.commonPool());
         this.treePanel = new VaultTreePanel(editors, this::moveOrClone, this::newMarkdown,
-                this::addLink, this::moveLink);
+                this::addLink, this::moveLink, this::openBook, new ViewTreePanel.StatisticsHandler() {
+            @Override
+            public void physical(Path file) {
+                showPhysicalStatistics(file);
+            }
+
+            @Override
+            public void view(String viewId, List<Integer> nodePath) {
+                showViewStatistics(viewId, nodePath);
+            }
+        });
         this.searchPanel = new VaultSearchPanel(this::openSearchResult);
 
         toolWindows.register("core", ToolWindowSpec.of("core.vault", Messages.get("vault.title"),
@@ -205,6 +219,67 @@ public final class VaultController implements AutoCloseable {
             statusBar.setMessage(Messages.get("vault.status.viewErrors", snapshot.notes().size(),
                     snapshot.views().size(), snapshot.viewErrors().size()));
         }
+    }
+
+    private void openBook(String viewId, List<Integer> nodePath) {
+        VaultService service = current;
+        if (service == null) {
+            return;
+        }
+        ViewDefinition view = service.snapshot().views().stream()
+                .filter(candidate -> candidate.id().equals(viewId)).findFirst().orElse(null);
+        if (view == null) {
+            return;
+        }
+        String suffix = nodePath.isEmpty() ? "" : "-" + nodePath.stream().map(String::valueOf)
+                .reduce((left, right) -> left + "-" + right).orElse("");
+        Path key = service.root().resolve(".manuscriptium/books/" + viewId + suffix + ".book");
+        ViewEntry selected = nodePath.isEmpty() ? null : ViewOperations.entryAt(view.entries(), nodePath);
+        String name = selected == null ? view.name() : selected.title();
+        editors.openEditor(key, new BookViewEditor(key, name, service.root(), view, nodePath,
+                new AtomicFileStoreImpl()));
+    }
+
+    private void showPhysicalStatistics(Path selected) {
+        VaultService service = current;
+        if (service != null) {
+            showStatistics(service, branchStatistics.physical(selected, service.snapshot().notes()));
+        }
+    }
+
+    private void showViewStatistics(String viewId, List<Integer> nodePath) {
+        VaultService service = current;
+        if (service == null) {
+            return;
+        }
+        ViewDefinition view = service.snapshot().views().stream()
+                .filter(candidate -> candidate.id().equals(viewId)).findFirst().orElse(null);
+        if (view != null) {
+            showStatistics(service, branchStatistics.view(service.root(), view, nodePath));
+        }
+    }
+
+    private void showStatistics(VaultService service,
+                                CompletableFuture<BranchStatistics.Statistics> calculation) {
+        statusBar.setMessage(Messages.get("branch.statistics.loading"));
+        calculation.whenComplete((statistics, error) -> javax.swing.SwingUtilities.invokeLater(() -> {
+            if (current != service) {
+                return;
+            }
+            if (error != null) {
+                Throwable cause = error instanceof java.util.concurrent.CompletionException
+                        && error.getCause() != null ? error.getCause() : error;
+                String detail = cause.getMessage() == null ? cause.toString() : cause.getMessage();
+                notifications.notify("core", Messages.get("branch.statistics.title"),
+                        Messages.get("branch.statistics.error", detail), NotificationType.ERROR);
+                statusBar.setMessage(Messages.get("branch.statistics.error", detail));
+                return;
+            }
+            statusBar.setMessage(Messages.get("branch.statistics.ready"));
+            JOptionPane.showMessageDialog(frame, Messages.get("branch.statistics.message",
+                            statistics.files(), statistics.words(), statistics.characters(), statistics.readingMinutes()),
+                    Messages.get("branch.statistics.title"), JOptionPane.INFORMATION_MESSAGE);
+        }));
     }
 
     private CompletableFuture<Boolean> moveOrClone(String viewId, List<Integer> sourcePath, String sourceFile,

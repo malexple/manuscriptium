@@ -232,6 +232,21 @@ public final class FileEditorManagerImpl implements FileEditorManager {
         return true;
     }
 
+    /** Открывает core-вкладку виртуального документа; ключ не обязан существовать на диске. */
+    public synchronized boolean openEditor(Path key, FileEditor editor) {
+        Path normalized = normalize(key);
+        if (find(normalized) != null) {
+            selectFile(normalized);
+            return true;
+        }
+        editor.addModifiedListener(() -> fire(Listener::stateChanged));
+        entries.add(new Entry(normalized, editor, null));
+        selected = normalized;
+        fire(Listener::tabsChanged);
+        fire(Listener::selectionChanged);
+        return true;
+    }
+
     @Override
     public synchronized boolean closeFile(Path file) {
         Entry e = find(normalize(file));

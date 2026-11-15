@@ -65,6 +65,8 @@ final class VaultTreePanel extends JPanel {
     private final NewNoteHandler newNoteHandler;
     private final CloneLinkHandler cloneLinkHandler;
     private final MoveLinkHandler moveLinkHandler;
+    private final ViewTreePanel.BookHandler bookHandler;
+    private final ViewTreePanel.StatisticsHandler statisticsHandler;
     private final Map<String, ViewTreePanel> viewPanels = new HashMap<>();
     private List<ViewDefinition> views = List.of();
     private final Set<Path> pending = new HashSet<>();
@@ -74,12 +76,36 @@ final class VaultTreePanel extends JPanel {
     VaultTreePanel(FileEditorManagerImpl editors, ViewTreePanel.DropHandler dropHandler,
                    NewNoteHandler newNoteHandler, CloneLinkHandler cloneLinkHandler,
                    MoveLinkHandler moveLinkHandler) {
+        this(editors, dropHandler, newNoteHandler, cloneLinkHandler, moveLinkHandler, (view, path) -> { });
+    }
+
+    VaultTreePanel(FileEditorManagerImpl editors, ViewTreePanel.DropHandler dropHandler,
+                   NewNoteHandler newNoteHandler, CloneLinkHandler cloneLinkHandler,
+                   MoveLinkHandler moveLinkHandler, ViewTreePanel.BookHandler bookHandler) {
+        this(editors, dropHandler, newNoteHandler, cloneLinkHandler, moveLinkHandler, bookHandler,
+                new ViewTreePanel.StatisticsHandler() {
+                    @Override
+                    public void physical(Path file) {
+                    }
+
+                    @Override
+                    public void view(String viewId, List<Integer> nodePath) {
+                    }
+                });
+    }
+
+    VaultTreePanel(FileEditorManagerImpl editors, ViewTreePanel.DropHandler dropHandler,
+                   NewNoteHandler newNoteHandler, CloneLinkHandler cloneLinkHandler,
+                   MoveLinkHandler moveLinkHandler, ViewTreePanel.BookHandler bookHandler,
+                   ViewTreePanel.StatisticsHandler statisticsHandler) {
         super(new BorderLayout());
         this.editors = editors;
         this.dropHandler = dropHandler;
         this.newNoteHandler = newNoteHandler;
         this.cloneLinkHandler = cloneLinkHandler;
         this.moveLinkHandler = moveLinkHandler;
+        this.bookHandler = bookHandler;
+        this.statisticsHandler = statisticsHandler;
         setLayout(cards);
         JLabel empty = new JLabel(Messages.get("vault.empty"), SwingConstants.CENTER);
         empty.setBorder(new EmptyBorder(16, 16, 16, 16));
@@ -161,7 +187,8 @@ final class VaultTreePanel extends JPanel {
         Set<String> present = new HashSet<>();
         for (ViewDefinition view : snapshot.views()) {
             present.add(view.id());
-            ViewTreePanel panel = viewPanels.computeIfAbsent(view.id(), ignored -> new ViewTreePanel(editors, dropHandler));
+            ViewTreePanel panel = viewPanels.computeIfAbsent(view.id(),
+                    ignored -> new ViewTreePanel(editors, dropHandler, bookHandler, statisticsHandler));
             panel.setView(root, view, notePaths, clonedFiles);
             tabs.addTab(view.name(), panel);
         }
@@ -334,6 +361,10 @@ final class VaultTreePanel extends JPanel {
         Path directory = value.directory() ? value.file() : value.file().getParent();
         create.addActionListener(e -> newNoteHandler.newNote(directory));
         popup.add(create);
+        popup.addSeparator();
+        JMenuItem statistics = new JMenuItem(Messages.get("branch.statistics"));
+        statistics.addActionListener(event -> statisticsHandler.physical(value.file()));
+        popup.add(statistics);
         return popup;
     }
 

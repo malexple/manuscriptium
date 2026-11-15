@@ -5,6 +5,7 @@ import java.util.List;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.bus.MessageBusImpl;
+import ru.mcs.core.editor.CoreObsidianLinkService;
 import ru.mcs.core.editor.EditorEventsBridge;
 import ru.mcs.core.editor.FileEditorManagerImpl;
 import ru.mcs.core.editor.ObsidianLinkNavigator;
@@ -32,6 +33,7 @@ import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.core.vault.VaultPaths;
 import ru.mcs.core.vault.VaultState;
 import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.editor.ObsidianLinkService;
 import ru.mcs.spi.editor.style.ShellThemeService;
 import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
@@ -77,6 +79,7 @@ final class CoreServices {
         configurables.register(new AppearanceSettingsProvider(themes));
         services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
         services.register(ShellThemeService.class, themes);
+        services.register(ObsidianLinkService.class, new CoreObsidianLinkService(obsidianLinks));
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);

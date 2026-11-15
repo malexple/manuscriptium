@@ -11,40 +11,78 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
+import javax.swing.JComponent;
 import ru.mcs.plugin.mdeditor.layout.InlineContent;
+import ru.mcs.plugin.mdeditor.reference.CitationIndex;
+import ru.mcs.plugin.mdeditor.reference.CrossReferenceIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockRenderRequest;
 import ru.mcs.spi.editor.BlockRendererExtension;
 import ru.mcs.spi.editor.BlockRendererExtensionRegistry;
 import ru.mcs.spi.editor.BlockSpan;
 import ru.mcs.spi.editor.MathRenderingService;
+import ru.mcs.spi.editor.ObsidianLinkService;
 import ru.mcs.spi.editor.RenderedBlock;
+import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.i18n.I18n;
 
 /** Общие кэши и фабрика lightweight-виджетов; тяжёлая работа не выполняется на EDT. */
 public final class WidgetRegistry implements BlockRendererExtensionRegistry {
 
     private final Executor executor;
     private final MathRenderingService math;
+    private final ObsidianLinkService links;
+    private final AtomicFileStore fileStore;
+    private final I18n i18n;
     private final ImageCache images;
     private final CopyOnWriteArrayList<Runnable> listeners = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<BlockRendererExtension> extensions = new CopyOnWriteArrayList<>();
     private final ConcurrentHashMap<MathKey, AsyncImage> mathImages = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<ExtensionKey, AsyncImage> extensionImages = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<TransclusionKey, TransclusionSession> transclusions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<CitationKey, java.util.concurrent.CompletableFuture<CitationIndex>> citations =
+            new ConcurrentHashMap<>();
 
     public WidgetRegistry(Executor executor, MathRenderingService math) {
+        this(executor, math, null, null);
+    }
+
+    public WidgetRegistry(Executor executor, MathRenderingService math, ObsidianLinkService links,
+                          AtomicFileStore fileStore) {
+        this(executor, math, links, fileStore, null);
+    }
+
+    public WidgetRegistry(Executor executor, MathRenderingService math, ObsidianLinkService links,
+                          AtomicFileStore fileStore, I18n i18n) {
         this.executor = Objects.requireNonNull(executor, "executor");
         this.math = math;
+        this.links = links;
+        this.fileStore = fileStore;
+        this.i18n = i18n;
         images = new ImageCache(executor, this::fireChange);
     }
 
     public BlockWidget create(String raw, BlockSpan span, int end, int width, boolean dark,
                               ComputedStyle style, Font font, Path baseDirectory) {
+        return create(raw, span, end, width, dark, style, font, baseDirectory, null);
+    }
+
+    public BlockWidget create(String raw, BlockSpan span, int end, int width, boolean dark,
+                              ComputedStyle style, Font font, Path baseDirectory, Path noteFile) {
+        return create(raw, span, end, end, width, dark, style, font, baseDirectory, noteFile,
+                CrossReferenceIndex.EMPTY);
+    }
+
+    public BlockWidget create(String raw, BlockSpan span, int end, int referenceEnd, int width, boolean dark,
+                              ComputedStyle style, Font font, Path baseDirectory, Path noteFile,
+                              CrossReferenceIndex references) {
         String source = raw.substring(span.start(), Math.max(span.start(), Math.min(end, raw.length())));
+        String caption = references.labelInRange(span.start(), Math.min(raw.length(), referenceEnd));
         return switch (span.kind()) {
             case MATH_BLOCK -> new MathWidget(span.start(), end, MathWidget.blockLatex(source),
                     true, font.getSize2D(), style.color(), this);
-            case TABLE -> new TableWidget(span.start(), end, source, style, font);
+            case TABLE -> new TableWidget(span.start(), end, tableSource(source), style, font, caption);
             case FRONT_MATTER -> new FrontMatterWidget(span.start(), end, source, style, font);
             case CALLOUT -> new CalloutWidget(span.start(), end, source, style, font);
             case FENCED_CODE -> {
@@ -59,11 +97,35 @@ public final class WidgetRegistry implements BlockRendererExtensionRegistry {
             }
             case PARAGRAPH, IMAGE, IMAGE_REFERENCE, WIKI_IMAGE, EMBED -> {
                 ImageSource image = ImageSource.parseBlock(raw, span.start(), end);
+                if (image != null && image.wiki() && !imageExtension(image.path())) {
+                    String target = transclusionTarget(source);
+                    yield target == null || noteFile == null ? null : new TransclusionWidget(span.start(), end,
+                            transclusions.computeIfAbsent(new TransclusionKey(noteFile, target),
+                                    key -> new TransclusionSession(noteFile, target, this)));
+                }
                 yield image == null ? null : new ImageWidget(span.start(), end, image,
-                        baseDirectory, this, style, font);
+                        baseDirectory, this, style, font, caption);
             }
             default -> null;
         };
+    }
+
+    public CitationIndex citations(String markdown, Path noteFile) {
+        CitationIndex.Configuration configuration = CitationIndex.configuration(markdown);
+        if (configuration.bibliography() == null || noteFile == null || links == null || fileStore == null) {
+            return CitationIndex.EMPTY;
+        }
+        CitationKey key = new CitationKey(noteFile, configuration);
+        return citations.computeIfAbsent(key, ignored -> {
+            java.util.concurrent.CompletableFuture<CitationIndex> loaded = CitationIndex.load(
+                    configuration, noteFile, links, fileStore, executor);
+            loaded.whenComplete((index, error) -> fireChange());
+            return loaded;
+        }).getNow(CitationIndex.EMPTY);
+    }
+
+    public String bibliographyTitle() {
+        return i18n == null ? "Bibliography" : i18n.get("bibliography.title");
     }
 
     public InlineContent.Atom inlineMath(String latex, float fontSize, Color color) {
@@ -101,6 +163,28 @@ public final class WidgetRegistry implements BlockRendererExtensionRegistry {
 
     public Executor executor() {
         return executor;
+    }
+
+    ObsidianLinkService links() {
+        return links;
+    }
+
+    AtomicFileStore fileStore() {
+        return fileStore;
+    }
+
+    I18n i18n() {
+        return i18n;
+    }
+
+    void invalidate() {
+        fireChange();
+    }
+
+    public void openLink(Path source, String target, JComponent anchor) {
+        if (links != null && source != null && target != null && !target.isBlank()) {
+            links.open(source, target, anchor);
+        }
     }
 
     public void addChangeListener(Runnable listener) {
@@ -164,6 +248,28 @@ public final class WidgetRegistry implements BlockRendererExtensionRegistry {
         listeners.forEach(Runnable::run);
     }
 
+    private static boolean imageExtension(String path) {
+        String value = path.toLowerCase(java.util.Locale.ROOT);
+        return value.endsWith(".png") || value.endsWith(".jpg") || value.endsWith(".jpeg")
+                || value.endsWith(".gif") || value.endsWith(".bmp") || value.endsWith(".wbmp")
+                || value.endsWith(".svg");
+    }
+
+    private static String transclusionTarget(String source) {
+        String value = source.strip();
+        if (!value.startsWith("![[") || !value.endsWith("]]")) {
+            return null;
+        }
+        String body = value.substring(3, value.length() - 2);
+        int alias = body.indexOf('|');
+        String target = (alias < 0 ? body : body.substring(0, alias)).trim();
+        return target.isEmpty() ? null : target;
+    }
+
+    private static String tableSource(String source) {
+        return source.replaceAll("(?m)^\\s*\\{#tbl:[A-Za-z0-9_.-]+}\\s*$", "").stripTrailing();
+    }
+
     private static String fencedSource(String source) {
         int start = source.indexOf('\n');
         if (start < 0) {
@@ -200,6 +306,18 @@ public final class WidgetRegistry implements BlockRendererExtensionRegistry {
     }
 
     private record MathKey(String latex, boolean display, float fontSize, int color) {
+    }
+
+    private record CitationKey(Path source, CitationIndex.Configuration configuration) {
+        private CitationKey {
+            source = source.toAbsolutePath().normalize();
+        }
+    }
+
+    private record TransclusionKey(Path source, String target) {
+        private TransclusionKey {
+            source = source.toAbsolutePath().normalize();
+        }
     }
 
     record ExtensionKey(BlockRendererExtension extension, String info, String source,

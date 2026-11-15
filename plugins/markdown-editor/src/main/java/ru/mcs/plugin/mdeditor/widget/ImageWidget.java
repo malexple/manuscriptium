@@ -19,16 +19,19 @@ public final class ImageWidget extends AbstractBlockWidget {
     private final WidgetRegistry registry;
     private final ComputedStyle style;
     private final Font font;
+    private final String caption;
     private int renderedWidth;
     private int renderedHeight;
 
     ImageWidget(int start, int end, ImageSource source, Path baseDirectory,
-                WidgetRegistry registry, ComputedStyle style, Font font) {
+                WidgetRegistry registry, ComputedStyle style, Font font, String label) {
         super(start, end);
         this.source = source;
         this.registry = registry;
         this.style = style;
         this.font = font;
+        String alt = source.alt() == null ? "" : source.alt().strip();
+        this.caption = label == null ? null : label + (alt.isEmpty() ? "" : ". " + alt);
         file = resolve(baseDirectory, source.path());
     }
 
@@ -36,11 +39,13 @@ public final class ImageWidget extends AbstractBlockWidget {
     public int height(int width) {
         BufferedImage image = image();
         if (image == null) {
-            return file == null || entry().failed() ? Math.max(40, WidgetText.lineHeight(font) + 20) : 96;
+            int placeholder = file == null || entry().failed()
+                    ? Math.max(40, WidgetText.lineHeight(font) + 20) : 96;
+            return placeholder + captionHeight();
         }
         renderedWidth = displayWidth(image, width);
         renderedHeight = Math.max(1, Math.round((float) image.getHeight() * renderedWidth / image.getWidth()));
-        return renderedHeight;
+        return renderedHeight + captionHeight();
     }
 
     @Override
@@ -52,14 +57,29 @@ public final class ImageWidget extends AbstractBlockWidget {
             sink.drawImage(image, bounds.x, bounds.y, width, height);
             Color handle = new Color(style.color().getRed(), style.color().getGreen(), style.color().getBlue(), 180);
             sink.fillRect(bounds.x + width - HANDLE, bounds.y + height - HANDLE, HANDLE, HANDLE, handle);
+            paintCaption(sink, bounds);
             return;
         }
-        sink.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 6,
+        sink.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height - captionHeight(), 6,
                 style.backgroundColor() != null ? style.backgroundColor() : new Color(0xf6f8fa));
         String text = file == null ? "Image outside the note directory: " + source.path()
                 : entry().failed() ? "Cannot load image: " + source.path() : "Loading image…";
         WidgetText.draw(sink, text, font, style.color(), bounds.x + 10,
                 bounds.y + 10 + WidgetText.baseline(font));
+        paintCaption(sink, bounds);
+    }
+
+    private void paintCaption(DrawSink sink, Rectangle bounds) {
+        if (caption != null) {
+            Font captionFont = font.deriveFont(Math.max(12f, font.getSize2D() - 1f));
+            WidgetText.draw(sink, caption, captionFont, style.color(), bounds.x,
+                    bounds.y + bounds.height - WidgetText.lineHeight(captionFont)
+                            + WidgetText.baseline(captionFont));
+        }
+    }
+
+    private int captionHeight() {
+        return caption == null ? 0 : WidgetText.lineHeight(font) + 4;
     }
 
     public boolean resizeHandleAt(Point point) {

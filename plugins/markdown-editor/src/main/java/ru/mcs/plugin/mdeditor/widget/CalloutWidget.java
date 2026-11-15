@@ -15,6 +15,7 @@ public final class CalloutWidget extends AbstractBlockWidget {
     private final String type;
     private final String title;
     private final List<String> body;
+    private final boolean collapsed;
     private final ComputedStyle style;
     private final Font font;
     private final Font titleFont;
@@ -31,7 +32,8 @@ public final class CalloutWidget extends AbstractBlockWidget {
         }
         int close = marker.indexOf(']');
         type = marker.substring(2, close).toLowerCase(Locale.ROOT);
-        String explicitTitle = marker.substring(close + 1).strip();
+        collapsed = close + 1 < marker.length() && marker.charAt(close + 1) == '-';
+        String explicitTitle = marker.substring(close + 1 + (collapsed ? 1 : 0)).strip();
         title = explicitTitle.isEmpty() ? type.substring(0, 1).toUpperCase(Locale.ROOT) + type.substring(1) : explicitTitle;
         body = new ArrayList<>();
         for (int index = 1; index < lines.size(); index++) {
@@ -41,7 +43,8 @@ public final class CalloutWidget extends AbstractBlockWidget {
 
     @Override
     public int height(int width) {
-        return 20 + WidgetText.lineHeight(titleFont) + Math.max(1, body.size()) * (WidgetText.lineHeight(font) + 3);
+        return 20 + WidgetText.lineHeight(titleFont)
+                + (collapsed ? 0 : Math.max(1, body.size()) * (WidgetText.lineHeight(font) + 3));
     }
 
     @Override
@@ -60,6 +63,9 @@ public final class CalloutWidget extends AbstractBlockWidget {
         sink.fillRoundRect(bounds.x + 14, y - WidgetText.baseline(titleFont), 10, 10, 3, accent);
         WidgetText.draw(sink, title, titleFont, accent, bounds.x + 32, y);
         y += 7;
+        if (collapsed) {
+            return;
+        }
         for (String line : body) {
             y += WidgetText.lineHeight(font);
             WidgetText.draw(sink, line, font, style.color(), bounds.x + 16, y);

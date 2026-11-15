@@ -26,10 +26,12 @@ import ru.mcs.plugin.mdeditor.model.DocumentListener;
 import ru.mcs.plugin.mdeditor.model.DocumentModel;
 import ru.mcs.plugin.mdeditor.model.DocumentModel.SavePoint;
 import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
+import ru.mcs.plugin.mdeditor.model.Insert;
 import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec;
 import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec.DecodedDocument;
-import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.plugin.mdeditor.model.Replace;import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.plugin.mdeditor.view.MarginNotesPane;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.editor.AstIndex;
@@ -60,6 +62,8 @@ final class MarkdownFileEditor implements FileEditor {
     private final EditorCanvas source = new EditorCanvas();
     private final JToggleButton canvasButton;
     private final JToggleButton sourceButton;
+    private final JToggleButton notesButton;
+    private final MarginNotesPane marginNotes;
     private final SwingWorker<DecodedDocument, Void> loader;
     private final List<Runnable> modifiedListeners = new CopyOnWriteArrayList<>();
     private final DocumentListener documentListener = change -> documentChanged();
@@ -103,8 +107,8 @@ final class MarkdownFileEditor implements FileEditor {
             canvas.setEditorStyles(styles);
         }
         if (widgets != null) {
-            canvas.setWidgets(widgets, this.file.getParent());
-            source.setWidgets(widgets, this.file.getParent());
+            canvas.setWidgets(widgets, this.file.getParent(), this.file);
+            source.setWidgets(widgets, this.file.getParent(), this.file);
         }
         source.setName("markdown.editor.source");
         source.setStatus(i18n.get("source.loading"));
@@ -130,14 +134,39 @@ final class MarkdownFileEditor implements FileEditor {
         group.add(sourceButton);
         canvasButton.addActionListener(e -> setMode(EditorMode.WYSIWYG));
         sourceButton.addActionListener(e -> setMode(EditorMode.SOURCE));
+        marginNotes = new MarginNotesPane(i18n.get("notes.empty"), new MarginNotesPane.Handler() {
+            @Override
+            public void select(int offset) {
+                if (document != null) {
+                    activeCanvas().setCaretSelection(offset, offset);
+                    activeCanvas().requestFocusInWindow();
+                }
+            }
+
+            @Override
+            public void add(String text) {
+                addMarginNote(text);
+            }
+
+            @Override
+            public void edit(ru.mcs.plugin.mdeditor.view.ObsidianComments.Comment comment, String text) {
+                editMarginNote(comment, text);
+            }
+        }, i18n);
+        marginNotes.setVisible(false);
+        notesButton = modeButton("markdown.editor.notes", i18n.get("mode.notes"));
+        notesButton.addActionListener(event -> marginNotes.setVisible(notesButton.isSelected()));
         JToolBar modes = new JToolBar();
         modes.setName("markdown.editor.modes");
         modes.setFloatable(false);
         modes.add(canvasButton);
         modes.add(sourceButton);
+        modes.addSeparator();
+        modes.add(notesButton);
 
         root.add(modes, BorderLayout.NORTH);
         root.add(content, BorderLayout.CENTER);
+        root.add(marginNotes, BorderLayout.EAST);
         registry.register(this);
         setMode(initialMode);
         loader = createLoader();
@@ -177,6 +206,7 @@ final class MarkdownFileEditor implements FileEditor {
                                 }
                             });
                     canvas.setStatus(i18n.get("canvas.ready"));
+                    marginNotes.setComments(document.text().toString(), i18n.get("notes.empty"));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     showLoadError(e);
@@ -283,6 +313,22 @@ final class MarkdownFileEditor implements FileEditor {
         return new EditorContext(kind, active.selectionRange().length() > 0, link, image);
     }
 
+    void addMarginNote(String text) {
+        if (document == null) {
+            return;
+        }
+        int offset = activeCanvas().caretOffset();
+        document.apply(new Insert(offset, "%%" + text + "%%"));
+        int caret = offset + text.length() + 4;
+        activeCanvas().setCaretSelection(caret, caret);
+    }
+
+    void editMarginNote(ru.mcs.plugin.mdeditor.view.ObsidianComments.Comment comment, String text) {
+        if (document != null) {
+            document.apply(Replace.of(comment.start(), comment.end(), "%%" + text + "%%"));
+        }
+    }
+
     DocumentModel document() {
         return document;
     }
@@ -297,6 +343,13 @@ final class MarkdownFileEditor implements FileEditor {
 
     private void documentChanged() {
         updateModified();
+        if (document != null) {
+            marginNotes.setComments(document.text().toString(), i18n.get("notes.empty"));
+        }
+    }
+
+    MarginNotesPane marginNotes() {
+        return marginNotes;
     }
 
     private void updateModified() {

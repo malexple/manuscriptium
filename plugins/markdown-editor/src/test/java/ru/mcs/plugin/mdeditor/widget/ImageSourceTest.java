@@ -21,4 +21,19 @@ class ImageSourceTest {
         assertThat(wiki.width()).isEqualTo(180);
         assertThat(wiki.withWidth(256)).isEqualTo("![[assets/picture.png|256]]");
     }
+
+    @Test
+    void resizePreservesCrossReferenceSuffix() {
+        String source = "![Architecture](assets/architecture.png){#fig:architecture}";
+        ImageSource image = ImageSource.parseBlock(source, 0, source.length());
+
+        assertThat(image).isNotNull();
+        assertThat(image.suffix()).isEqualTo("{#fig:architecture}");
+        assertThat(image.withWidth(420))
+                .isEqualTo("![Architecture|420](assets/architecture.png){#fig:architecture}");
+
+        String wikiSource = "![[assets/architecture.png|200]] {#fig:wiki-architecture}";
+        assertThat(ImageSource.parseBlock(wikiSource, 0, wikiSource.length()).withWidth(300))
+                .isEqualTo("![[assets/architecture.png|300]] {#fig:wiki-architecture}");
+    }
 }

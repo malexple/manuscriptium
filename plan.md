@@ -1,6 +1,6 @@
 # Manuscriptium — план реализации (plan.md)
 
-Версия документа: 1.10 (2026-11-15). Статус: Фазы 0–4 и Canvas-редактор E0–E7 завершены; следующий этап — E8, публикация Фазы 5 продолжится после E9.
+Версия документа: 1.11 (2026-11-16). Статус: Фазы 0–4 и Canvas-редактор E0–E8 завершены; следующий этап — E9, публикация Фазы 5 продолжится после E9.
 
 ## 1. Цель и приоритеты
 
@@ -326,7 +326,15 @@ FileEditorProvider и поэтому сохраняет Obsidian-подсвет�
   девять Linux goldens, clean build, bundled/external smoke и packaged UI-сценарии пройдены, включая настоящий XDND и Enter
   до/после публикации AST. Смешанные inline-изображения внутри текстового абзаца пока отображаются как исходник; mermaid demo
   необязателен и не создавался.
-- [ ] **E8–E9:** выполняются последовательно по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
+- [x] **E8. Obsidian и рукописи:** Canvas поддерживает wikilink alias и Ctrl/Cmd+Click через SPI/Core-адаптер, скрытые вне
+  каретки `%%…%%`, callouts и image/note embeds. Полные и section-трансклюзии редактируются на месте; Save повторно читает
+  актуальный исходник, объединяет правку с fresh prefix/suffix и не изменяет родительский Markdown. Виртуальная книга собирает
+  видимые главы view, сохраняет только изменённые исходники и экспортирует текущий текст через `CREATE_NEW`. Реализованы
+  вычисляемые sec/fig/tbl-номера и ссылки, BibTeX/CSL author-date citations с completion и виртуальной библиографией, правая
+  панель Notes с точными undoable-операциями и фоновая Branch Statistics для физических/виртуальных веток. Все `Obsidian*Test`,
+  полный clean build (502 теста), девять Linux goldens, bundled/external smoke и packaged UI-сценарии пройдены, включая
+  последовательный Save разных трансклюзий, Book Save/Export, Notes Add/Edit, citation completion и обе Branch Statistics.
+- [ ] **E9:** следующий этап по отдельному плану. Публикация и Фаза 6 начинаются только после завершения E9.
 
 Принятые решения: плагин не зависит от `core`; Obsidian-навигация и preview будут предоставлены через SPI-сервисы и адаптер
 `core`. `flexmark-java`, CSS-движок и `JLaTeXMath` становятся отдельными JAR-плагинами с JDK-only сервисными контрактами SPI
@@ -358,6 +366,15 @@ plugin layer `ru.mcs.plugin.math`, а `markdown-editor` получает сер�
 `ImageInputService` всегда relativize-ит от каталога заметки, а не от `assets`, и не перезаписывает существующие файлы. Native
 DnD координируется видимой карточкой Canvas/Source, но clipboard продолжает работать в обоих через общий `TransferHandler`.
 Тестовый `ImageTransferHandler` и XDND listener используют один `importTransferable`, чтобы пути и обработка ошибок не расходились.
+
+В E8 `ObsidianLinkService` добавлен в SPI как JDK-only контракт, а `CoreObsidianLinkService` повторно использует существующие
+Vault-safe resolver/navigator; production-зависимость `markdown-editor → core` не появилась. Test-only связь с
+`plugins:markdown-parser` нужна лишь для integration-тестов на реальном Flexmark AST. Трансклюзия — единственный виджет с Swing
+child component; её session переживает layout, а Save делает read-merge-write по актуальному файлу. Книга остаётся виртуальным
+`FileEditor`, не создаёт фиктивный Markdown и не восстанавливается как обычный файл. Citation/render labels и bibliography не
+записываются в исходник; BibTeX/CSL реализованы JDK-only без новых production-зависимостей. `BranchStatistics` находится в
+`core.vault`, использует `AtomicFileStore` и executor, поэтому core не зависит от plugin `notes`, а EDT не блокируется. SPI и
+plugin descriptor версии остаются `0.9.0`/`0.9`.
 
 ### Фаза 5. Публикация (после Canvas E0–E9)
 - Публикация: `StaticSiteExporter` (Hugo), `PublishingProfile`, валидация YAML, конвертация `![[img]]`, проверка `draft`, битые ссылки, JGit commit/push в фоне со статусом в статус-баре.

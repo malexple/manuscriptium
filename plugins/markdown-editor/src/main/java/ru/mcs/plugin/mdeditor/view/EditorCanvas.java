@@ -28,9 +28,12 @@ import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import javax.swing.JComponent;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 import javax.swing.JViewport;
 import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
@@ -47,6 +50,7 @@ import ru.mcs.plugin.mdeditor.model.DocumentModel;
 import ru.mcs.plugin.mdeditor.model.Range;
 import ru.mcs.plugin.mdeditor.model.Insert;
 import ru.mcs.plugin.mdeditor.model.Replace;
+import ru.mcs.plugin.mdeditor.reference.CitationIndex;
 import ru.mcs.plugin.mdeditor.widget.ImageWidget;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.AstIndex;
@@ -86,8 +90,10 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     private EditorStyleService styles;
     private WidgetRegistry widgets;
     private Path baseDirectory;
+    private Path noteFile;
     private ImageInputService imageInput;
     private ImageResize imageResize;
+    private JPopupMenu citationPopup;
     private EditorContextMenuBuilder contextMenuBuilder;
     private Supplier<EditorContext> editorContext;
     private boolean disposed;
@@ -135,6 +141,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
                 if (document != null && !Character.isISOControl(ch) && !event.isMetaDown()
                         && (!event.isControlDown() || event.isAltDown())) {
                     inputController.insertText(String.valueOf(ch));
+                    SwingUtilities.invokeLater(EditorCanvas.this::updateCitationCompletion);
                     event.consume();
                 }
             }
@@ -227,6 +234,10 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     }
 
     public void setWidgets(WidgetRegistry widgets, Path baseDirectory) {
+        setWidgets(widgets, baseDirectory, null);
+    }
+
+    public void setWidgets(WidgetRegistry widgets, Path baseDirectory, Path noteFile) {
         if (!SwingUtilities.isEventDispatchThread()) {
             throw new IllegalStateException("Editor widgets must be attached on EDT");
         }
@@ -235,11 +246,12 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         }
         this.widgets = widgets;
         this.baseDirectory = baseDirectory;
+        this.noteFile = noteFile;
         imageInput = widgets == null ? null : new ImageInputService(widgets.executor());
         if (widgets != null) {
             widgets.addChangeListener(widgetListener);
         }
-        markdownLayout.setWidgets(widgets, baseDirectory);
+        markdownLayout.setWidgets(widgets, baseDirectory, noteFile);
         revalidate();
         repaint();
     }
@@ -259,6 +271,51 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         markdownLayout.invalidate();
         revalidate();
         repaint();
+    }
+
+    private void updateCitationCompletion() {
+        if (citationPopup != null) {
+            citationPopup.setVisible(false);
+        }
+        citationPopup = createCitationCompletion();
+        if (citationPopup != null && isShowing()) {
+            Rectangle caret = markdownLayout.caretRect(caretOffset);
+            citationPopup.show(this, caret.x, caret.y + caret.height);
+        }
+    }
+
+    JPopupMenu createCitationCompletion() {
+        if (disposed || document == null || widgets == null || caretOffset != selectionAnchor) {
+            return null;
+        }
+        String text = document.text().toString();
+        int at = text.lastIndexOf("@", Math.max(0, caretOffset - 1));
+        if (at < 1 || text.charAt(at - 1) != '[' || at >= caretOffset) {
+            return null;
+        }
+        String prefix = text.substring(at + 1, caretOffset);
+        if (prefix.contains("]") || prefix.contains("\n") || prefix.contains("\r") || prefix.contains(";")) {
+            return null;
+        }
+        CitationIndex citations = widgets.citations(text, noteFile);
+        List<String> matches = citations.complete(prefix);
+        if (matches.isEmpty()) {
+            return null;
+        }
+        JPopupMenu popup = new JPopupMenu();
+        for (String key : matches.stream().limit(12).toList()) {
+            JMenuItem item = new JMenuItem(key);
+            item.addActionListener(event -> {
+                if (document != null && caretOffset >= at && text.regionMatches(at, "@" + prefix, 0, prefix.length() + 1)) {
+                    document.apply(Replace.of(at, caretOffset, "@" + key));
+                    setCaretState(at + key.length() + 1, at + key.length() + 1);
+                }
+                popup.setVisible(false);
+                requestFocusInWindow();
+            });
+            popup.add(item);
+        }
+        return popup;
     }
 
     void insertImageMarkdown(long version, int offset, String markdown) {
@@ -548,8 +605,17 @@ public final class EditorCanvas extends JComponent implements Scrollable {
             return false;
         }
         String target = markdownLayout.linkAt(contentPoint(point));
-        if (target == null || !(target.startsWith("https://") || target.startsWith("http://"))
-                || !Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+        if (target == null) {
+            return false;
+        }
+        if (!(target.startsWith("https://") || target.startsWith("http://"))) {
+            if (widgets == null || noteFile == null) {
+                return false;
+            }
+            widgets.openLink(noteFile, target, this);
+            return true;
+        }
+        if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
             return false;
         }
         try {
@@ -633,6 +699,8 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         }
         imageResize = null;
         imageInput = null;
+        noteFile = null;
+        removeAll();
         if (document != null) {
             document.removeListener(documentListener);
             document = null;
@@ -770,6 +838,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     }
 
     private void paintDocument(Graphics2D graphics) {
+        syncWidgetComponents();
         graphics.translate(0, typewriterMode.topPadding(this));
         Rectangle clip = graphics.getClipBounds();
         if (clip == null) {
@@ -805,12 +874,41 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         graphics.drawString(text, x, y);
     }
 
+    private void syncWidgetComponents() {
+        if (!markdownMode()) {
+            if (getComponentCount() > 0) {
+                removeAll();
+            }
+            return;
+        }
+        List<JComponent> desired = new ArrayList<>();
+        int padding = typewriterMode.topPadding(this);
+        for (var block : markdownLayout.layout().blocks()) {
+            if (block.widget() == null || block.widget().component() == null) {
+                continue;
+            }
+            JComponent component = block.widget().component();
+            component.setBounds(block.contentX(), block.contentY() + padding, block.contentWidth(),
+                    block.widget().height(block.contentWidth()));
+            if (component.getParent() != this) {
+                add(component);
+            }
+            desired.add(component);
+        }
+        for (java.awt.Component child : getComponents()) {
+            if (!desired.contains(child)) {
+                remove(child);
+            }
+        }
+    }
+
     @Override
     public Dimension getPreferredSize() {
         if (document == null) {
             return new Dimension(800, 600);
         }
         int contentHeight = markdownMode() ? markdownLayout.layout().height() : textLayout.preferredHeight();
+        syncWidgetComponents();
         return new Dimension(800, contentHeight + typewriterMode.topPadding(this) + typewriterMode.bottomPadding(this));
     }
 

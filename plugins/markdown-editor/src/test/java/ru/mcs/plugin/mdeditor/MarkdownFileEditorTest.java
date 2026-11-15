@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mcs.plugin.mdeditor.mode.EditorMode;
 import ru.mcs.plugin.mdeditor.model.Insert;
+import ru.mcs.plugin.mdeditor.view.ObsidianComments;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 
@@ -252,6 +253,41 @@ class MarkdownFileEditorTest {
             saving.get().get(5, TimeUnit.SECONDS);
             assertThat(Files.readString(file)).isEqualTo("one\ntwo\nthree!");
             assertThat(editor.isModified()).isFalse();
+        } finally {
+            SwingUtilities.invokeAndWait(editor::dispose);
+        }
+    }
+
+    @Test
+    void marginNotesUseExactUtf16OffsetsAndRemainUndoable() throws Exception {
+        Path file = temp.resolve("notes.md");
+        String original = "🙂 before\n\nafter";
+        Files.writeString(file, original, StandardCharsets.UTF_8);
+        MarkdownFileEditor editor = create(file, EditorMode.WYSIWYG, new MarkdownEditorRegistry());
+        try {
+            awaitLoaded(editor);
+            String inserted = "🙂 before\n%%first%%\nafter";
+            SwingUtilities.invokeAndWait(() -> {
+                editor.canvas().setCaretSelection(10, 10);
+                editor.addMarginNote("first");
+            });
+            assertThat(sourceText(editor)).isEqualTo(inserted);
+            assertThat(editor.canvas().caretOffset()).isEqualTo(19);
+            assertThat(ObsidianComments.parse(sourceText(editor)))
+                    .containsExactly(new ObsidianComments.Comment(10, 19, "first"));
+
+            SwingUtilities.invokeAndWait(() -> editor.document().undo().undo());
+            assertThat(sourceText(editor)).isEqualTo(original);
+            SwingUtilities.invokeAndWait(() -> editor.document().undo().redo());
+            assertThat(sourceText(editor)).isEqualTo(inserted);
+
+            ObsidianComments.Comment comment = ObsidianComments.parse(sourceText(editor)).getFirst();
+            SwingUtilities.invokeAndWait(() -> editor.editMarginNote(comment, "revised"));
+            assertThat(sourceText(editor)).isEqualTo("🙂 before\n%%revised%%\nafter");
+            SwingUtilities.invokeAndWait(() -> editor.document().undo().undo());
+            assertThat(sourceText(editor)).isEqualTo(inserted);
+            SwingUtilities.invokeAndWait(() -> editor.document().undo().redo());
+            assertThat(sourceText(editor)).isEqualTo("🙂 before\n%%revised%%\nafter");
         } finally {
             SwingUtilities.invokeAndWait(editor::dispose);
         }

@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import ru.mcs.plugin.mdeditor.reference.CitationIndex;
+import ru.mcs.plugin.mdeditor.reference.CrossReferenceIndex;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.style.ComputedStyle;
@@ -31,23 +33,45 @@ final class InlineMarkdown {
 
     static InlineContent render(String raw, int start, int end, InlineContent.Style style,
                                 EditorStyleService styles) {
-        return render(raw, start, end, style, styles, null);
+        return render(raw, start, end, style, styles, null, CrossReferenceIndex.EMPTY);
     }
 
     static InlineContent render(String raw, int start, int end, InlineContent.Style style,
                                 EditorStyleService styles, WidgetRegistry widgets) {
+        return render(raw, start, end, style, styles, widgets, CrossReferenceIndex.EMPTY);
+    }
+
+    static InlineContent render(String raw, int start, int end, InlineContent.Style style,
+                                EditorStyleService styles, WidgetRegistry widgets, CrossReferenceIndex references) {
+        return render(raw, start, end, style, styles, widgets, references, CitationIndex.EMPTY);
+    }
+
+    static InlineContent render(String raw, int start, int end, InlineContent.Style style,
+                                EditorStyleService styles, WidgetRegistry widgets, CrossReferenceIndex references,
+                                CitationIndex citations) {
         InlineContent result = new InlineContent();
-        parse(raw, start, end, style, styles, widgets, result);
+        parse(raw, start, end, style, styles, widgets, references, citations, result);
         return result;
     }
 
     static InlineContent quote(String raw, int start, int end, InlineContent.Style style,
                                EditorStyleService styles) {
-        return quote(raw, start, end, style, styles, null);
+        return quote(raw, start, end, style, styles, null, CrossReferenceIndex.EMPTY);
     }
 
     static InlineContent quote(String raw, int start, int end, InlineContent.Style style,
                                EditorStyleService styles, WidgetRegistry widgets) {
+        return quote(raw, start, end, style, styles, widgets, CrossReferenceIndex.EMPTY);
+    }
+
+    static InlineContent quote(String raw, int start, int end, InlineContent.Style style,
+                               EditorStyleService styles, WidgetRegistry widgets, CrossReferenceIndex references) {
+        return quote(raw, start, end, style, styles, widgets, references, CitationIndex.EMPTY);
+    }
+
+    static InlineContent quote(String raw, int start, int end, InlineContent.Style style,
+                               EditorStyleService styles, WidgetRegistry widgets, CrossReferenceIndex references,
+                               CitationIndex citations) {
         InlineContent result = new InlineContent();
         for (SourceLine line : lines(raw, start, end)) {
             int content = line.start();
@@ -63,7 +87,7 @@ final class InlineMarkdown {
                     content++;
                 }
             }
-            parse(raw, content, line.end(), style, styles, widgets, result);
+            parse(raw, content, line.end(), style, styles, widgets, references, citations, result);
             appendNewline(raw, line, result, style);
         }
         return result;
@@ -71,11 +95,23 @@ final class InlineMarkdown {
 
     static InlineContent list(String raw, int start, int end, InlineContent.Style style,
                               EditorStyleService styles, boolean ordered) {
-        return list(raw, start, end, style, styles, ordered, null);
+        return list(raw, start, end, style, styles, ordered, null, CrossReferenceIndex.EMPTY);
     }
 
     static InlineContent list(String raw, int start, int end, InlineContent.Style style,
                               EditorStyleService styles, boolean ordered, WidgetRegistry widgets) {
+        return list(raw, start, end, style, styles, ordered, widgets, CrossReferenceIndex.EMPTY);
+    }
+
+    static InlineContent list(String raw, int start, int end, InlineContent.Style style,
+                              EditorStyleService styles, boolean ordered, WidgetRegistry widgets,
+                              CrossReferenceIndex references) {
+        return list(raw, start, end, style, styles, ordered, widgets, references, CitationIndex.EMPTY);
+    }
+
+    static InlineContent list(String raw, int start, int end, InlineContent.Style style,
+                              EditorStyleService styles, boolean ordered, WidgetRegistry widgets,
+                              CrossReferenceIndex references, CitationIndex citations) {
         InlineContent result = new InlineContent();
         for (SourceLine line : lines(raw, start, end)) {
             int p = line.start();
@@ -90,7 +126,7 @@ final class InlineMarkdown {
                 if (p > line.start()) {
                     result.appendMapped("  ", line.start(), p, style);
                 }
-                parse(raw, p, line.end(), style, styles, widgets, result);
+                parse(raw, p, line.end(), style, styles, widgets, references, citations, result);
                 appendNewline(raw, line, result, style);
                 continue;
             }
@@ -127,7 +163,7 @@ final class InlineMarkdown {
                 };
             }
             result.appendMapped(prefix, markerStart, Math.max(markerEnd, taskOffset + 2), prefixStyle);
-            parse(raw, content, line.end(), style, styles, widgets, result);
+            parse(raw, content, line.end(), style, styles, widgets, references, citations, result);
             appendNewline(raw, line, result, style);
         }
         return result;
@@ -194,10 +230,45 @@ final class InlineMarkdown {
     }
 
     private static void parse(String raw, int start, int end, InlineContent.Style style,
-                              EditorStyleService styles, WidgetRegistry widgets, InlineContent out) {
+                              EditorStyleService styles, WidgetRegistry widgets, CrossReferenceIndex references,
+                              CitationIndex citations, InlineContent out) {
         int i = start;
         while (i < end) {
             char ch = raw.charAt(i);
+            if (ch == '#' && i + 5 < end) {
+                int idStart = i + 1;
+                int idEnd = idStart;
+                while (idEnd < end && (Character.isLetterOrDigit(raw.charAt(idEnd))
+                        || raw.charAt(idEnd) == ':' || raw.charAt(idEnd) == '_' || raw.charAt(idEnd) == '.'
+                        || raw.charAt(idEnd) == '-')) {
+                    idEnd++;
+                }
+                while (idEnd > idStart && raw.charAt(idEnd - 1) == '.') {
+                    idEnd--;
+                }
+                String label = idEnd > idStart ? references.reference(raw.substring(idStart, idEnd)) : null;
+                if (label != null) {
+                    out.appendMapped(label, i, idEnd, inlineStyle(styles, BlockKind.LINK_REFERENCE, style));
+                    i = idEnd;
+                    continue;
+                }
+            }
+            if (ch == '{' && i + 6 < end && raw.charAt(i + 1) == '#') {
+                int close = raw.indexOf('}', i + 2);
+                if (close > i + 6 && close < end
+                        && raw.substring(i + 2, close).matches("(sec|fig|tbl):[A-Za-z0-9_.-]+")) {
+                    i = close + 1;
+                    continue;
+                }
+            }
+            if (ch == '%' && i + 1 < end && raw.charAt(i + 1) == '%') {
+                int close = raw.indexOf("%%", i + 2);
+                if (close >= 0 && close < end) {
+                    // Obsidian comment не занимает видимого места вне активного source-блока.
+                    i = close + 2;
+                    continue;
+                }
+            }
             if (ch == '\\' && i + 1 < end) {
                 out.appendMapped(raw.substring(i + 1, i + 2), i, i + 2, style);
                 i += 2;
@@ -236,10 +307,22 @@ final class InlineMarkdown {
                         default -> style.withFont(style.font().deriveFont(Font.ITALIC));
                     };
                     InlineContent nested = new InlineContent();
-                    parse(raw, i + paired.length(), close, nestedStyle, styles, widgets, nested);
+                    parse(raw, i + paired.length(), close, nestedStyle, styles, widgets, references, citations, nested);
                     out.append(nested, i, close + paired.length());
                     i = close + paired.length();
                     continue;
+                }
+            }
+            if (ch == '[' && i + 1 < end && raw.charAt(i + 1) == '@') {
+                int close = raw.indexOf(']', i + 2);
+                if (close > i + 2 && close < end) {
+                    String citation = citations.citation(raw.substring(i, close + 1));
+                    if (citation != null) {
+                        out.appendMapped(citation, i, close + 1,
+                                inlineStyle(styles, BlockKind.LINK_REFERENCE, style));
+                        i = close + 1;
+                        continue;
+                    }
                 }
             }
             if ((ch == '[' || ch == '!' && i + 1 < end && raw.charAt(i + 1) == '[')) {
@@ -255,7 +338,7 @@ final class InlineMarkdown {
                             label.appendMapped("🖼 " + raw.substring(labelStart, labelEnd), i, close + 1, style);
                         } else {
                             parse(raw, labelStart, labelEnd, new InlineContent.Style(linkStyle.computed(),
-                                    linkStyle.font(), target, -1, false), styles, widgets, label);
+                                    linkStyle.font(), target, -1, false), styles, widgets, references, citations, label);
                         }
                         out.append(label, i, close + 1);
                         i = close + 1;
@@ -283,7 +366,8 @@ final class InlineMarkdown {
                 int close = raw.indexOf("</u>", i + 3);
                 if (close > i + 3 && close < end) {
                     InlineContent nested = new InlineContent();
-                    parse(raw, i + 3, close, decorated(style, TextDecoration.UNDERLINE), styles, widgets, nested);
+                    parse(raw, i + 3, close, decorated(style, TextDecoration.UNDERLINE), styles, widgets, references,
+                            citations, nested);
                     out.append(nested, i, close + 4);
                     i = close + 4;
                     continue;
@@ -316,6 +400,7 @@ final class InlineMarkdown {
     private static boolean startsConstruct(String raw, int offset, int end) {
         char ch = raw.charAt(offset);
         return ch == '\\' || ch == '`' || ch == '$' || ch == '*' || ch == '_' || ch == '~' || ch == '[' || ch == '<'
+                || ch == '#' || ch == '{' || ch == '%' && offset + 1 < end && raw.charAt(offset + 1) == '%'
                 || ch == '!' && offset + 1 < end && raw.charAt(offset + 1) == '[';
     }
 

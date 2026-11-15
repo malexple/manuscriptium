@@ -13,6 +13,7 @@ import ru.mcs.spi.editor.BlockRendererExtensionRegistry;
 import ru.mcs.spi.editor.FileEditorProvider;
 import ru.mcs.spi.editor.MathRenderingService;
 import ru.mcs.spi.editor.MarkdownParser;
+import ru.mcs.spi.editor.ObsidianLinkService;
 import ru.mcs.spi.editor.style.EditorStyleService;
 import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
@@ -50,7 +51,8 @@ public final class MarkdownEditorPlugin implements Plugin {
             thread.setDaemon(true);
             return thread;
         });
-        widgets = new WidgetRegistry(widgetExecutor, context.services().find(MathRenderingService.class).orElse(null));
+        widgets = new WidgetRegistry(widgetExecutor, context.services().find(MathRenderingService.class).orElse(null),
+                context.services().find(ObsidianLinkService.class).orElse(null), fileStore, context.i18n());
         context.services().register(WidgetRegistry.class, widgets);
         context.services().register(BlockRendererExtensionRegistry.class, widgets);
         ctx.state().register("editor", Scope.APPLICATION, state);

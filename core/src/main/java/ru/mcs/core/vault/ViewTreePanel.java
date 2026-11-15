@@ -41,6 +41,16 @@ final class ViewTreePanel extends JPanel {
                   List<Integer> targetPath, boolean clone);
     }
 
+    interface BookHandler {
+        void open(String viewId, List<Integer> nodePath);
+    }
+
+    interface StatisticsHandler {
+        void physical(Path file);
+
+        void view(String viewId, List<Integer> nodePath);
+    }
+
     private record ViewTransfer(String viewId, List<Integer> sourcePath, String sourceFile) {
     }
 
@@ -50,11 +60,28 @@ final class ViewTreePanel extends JPanel {
     private final JTree tree = new JTree(model);
     private final FileEditorManagerImpl editors;
     private final DropHandler dropHandler;
+    private final BookHandler bookHandler;
+    private final StatisticsHandler statisticsHandler;
 
-    ViewTreePanel(FileEditorManagerImpl editors, DropHandler dropHandler) {
+    ViewTreePanel(FileEditorManagerImpl editors, DropHandler dropHandler, BookHandler bookHandler) {
+        this(editors, dropHandler, bookHandler, new StatisticsHandler() {
+            @Override
+            public void physical(Path file) {
+            }
+
+            @Override
+            public void view(String viewId, List<Integer> nodePath) {
+            }
+        });
+    }
+
+    ViewTreePanel(FileEditorManagerImpl editors, DropHandler dropHandler, BookHandler bookHandler,
+                  StatisticsHandler statisticsHandler) {
         super(new BorderLayout());
         this.editors = editors;
         this.dropHandler = dropHandler;
+        this.bookHandler = bookHandler;
+        this.statisticsHandler = statisticsHandler;
         add(new JScrollPane(tree), BorderLayout.CENTER);
         tree.setRootVisible(true);
         tree.setShowsRootHandles(true);
@@ -70,7 +97,7 @@ final class ViewTreePanel extends JPanel {
                 }
             }
         });
-        TreePopupSupport.install(tree, this::linkPopup);
+        TreePopupSupport.install(tree, this::popup);
         tree.getInputMap().put(KeyStroke.getKeyStroke("ENTER"), "mcs.openViewNote");
         tree.getActionMap().put("mcs.openViewNote", new AbstractAction() {
             @Override
@@ -144,19 +171,29 @@ final class ViewTreePanel extends JPanel {
         return null;
     }
 
-    private JPopupMenu linkPopup(TreePath path) {
+    JPopupMenu popup(TreePath path) {
         ViewTreeModel.Node value = value(path);
-        if (value == null || value.directory()) {
+        if (value == null) {
             return null;
         }
         JPopupMenu popup = new JPopupMenu();
-        JMenuItem open = new JMenuItem(Messages.get("vault.note.open"));
-        open.setEnabled(!value.missing());
-        open.addActionListener(e -> editors.openFile(value.file()));
-        popup.add(open);
+        if (value.directory()) {
+            JMenuItem book = new JMenuItem(Messages.get("book.open"));
+            book.addActionListener(event -> bookHandler.open(value.viewId(), value.path()));
+            popup.add(book);
+        } else {
+            JMenuItem open = new JMenuItem(Messages.get("vault.note.open"));
+            open.setEnabled(!value.missing());
+            open.addActionListener(e -> editors.openFile(value.file()));
+            popup.add(open);
+            popup.addSeparator();
+            popup.add(targetAction(value, true));
+            popup.add(targetAction(value, false));
+        }
         popup.addSeparator();
-        popup.add(targetAction(value, true));
-        popup.add(targetAction(value, false));
+        JMenuItem statistics = new JMenuItem(Messages.get("branch.statistics"));
+        statistics.addActionListener(event -> statisticsHandler.view(value.viewId(), value.path()));
+        popup.add(statistics);
         return popup;
     }
 
