@@ -16,9 +16,10 @@ import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
-import ru.mcs.plugin.mdeditor.model.DocumentProperties;
-import ru.mcs.plugin.mdeditor.model.LineEnding;
+import ru.mcs.editor.model.DocumentModelImpl;
+import ru.mcs.editor.model.DocumentProperties;
+import ru.mcs.editor.model.LineEnding;
+import ru.mcs.editor.view.ClipboardService;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.swing.editor.ObsidianLinkService;
 import ru.mcs.spi.service.AtomicFileStore;
@@ -36,7 +37,7 @@ class EditorCanvasCitationTest {
                 """);
         Path note = temp.resolve("note.md");
         String markdown = "---\nbibliography: refs.bib\n---\nCite [@do";
-        EditorCanvas canvas = canvas(markdown);
+        MarkdownCanvas canvas = canvas(markdown);
         WidgetRegistry widgets = new WidgetRegistry(Runnable::run, null, links(bib), store());
         try {
             AtomicReference<JPopupMenu> popup = new AtomicReference<>();
@@ -69,10 +70,10 @@ class EditorCanvasCitationTest {
         }
     }
 
-    private EditorCanvas canvas(String text) throws Exception {
-        AtomicReference<EditorCanvas> result = new AtomicReference<>();
+    private MarkdownCanvas canvas(String text) throws Exception {
+        AtomicReference<MarkdownCanvas> result = new AtomicReference<>();
         runEdt(() -> {
-            EditorCanvas canvas = new EditorCanvas(new ClipboardService(new Clipboard("citations")));
+            MarkdownCanvas canvas = new MarkdownCanvas(new ClipboardService(new Clipboard("citations")));
             canvas.setSize(600, 300);
             canvas.setDocument(new DocumentModelImpl(text,
                     new DocumentProperties(StandardCharsets.UTF_8, LineEnding.LF, false, false)));

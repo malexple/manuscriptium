@@ -25,7 +25,7 @@ final class ImageInputService {
         this.executor = executor;
     }
 
-    void insert(EditorCanvas canvas, Path baseDirectory, int offset, List<Path> files, BufferedImage image) {
+    void insert(MarkdownCanvas canvas, Path baseDirectory, int offset, List<Path> files, BufferedImage image) {
         if (baseDirectory == null || (files.isEmpty() && image == null)) {
             return;
         }

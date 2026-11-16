@@ -1,7 +1,7 @@
 package ru.mcs.plugin.mdeditor.render;
 
 import java.awt.Color;
-import ru.mcs.plugin.mdeditor.draw.DrawSink;
+import ru.mcs.editor.draw.DrawSink;
 import ru.mcs.plugin.mdeditor.layout.BlockBox;
 import ru.mcs.plugin.mdeditor.layout.LineBox;
 import ru.mcs.spi.editor.BlockKind;

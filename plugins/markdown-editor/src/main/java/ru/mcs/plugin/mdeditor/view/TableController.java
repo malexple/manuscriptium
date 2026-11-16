@@ -1,8 +1,8 @@
 package ru.mcs.plugin.mdeditor.view;
 
 import java.util.function.UnaryOperator;
-import ru.mcs.plugin.mdeditor.model.DocumentModel;
-import ru.mcs.plugin.mdeditor.model.Replace;
+import ru.mcs.editor.model.DocumentModel;
+import ru.mcs.editor.model.Replace;
 import ru.mcs.plugin.mdeditor.widget.TableModel;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
@@ -14,7 +14,7 @@ final class TableController {
     private TableController() {
     }
 
-    static boolean navigate(EditorCanvas canvas, int direction) {
+    static boolean navigate(MarkdownCanvas canvas, int direction) {
         Location location = location(canvas);
         if (location == null) {
             return false;
@@ -36,7 +36,7 @@ final class TableController {
         return true;
     }
 
-    static boolean edit(EditorCanvas canvas, UnaryOperator<TableModel> operation) {
+    static boolean edit(MarkdownCanvas canvas, UnaryOperator<TableModel> operation) {
         Location location = location(canvas);
         if (location == null) {
             return false;
@@ -55,12 +55,12 @@ final class TableController {
         return true;
     }
 
-    static String cell(EditorCanvas canvas) {
+    static String cell(MarkdownCanvas canvas) {
         Location location = location(canvas);
         return location == null ? null : location.model.cell(location.row, location.column);
     }
 
-    static Location location(EditorCanvas canvas) {
+    static Location location(MarkdownCanvas canvas) {
         DocumentModel document = canvas.document();
         AstIndex ast = canvas.astIndex();
         if (document == null || ast == null || ast.version() != document.version()) {

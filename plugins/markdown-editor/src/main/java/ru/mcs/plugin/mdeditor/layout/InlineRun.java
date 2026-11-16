@@ -6,7 +6,7 @@ import java.awt.Rectangle;
 import java.awt.font.TextHitInfo;
 import java.awt.font.TextLayout;
 import java.util.Arrays;
-import ru.mcs.plugin.mdeditor.draw.InlineContent;
+import ru.mcs.editor.draw.InlineContent;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Видимый фрагмент строки и отображение каждой его границы в UTF-16 offsets исходника. */

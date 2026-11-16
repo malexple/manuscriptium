@@ -45,7 +45,7 @@ ru.mcs.spi.editor
 ### 2.2. Ключевые контракты (сигнатуры без тел)
 
 ```java
-// ru.mcs.plugin.mdeditor.model
+// ru.mcs.editor.model
 public interface DocumentModel {
     CharSequence text();
     int length();

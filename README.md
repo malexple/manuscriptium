@@ -23,6 +23,18 @@ file editors, rendering/style API, settings, status bar и tool windows. Мод�
 `spi → spi-swing`. `SpiPurityTest` проверяет скомпилированные classfiles, а `SpiSwingModuleTest` — публичные контракты
 и JPMS exports.
 
+## Универсальный редактор
+
+`editor` (`ru.mcs.editor`) содержит языконезависимые DocumentModel/Piece Table, undo/redo и save-point, Canvas, layout,
+caret/selection, viewport, IME, clipboard и keyboard/mouse input. Он зависит только от `spi-swing` и не знает о `core`,
+Markdown, Obsidian или Front Matter; это проверяется `EditorPurityTest` по production classfiles и JPMS descriptor.
+
+Обычные файлы до 5 МиБ открывает `editor.text` через `ServiceLoader<FileEditorProvider>`: `core` объявляет только `uses`,
+а `app` включает модуль в runtime image. Загрузка и Save выполняются вне EDT; strict UTF-8, BOM, LF/CRLF/CR, атомарная
+запись и symlink-target semantics совпадают с Markdown editor. `core.markdown-fallback` сохраняет прежний редактор с
+Obsidian-навигацией только для `.md` на случай отключённого Markdown-плагина. Markdown расширяет базовый Canvas через
+`MarkdownCanvas extends EditorCanvas`; обратной зависимости `editor → markdown-editor` нет.
+
 ## Markdown Canvas Editor — E0–E8
 
 `.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
@@ -36,12 +48,13 @@ Save-point учитывает undo/redo и правки во время фоно
 при загрузке строго проверяются UTF-8, сохраняются BOM и однородные LF/CRLF/CR. Смешанные EOL отклоняются при сохранении,
 чтобы не переформатировать весь файл без явной команды пользователя.
 
-`AtomicFileStore` из SPI реализован в `core`: запись идёт через temp-файл в каталоге целевого файла и `ATOMIC_MOVE`, а symlink
-сохраняется и ведёт запись в его target. Чтение и запись выполняются вне EDT; Save, Save All, закрытие вкладки, выход,
+`AtomicFileStore` из SPI реализован в `core` для плагинов; универсальный `editor` использует собственную JDK-only реализацию
+того же контракта записи без зависимости на `core`: temp-файл создаётся в каталоге целевого файла, применяется `ATOMIC_MOVE`,
+а symlink сохраняется и ведёт запись в его target. Чтение и запись выполняются вне EDT; Save, Save All, закрытие вкладки, выход,
 перезапуск и смена Project ждут завершения фонового сохранения.
 
-В E2 оба режима используют редактируемый собственный lightweight canvas и общую `DocumentModel`; `JTextArea` больше не
-используется. Поддержаны клавиатурный ввод, каретка и selection, drag/double/triple click, word wrap, Home/End/PageUp/PageDown,
+В E2 оба режима используют редактируемый собственный lightweight canvas и общую `DocumentModel`; основной Markdown и
+обычный текст не используют `JTextArea` (он остаётся только в core fallback и внутри transclusion editor). Поддержаны клавиатурный ввод, каретка и selection, drag/double/triple click, word wrap, Home/End/PageUp/PageDown,
 текстовый clipboard, undo/redo с системным menu shortcut (`Cmd` на macOS), IME и скролл с инерцией. Построчная раскладка
 изменяет только затронутые физические строки, а рисование ограничено viewport. Source сохраняет эту исходную раскладку;
 Canvas начиная с E5 использует отдельный WYSIWYG layout над той же моделью документа.
@@ -269,7 +282,7 @@ entries:
 
 ### Obsidian-разметка
 
-Встроенный source-редактор `core.text` подсвечивает `[[wikilinks]]`, `![[embed]]` и callouts вида `> [!note]`, `> [!warning]`.
+Fallback source-редактор `core.markdown-fallback` подсвечивает `[[wikilinks]]`, `![[embed]]` и callouts вида `> [!note]`, `> [!warning]`.
 Он используется, если bundled Markdown Canvas Editor отключён. С E8 Canvas также поддерживает wikilinks, embeds, callouts,
 комментарии и навигацию через SPI-сервисы без production-зависимости плагина от `core`.
 Поддержаны alias (`[[Note|alias]]`), заголовки (`[[Note#Heading]]`, `[[#Local heading]]`) и block-id

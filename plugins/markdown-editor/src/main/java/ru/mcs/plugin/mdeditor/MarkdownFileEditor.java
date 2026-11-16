@@ -22,15 +22,16 @@ import ru.mcs.plugin.mdeditor.action.EditorBlockContext;
 import ru.mcs.plugin.mdeditor.action.EditorContextMenuBuilder;
 import ru.mcs.plugin.mdeditor.action.TyporaKeymap;
 import ru.mcs.plugin.mdeditor.mode.EditorMode;
-import ru.mcs.plugin.mdeditor.model.DocumentListener;
-import ru.mcs.plugin.mdeditor.model.DocumentModel;
-import ru.mcs.plugin.mdeditor.model.DocumentModel.SavePoint;
-import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
-import ru.mcs.plugin.mdeditor.model.Insert;
-import ru.mcs.plugin.mdeditor.model.DocumentProperties;
-import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec;
-import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec.DecodedDocument;
-import ru.mcs.plugin.mdeditor.model.Replace;import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.editor.model.DocumentListener;
+import ru.mcs.editor.model.DocumentModel;
+import ru.mcs.editor.model.DocumentModel.SavePoint;
+import ru.mcs.editor.model.DocumentModelImpl;
+import ru.mcs.editor.model.Insert;
+import ru.mcs.editor.model.DocumentProperties;
+import ru.mcs.editor.model.TextDocumentCodec;
+import ru.mcs.editor.model.TextDocumentCodec.DecodedDocument;
+import ru.mcs.editor.model.Replace;
+import ru.mcs.plugin.mdeditor.view.MarkdownCanvas;
 import ru.mcs.plugin.mdeditor.view.MarginNotesPane;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.swing.action.ActionManager;
@@ -58,8 +59,8 @@ final class MarkdownFileEditor implements FileEditor {
     private final JPanel root = new JPanel(new BorderLayout());
     private final CardLayout cards = new CardLayout();
     private final JPanel content = new JPanel(cards);
-    private final EditorCanvas canvas = new EditorCanvas();
-    private final EditorCanvas source = new EditorCanvas();
+    private final MarkdownCanvas canvas = new MarkdownCanvas();
+    private final MarkdownCanvas source = new MarkdownCanvas();
     private final JToggleButton canvasButton;
     private final JToggleButton sourceButton;
     private final JToggleButton notesButton;
@@ -184,7 +185,7 @@ final class MarkdownFileEditor implements FileEditor {
         return new SwingWorker<>() {
             @Override
             protected DecodedDocument doInBackground() throws Exception {
-                return MarkdownDocumentCodec.decode(fileStore.read(file));
+                return TextDocumentCodec.decode(fileStore.read(file));
             }
 
             @Override
@@ -230,10 +231,10 @@ final class MarkdownFileEditor implements FileEditor {
             return;
         }
         EditorMode requested = Objects.requireNonNull(newMode, "mode");
-        EditorCanvas previous = activeCanvas();
+        MarkdownCanvas previous = activeCanvas();
         mode = requested;
         boolean sourceMode = mode == EditorMode.SOURCE;
-        EditorCanvas next = activeCanvas();
+        MarkdownCanvas next = activeCanvas();
         if (document != null && previous != next) {
             var selection = previous.selectionRange();
             next.setCaretSelection(selection.start(), selection.end());
@@ -252,7 +253,7 @@ final class MarkdownFileEditor implements FileEditor {
         return mode;
     }
 
-    EditorCanvas canvas() {
+    MarkdownCanvas canvas() {
         return canvas;
     }
 
@@ -260,11 +261,11 @@ final class MarkdownFileEditor implements FileEditor {
         return document == null ? source.getStatus() : document.text().toString();
     }
 
-    EditorCanvas source() {
+    MarkdownCanvas source() {
         return source;
     }
 
-    EditorCanvas activeCanvas() {
+    MarkdownCanvas activeCanvas() {
         return mode == EditorMode.SOURCE ? source : canvas;
     }
 
@@ -295,7 +296,7 @@ final class MarkdownFileEditor implements FileEditor {
     }
 
     private EditorBlockContext editorContext() {
-        EditorCanvas active = activeCanvas();
+        MarkdownCanvas active = activeCanvas();
         AstIndex index = astIndex();
         if (index == null || document == null || index.version() != document.version()) {
             return new EditorBlockContext(BlockKind.PARAGRAPH, active.selectionRange().length() > 0, false, false);
@@ -447,7 +448,7 @@ final class MarkdownFileEditor implements FileEditor {
         if (snapshot.properties().mixedLineEndings()) {
             throw new IOException(i18n.get("save.error.mixedEol"));
         }
-        fileStore.write(file, MarkdownDocumentCodec.encode(snapshot.text(), snapshot.properties()));
+        fileStore.write(file, TextDocumentCodec.encode(snapshot.text(), snapshot.properties()));
     }
 
     private void commitSave(SaveSnapshot snapshot) {

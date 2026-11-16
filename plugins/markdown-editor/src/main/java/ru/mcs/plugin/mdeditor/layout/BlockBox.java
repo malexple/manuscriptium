@@ -1,7 +1,7 @@
 package ru.mcs.plugin.mdeditor.layout;
 
 import java.util.List;
-import ru.mcs.plugin.mdeditor.draw.BlockWidget;
+import ru.mcs.editor.draw.BlockWidget;
 import ru.mcs.spi.editor.BlockSpan;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 

@@ -6,8 +6,8 @@ import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import ru.mcs.plugin.mdeditor.draw.BlockWidget;
-import ru.mcs.plugin.mdeditor.draw.DrawSink;
+import ru.mcs.editor.draw.BlockWidget;
+import ru.mcs.editor.draw.DrawSink;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Obsidian-callout > [!type] с цветной плашкой и векторным маркером. */

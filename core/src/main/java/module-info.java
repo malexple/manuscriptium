@@ -1,4 +1,5 @@
 module ru.mcs.core {
+    uses ru.mcs.spi.swing.editor.FileEditorProvider;
     requires transitive ru.mcs.spi.swing;
     requires java.management;
     requires jdk.management;

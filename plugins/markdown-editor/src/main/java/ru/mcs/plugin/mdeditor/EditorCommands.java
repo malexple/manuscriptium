@@ -4,12 +4,12 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 import ru.mcs.plugin.mdeditor.action.SelectionExpander;
 import ru.mcs.plugin.mdeditor.action.WordCount;
-import ru.mcs.plugin.mdeditor.model.Delete;
-import ru.mcs.plugin.mdeditor.model.DocumentModel;
-import ru.mcs.plugin.mdeditor.model.Insert;
-import ru.mcs.plugin.mdeditor.model.Range;
-import ru.mcs.plugin.mdeditor.model.Replace;
-import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.editor.model.Delete;
+import ru.mcs.editor.model.DocumentModel;
+import ru.mcs.editor.model.Insert;
+import ru.mcs.editor.model.Range;
+import ru.mcs.editor.model.Replace;
+import ru.mcs.plugin.mdeditor.view.MarkdownCanvas;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockSpan;
 
@@ -27,7 +27,7 @@ final class EditorCommands {
     }
 
     static void toggleInline(MarkdownFileEditor editor, String opening, String closing) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         Range selection = canvas.selectionRange();
         String text = document.text().toString();
@@ -57,7 +57,7 @@ final class EditorCommands {
     }
 
     static void insertLink(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         Range selection = canvas.selectionRange();
         String selected = selectedText(document, selection);
@@ -72,7 +72,7 @@ final class EditorCommands {
     }
 
     static void clearFormatting(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         Range range = canvas.selectionRange();
         if (range.length() == 0) {
@@ -125,7 +125,7 @@ final class EditorCommands {
     }
 
     static void codeBlock(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         Range range = canvas.selectionRange();
         if (range.length() == 0) {
@@ -176,7 +176,7 @@ final class EditorCommands {
     }
 
     static void deleteBlock(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         Range range = canvas.selectionRange();
         if (range.length() == 0) {
@@ -192,7 +192,7 @@ final class EditorCommands {
     }
 
     static void toggleCase(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         Range range = canvas.selectionRange();
         if (range.length() == 0) {
@@ -211,7 +211,7 @@ final class EditorCommands {
     }
 
     static void duplicateLine(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         String text = document.text().toString();
         int caret = canvas.caretOffset();
@@ -228,7 +228,7 @@ final class EditorCommands {
     }
 
     static void deleteLine(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         String text = document.text().toString();
         if (text.isEmpty()) {
@@ -245,14 +245,14 @@ final class EditorCommands {
     }
 
     static void extendSelection(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         Range expanded = SelectionExpander.extend(editor.document().text().toString(),
                 canvas.selectionRange(), canvas.caretOffset());
         canvas.setCaretSelection(expanded.start(), expanded.end());
     }
 
     static WordCount.Stats wordCount(MarkdownFileEditor editor) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         Range selection = canvas.selectionRange();
         String text = selection.length() == 0 ? editor.document().text().toString()
                 : selectedText(editor.document(), selection);
@@ -260,7 +260,7 @@ final class EditorCommands {
     }
 
     private static void insertSnippet(MarkdownFileEditor editor, String snippet, int selectionStart, int selectionEnd) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         Range selection = canvas.selectionRange();
         document.apply(Replace.of(selection.start(), selection.end(), snippet));
@@ -268,7 +268,7 @@ final class EditorCommands {
     }
 
     private static void transformLines(MarkdownFileEditor editor, LineTransformation transformation) {
-        EditorCanvas canvas = editor.activeCanvas();
+        MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();
         String text = document.text().toString();
         Range range = lineRange(text, canvas.selectionRange());
@@ -285,7 +285,7 @@ final class EditorCommands {
         canvas.setCaretSelection(range.start(), range.start() + replaced.length());
     }
 
-    private static void replaceAndSelect(DocumentModel document, EditorCanvas canvas, Range range,
+    private static void replaceAndSelect(DocumentModel document, MarkdownCanvas canvas, Range range,
                                          String replacement, int contentOffset, int contentLength) {
         document.apply(Replace.of(range.start(), range.end(), replacement));
         canvas.setCaretSelection(range.start() + contentOffset, range.start() + contentOffset + contentLength);

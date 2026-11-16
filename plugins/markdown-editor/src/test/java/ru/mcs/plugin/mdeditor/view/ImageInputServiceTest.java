@@ -10,9 +10,9 @@ import java.util.List;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
-import ru.mcs.plugin.mdeditor.model.DocumentProperties;
-import ru.mcs.plugin.mdeditor.model.LineEnding;
+import ru.mcs.editor.model.DocumentModelImpl;
+import ru.mcs.editor.model.DocumentProperties;
+import ru.mcs.editor.model.LineEnding;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 
 class ImageInputServiceTest {
@@ -30,7 +30,7 @@ class ImageInputServiceTest {
         Files.writeString(second, "second");
         Path noteDirectory = temp.resolve("note");
         Files.createDirectories(noteDirectory);
-        EditorCanvas canvas = new EditorCanvas();
+        MarkdownCanvas canvas = new MarkdownCanvas();
         try {
             SwingUtilities.invokeAndWait(() -> {
                 canvas.setDocument(new DocumentModelImpl("", new DocumentProperties(StandardCharsets.UTF_8,
@@ -52,7 +52,7 @@ class ImageInputServiceTest {
 
     @Test
     void canvasRegistersNativeDropTarget() throws Exception {
-        EditorCanvas canvas = new EditorCanvas();
+        MarkdownCanvas canvas = new MarkdownCanvas();
         try {
             assertThat(canvas.getDropTarget()).isNotNull();
         } finally {
@@ -64,7 +64,7 @@ class ImageInputServiceTest {
     void clipboardImageUsesNoteRelativeAssetsPath() throws Exception {
         Path noteDirectory = temp.resolve("note");
         Files.createDirectories(noteDirectory);
-        EditorCanvas canvas = new EditorCanvas();
+        MarkdownCanvas canvas = new MarkdownCanvas();
         try {
             SwingUtilities.invokeAndWait(() -> {
                 canvas.setDocument(new DocumentModelImpl("", new DocumentProperties(StandardCharsets.UTF_8,

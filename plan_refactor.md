@@ -231,6 +231,21 @@
 
 ### Шаг 5. Выделить универсальный `editor`
 
+**Статус: завершён 2026-11-17.**
+
+- Создан JPMS-модуль `ru.mcs.editor`; языконезависимые model, draw, input, caret/selection, viewport, IME, clipboard,
+  mouse/keyboard handling и TypewriterMode перенесены из `plugins/markdown-editor`.
+- `MarkdownCanvas extends EditorCanvas`; Markdown AST/layout/render/widgets остаются в языковом плагине. Обратной
+  зависимости `editor → markdown` нет, `EditorPurityTest` проверяет production classfiles и JPMS provides/requires.
+- Обычные файлы до 5 МиБ открывает `editor.text` через `ServiceLoader<FileEditorProvider>`; `core` не зависит от `editor`.
+  Асинхронные загрузка/Save, strict UTF-8, BOM/EOL, save-point, atomic write и symlink-target Save покрыты тестами.
+- Прежний `JTextArea` оставлен только как `core.markdown-fallback` для `.md` с Obsidian-навигацией при отключённом
+  Markdown-плагине. Восстановлена привязка Ctrl+Y для redo вместе с Ctrl+Shift+Z.
+- Полная проверка: 140 test suites, 531 тест, 0 failures/errors, 2 осознанных `@Disabled`; девять golden-тем, jlink,
+  standalone plugin-template, bundled и external packaged smoke прошли.
+- Packaged UI-приёмка: plain text и Markdown Source/Canvas, ru/en ввод, длинная строка, selection, copy/cut/paste,
+  undo/redo, Save, Dirty → Cancel и чистое закрытие прошли на реальном jlink image.
+
 **Изменения**
 
 1. Создать `editor` и перенести из `plugins/markdown-editor` языконезависимые части:

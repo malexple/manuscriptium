@@ -7,7 +7,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -32,12 +31,9 @@ class EditorPackageDependenciesTest {
     }
 
     @Test
-    void drawContractsAreIndependentFromHigherLevelPackages() {
-        Map<String, List<String>> forbidden = Map.of(
-                "draw", List.of("action", "layout", "mode", "model", "reference", "render", "view", "widget"),
-                "model", List.of("action", "draw", "layout", "mode", "reference", "render", "view", "widget"),
-                "reference", List.of("action", "draw", "layout", "mode", "model", "render", "view", "widget"));
-        forbidden.forEach((source, targets) -> targets.forEach(target -> assertNoReferences(source, target)));
+    void referencesAreIndependentFromHigherLevelPackages() {
+        List.of("action", "layout", "mode", "render", "view", "widget")
+                .forEach(target -> assertNoReferences("reference", target));
     }
 
     private static void assertNoReferences(String sourcePackage, String forbiddenPackage) {

@@ -10,10 +10,10 @@ import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
-import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
-import ru.mcs.plugin.mdeditor.model.DocumentProperties;
-import ru.mcs.plugin.mdeditor.model.LineEnding;
-import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.editor.model.DocumentModelImpl;
+import ru.mcs.editor.model.DocumentProperties;
+import ru.mcs.editor.model.LineEnding;
+import ru.mcs.plugin.mdeditor.view.MarkdownCanvas;
 import ru.mcs.spi.swing.action.AnAction;
 import ru.mcs.spi.swing.action.AnActionEvent;
 
@@ -23,7 +23,7 @@ class TyporaKeymapTest {
     void intellijShortcutsOwnPlainKeysWithoutLegacyConflicts() throws Exception {
         TestActionManager actions = TestActionManager.editorActions();
         SwingUtilities.invokeAndWait(() -> {
-            EditorCanvas canvas = new EditorCanvas();
+            MarkdownCanvas canvas = new MarkdownCanvas();
             try {
                 new TyporaKeymap(actions, InputEvent.CTRL_DOWN_MASK).install(canvas);
 
@@ -59,7 +59,7 @@ class TyporaKeymapTest {
             }
         });
         SwingUtilities.invokeAndWait(() -> {
-            EditorCanvas canvas = new EditorCanvas();
+            MarkdownCanvas canvas = new MarkdownCanvas();
             try {
                 canvas.setDocument(new DocumentModelImpl("body",
                         new DocumentProperties(StandardCharsets.UTF_8, LineEnding.LF, false, false)));
@@ -76,7 +76,7 @@ class TyporaKeymapTest {
         });
     }
 
-    private static Object binding(EditorCanvas canvas, int keyCode, int modifiers) {
+    private static Object binding(MarkdownCanvas canvas, int keyCode, int modifiers) {
         return canvas.getInputMap(JComponent.WHEN_FOCUSED).get(KeyStroke.getKeyStroke(keyCode, modifiers));
     }
 }

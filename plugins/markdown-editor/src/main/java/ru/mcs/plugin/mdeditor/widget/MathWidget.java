@@ -3,8 +3,8 @@ package ru.mcs.plugin.mdeditor.widget;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Rectangle;
-import ru.mcs.plugin.mdeditor.draw.BlockWidget;
-import ru.mcs.plugin.mdeditor.draw.DrawSink;
+import ru.mcs.editor.draw.BlockWidget;
+import ru.mcs.editor.draw.DrawSink;
 
 /** Асинхронный JLaTeXMath block; до готовности и при ошибке показывает исходную формулу. */
 public final class MathWidget extends AbstractBlockWidget {

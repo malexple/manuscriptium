@@ -6,13 +6,13 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
-import ru.mcs.plugin.mdeditor.view.EditorCanvas;
+import ru.mcs.plugin.mdeditor.view.MarkdownCanvas;
 
 class EditorCanvasTest {
 
     @Test
     void paintsHeadlesslyAndUpdatesStatus() throws Exception {
-        EditorCanvas canvas = new EditorCanvas();
+        MarkdownCanvas canvas = new MarkdownCanvas();
         canvas.setSize(640, 480);
         canvas.setStatus("Ready");
         BufferedImage image = new BufferedImage(640, 480, BufferedImage.TYPE_INT_ARGB);
@@ -33,7 +33,7 @@ class EditorCanvasTest {
 
     @Test
     void acceptsNullStatusWithoutFailingPaint() {
-        EditorCanvas canvas = new EditorCanvas();
+        MarkdownCanvas canvas = new MarkdownCanvas();
         canvas.setSize(0, 0);
         canvas.setStatus(null);
 

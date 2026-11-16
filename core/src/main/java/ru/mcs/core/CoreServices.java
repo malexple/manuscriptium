@@ -2,6 +2,7 @@ package ru.mcs.core;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.ServiceLoader;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.bus.MessageBusImpl;
@@ -33,6 +34,7 @@ import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.core.project.ProjectPaths;
 import ru.mcs.core.project.ProjectState;
 import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 import ru.mcs.spi.swing.editor.ObsidianLinkService;
 import ru.mcs.spi.editor.style.ShellThemeService;
 import ru.mcs.spi.service.AtomicFileStore;
@@ -90,6 +92,9 @@ final class CoreServices {
         CoreActions.registerStandardGroups(actions);
         toolWindows = new ToolWindowManagerImpl(actions, layout);
         editors.registerProvider(new TextFileEditorProvider(obsidianLinks));
+        for (FileEditorProvider provider : ServiceLoader.load(FileEditorProvider.class)) {
+            editors.registerProvider(provider);
+        }
         EditorEventsBridge.install(editors, bus);
     }
 

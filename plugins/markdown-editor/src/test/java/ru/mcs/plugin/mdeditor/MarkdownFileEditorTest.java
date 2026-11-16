@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mcs.plugin.mdeditor.mode.EditorMode;
-import ru.mcs.plugin.mdeditor.model.Insert;
+import ru.mcs.editor.model.Insert;
 import ru.mcs.plugin.mdeditor.view.ObsidianComments;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;

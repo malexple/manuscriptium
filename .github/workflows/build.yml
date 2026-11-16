@@ -42,11 +42,12 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then EXE=$EXE.bat; fi
           "$EXE" --smoke --home=app/build/dev-home | tee smoke.log
           grep -q "MCS_SMOKE plugins=\[ru.mcs.plugin.editorstyle, ru.mcs.plugin.hello, ru.mcs.plugin.mdparser, ru.mcs.plugin.math, ru.mcs.plugin.mdeditor, ru.mcs.plugin.notes, ru.mcs.plugin.properties\]" smoke.log
-          grep -q "editorProviders=\[core.text, hello.editor, markdown.editor\]" smoke.log
+          grep -q "editorProviders=\[core.markdown-fallback, editor.text, hello.editor, markdown.editor\]" smoke.log
           grep -q "markdown.editor.toggleMode" smoke.log
           app/build/image/bin/java --list-modules | grep -q '^org.apache.lucene.core@10.6.0$'
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.spi$'
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.spi.swing$'
+          app/build/image/bin/java --list-modules | grep -q '^ru.mcs.editor$'
       - name: Smoke test of the runtime image (bundled plugins + external template JAR)
         shell: bash
         run: |

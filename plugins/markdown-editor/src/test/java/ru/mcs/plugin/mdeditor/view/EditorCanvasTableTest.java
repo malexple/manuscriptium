@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
-import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
-import ru.mcs.plugin.mdeditor.model.DocumentProperties;
-import ru.mcs.plugin.mdeditor.model.LineEnding;
+import ru.mcs.editor.model.DocumentModelImpl;
+import ru.mcs.editor.model.DocumentProperties;
+import ru.mcs.editor.model.LineEnding;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;
@@ -25,7 +25,7 @@ class EditorCanvasTableTest {
         String suffix = "\n\nAfter <!-- unchanged -->.\n";
         String markdown = prefix + table + suffix;
         SwingUtilities.invokeAndWait(() -> {
-            EditorCanvas canvas = new EditorCanvas();
+            MarkdownCanvas canvas = new MarkdownCanvas();
             try {
                 DocumentModelImpl document = new DocumentModelImpl(markdown,
                         new DocumentProperties(StandardCharsets.UTF_8, LineEnding.LF, false, false));
@@ -61,7 +61,7 @@ class EditorCanvasTableTest {
     void tabMovesBetweenCellsWithoutChangingMarkdown() throws Exception {
         String markdown = "| A | B |\n|---|---|\n| one | two |";
         SwingUtilities.invokeAndWait(() -> {
-            EditorCanvas canvas = new EditorCanvas();
+            MarkdownCanvas canvas = new MarkdownCanvas();
             try {
                 DocumentModelImpl document = new DocumentModelImpl(markdown,
                         new DocumentProperties(StandardCharsets.UTF_8, LineEnding.LF, false, false));

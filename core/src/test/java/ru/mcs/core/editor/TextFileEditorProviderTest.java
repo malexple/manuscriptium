@@ -76,8 +76,9 @@ class TextFileEditorProviderTest {
         assertThat(provider.accept(tmp)).isFalse();
         assertThat(provider.accept(tmp.resolve("missing.txt"))).isFalse();
 
-        Path small = Files.writeString(tmp.resolve("s.txt"), "s");
+        Path small = Files.writeString(tmp.resolve("s.md"), "s");
         assertThat(provider.accept(small)).isTrue();
+        assertThat(provider.accept(Files.writeString(tmp.resolve("plain.txt"), "s"))).isFalse();
 
         Path big = tmp.resolve("big.bin");
         try (RandomAccessFile f = new RandomAccessFile(big.toFile(), "rw")) {

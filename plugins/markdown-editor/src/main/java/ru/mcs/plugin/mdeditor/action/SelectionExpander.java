@@ -1,6 +1,6 @@
 package ru.mcs.plugin.mdeditor.action;
 
-import ru.mcs.plugin.mdeditor.model.Range;
+import ru.mcs.editor.model.Range;
 
 /** Unicode-safe расширение выделения: слово → соседние слова → вся physical line без перевода строки. */
 public final class SelectionExpander {

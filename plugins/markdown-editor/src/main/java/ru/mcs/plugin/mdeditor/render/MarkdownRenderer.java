@@ -5,13 +5,13 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.util.List;
 import java.util.Objects;
-import ru.mcs.plugin.mdeditor.draw.DrawSink;
-import ru.mcs.plugin.mdeditor.draw.Graphics2DDrawSink;
+import ru.mcs.editor.draw.DrawSink;
+import ru.mcs.editor.draw.Graphics2DDrawSink;
 import ru.mcs.plugin.mdeditor.layout.BlockBox;
 import ru.mcs.plugin.mdeditor.layout.LayoutResult;
 import ru.mcs.plugin.mdeditor.layout.MarkdownLayoutEngine;
 import ru.mcs.plugin.mdeditor.mode.FocusMode;
-import ru.mcs.plugin.mdeditor.model.Range;
+import ru.mcs.editor.model.Range;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Рисует готовый Markdown layout, не участвуя в расчёте координат и source offsets. */

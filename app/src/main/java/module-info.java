@@ -1,5 +1,6 @@
 module ru.mcs.app {
     requires ru.mcs.core;
+    requires ru.mcs.editor;
 
     // JDK-модули, которые должны попасть в runtime-образ для плагинов (иначе jlink их выкинет).
     requires java.net.http;

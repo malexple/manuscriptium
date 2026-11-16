@@ -1,8 +1,8 @@
 package ru.mcs.plugin.mdeditor.widget;
 
 import java.awt.Rectangle;
-import ru.mcs.plugin.mdeditor.draw.BlockWidget;
-import ru.mcs.plugin.mdeditor.draw.DrawSink;
+import ru.mcs.editor.draw.BlockWidget;
+import ru.mcs.editor.draw.DrawSink;
 
 abstract class AbstractBlockWidget implements BlockWidget {
 

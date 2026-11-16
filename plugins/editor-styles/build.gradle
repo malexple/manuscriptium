@@ -4,6 +4,7 @@ dependencies {
     testImplementation project(':spi-swing')
     // Golden-тесты реальных CSS-тем рисуют публичный E5 layout; production-зависимости между плагинами нет.
     testImplementation project(':plugins:markdown-editor')
+    testImplementation project(':editor')
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

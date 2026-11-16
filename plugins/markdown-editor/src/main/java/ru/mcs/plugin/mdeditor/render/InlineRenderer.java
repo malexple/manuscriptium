@@ -1,6 +1,6 @@
 package ru.mcs.plugin.mdeditor.render;
 
-import ru.mcs.plugin.mdeditor.draw.DrawSink;
+import ru.mcs.editor.draw.DrawSink;
 import ru.mcs.plugin.mdeditor.layout.InlineRun;
 import ru.mcs.plugin.mdeditor.layout.LineBox;
 import ru.mcs.spi.editor.style.TextDecoration;

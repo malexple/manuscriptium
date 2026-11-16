@@ -3,7 +3,7 @@ package ru.mcs.plugin.mdeditor.action;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import ru.mcs.plugin.mdeditor.model.Range;
+import ru.mcs.editor.model.Range;
 
 class SelectionExpanderTest {
 

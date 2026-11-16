@@ -5,7 +5,7 @@ import java.awt.font.LineMetrics;
 import java.awt.font.TextLayout;
 import java.util.ArrayList;
 import java.util.List;
-import ru.mcs.plugin.mdeditor.draw.InlineContent;
+import ru.mcs.editor.draw.InlineContent;
 
 /** Word-wrap по styled runs; все измерения используют явный FontRenderContext. */
 final class TextMeasurer {

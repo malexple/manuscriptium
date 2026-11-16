@@ -1,5 +1,6 @@
 module ru.mcs.plugin.mdeditor {
     requires ru.mcs.spi.swing;
+    requires ru.mcs.editor;
 
     opens ru.mcs.plugin.mdeditor.icons;
 

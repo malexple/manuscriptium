@@ -1,7 +1,9 @@
 dependencies {
     compileOnly project(':spi-swing')
+    compileOnly project(':editor')
 
     testImplementation project(':spi-swing')
+    testImplementation project(':editor')
     testImplementation project(':plugins:markdown-parser')
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'

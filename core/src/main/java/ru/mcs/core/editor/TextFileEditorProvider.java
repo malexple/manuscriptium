@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import ru.mcs.spi.swing.editor.FileEditor;
 import ru.mcs.spi.swing.editor.FileEditorProvider;
 
-/** Запасной провайдер: любой обычный файл до 5 МБ, который строго декодируется как UTF-8. */
+/** Fallback для Markdown при отключённом языковом плагине: сохраняет wikilinks и fragment navigation. */
 public final class TextFileEditorProvider implements FileEditorProvider {
 
     static final long MAX_BYTES = 5L * 1024 * 1024;
@@ -30,18 +30,20 @@ public final class TextFileEditorProvider implements FileEditorProvider {
 
     @Override
     public String getId() {
-        return "core.text";
+        return "core.markdown-fallback";
     }
 
     @Override
     public int getPriority() {
-        return -100;
+        return -200;
     }
 
     @Override
     public boolean accept(Path file) {
         try {
-            return Files.isRegularFile(file) && Files.size(file) <= MAX_BYTES;
+            Path name = file == null ? null : file.getFileName();
+            return name != null && name.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".md")
+                    && Files.isRegularFile(file) && Files.size(file) <= MAX_BYTES;
         } catch (IOException e) {
             return false;
         }

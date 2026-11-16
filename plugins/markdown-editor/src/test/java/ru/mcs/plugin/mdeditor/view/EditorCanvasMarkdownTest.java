@@ -11,9 +11,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import ru.mcs.plugin.mdeditor.TestEditorStyleService;
-import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
-import ru.mcs.plugin.mdeditor.model.DocumentProperties;
-import ru.mcs.plugin.mdeditor.model.LineEnding;
+import ru.mcs.editor.model.DocumentModelImpl;
+import ru.mcs.editor.model.DocumentProperties;
+import ru.mcs.editor.model.LineEnding;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;
@@ -27,7 +27,7 @@ class EditorCanvasMarkdownTest {
         String markdown = "- [ ] task\n\nActive";
         AtomicReference<String> changed = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
-            EditorCanvas canvas = new EditorCanvas();
+            MarkdownCanvas canvas = new MarkdownCanvas();
             try {
                 DocumentModelImpl document = document(markdown);
                 canvas.setSize(800, 600);
@@ -61,7 +61,7 @@ class EditorCanvasMarkdownTest {
     void enterAtEndImmediatelyMovesCaretToEmptyNextLineBeforeAstArrives() throws Exception {
         String markdown = "Body";
         SwingUtilities.invokeAndWait(() -> {
-            EditorCanvas canvas = new EditorCanvas();
+            MarkdownCanvas canvas = new MarkdownCanvas();
             try {
                 DocumentModelImpl document = document(markdown);
                 canvas.setSize(800, 600);
@@ -89,7 +89,7 @@ class EditorCanvasMarkdownTest {
     void enterAtEndKeepsCaretOnEmptyNextLineAfterAstArrives() throws Exception {
         String markdown = "Body";
         SwingUtilities.invokeAndWait(() -> {
-            EditorCanvas canvas = new EditorCanvas();
+            MarkdownCanvas canvas = new MarkdownCanvas();
             try {
                 DocumentModelImpl document = document(markdown);
                 canvas.setSize(800, 600);
@@ -120,7 +120,7 @@ class EditorCanvasMarkdownTest {
     void enterBetweenParagraphsKeepsCaretOnBlankLineAfterAstArrives() throws Exception {
         String markdown = "one\n\ntwo";
         SwingUtilities.invokeAndWait(() -> {
-            EditorCanvas canvas = new EditorCanvas();
+            MarkdownCanvas canvas = new MarkdownCanvas();
             try {
                 DocumentModelImpl document = document(markdown);
                 canvas.setSize(800, 600);
@@ -155,7 +155,7 @@ class EditorCanvasMarkdownTest {
     void backgroundThemeReloadInvalidatesLayoutOnEdtAndDisposeUnsubscribes() throws Exception {
         String markdown = "one\n\ntwo";
         TestEditorStyleService styles = new TestEditorStyleService();
-        EditorCanvas canvas = new EditorCanvas();
+        MarkdownCanvas canvas = new MarkdownCanvas();
         SwingUtilities.invokeAndWait(() -> {
             canvas.setSize(800, 600);
             canvas.setEditorStyles(styles);
@@ -183,7 +183,7 @@ class EditorCanvasMarkdownTest {
 
     @Test
     void canvasWithoutStylesKeepsOriginalSourceLayout() throws Exception {
-        EditorCanvas canvas = new EditorCanvas();
+        MarkdownCanvas canvas = new MarkdownCanvas();
         SwingUtilities.invokeAndWait(() -> {
             canvas.setSize(640, 480);
             canvas.setDocument(document("# raw **source**"));
@@ -192,11 +192,11 @@ class EditorCanvasMarkdownTest {
         SwingUtilities.invokeAndWait(() -> paint(canvas, image));
 
         assertThat(canvas.markdownLayoutCount()).isZero();
-        assertThat(canvas.textLayout().preferredHeight()).isPositive();
+        assertThat(canvas.getPreferredSize().height).isPositive();
         SwingUtilities.invokeAndWait(canvas::dispose);
     }
 
-    private static void paint(EditorCanvas canvas, BufferedImage image) {
+    private static void paint(MarkdownCanvas canvas, BufferedImage image) {
         Graphics2D graphics = image.createGraphics();
         try {
             canvas.paint(graphics);
