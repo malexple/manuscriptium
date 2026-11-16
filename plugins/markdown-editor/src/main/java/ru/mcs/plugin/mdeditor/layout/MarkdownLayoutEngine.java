@@ -2,22 +2,17 @@ package ru.mcs.plugin.mdeditor.layout;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import ru.mcs.plugin.mdeditor.mode.FocusMode;
+import ru.mcs.plugin.mdeditor.draw.BlockWidget;
+import ru.mcs.plugin.mdeditor.draw.InlineContent;
 import ru.mcs.plugin.mdeditor.model.DocumentModel;
 import ru.mcs.plugin.mdeditor.model.Range;
-import ru.mcs.plugin.mdeditor.render.BlockRenderer;
-import ru.mcs.plugin.mdeditor.render.DrawSink;
-import ru.mcs.plugin.mdeditor.render.Graphics2DDrawSink;
-import ru.mcs.plugin.mdeditor.render.SourceBlockRenderer;
 import ru.mcs.plugin.mdeditor.reference.CitationIndex;
 import ru.mcs.plugin.mdeditor.reference.CrossReferenceIndex;
-import ru.mcs.plugin.mdeditor.widget.BlockWidget;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
@@ -38,9 +33,6 @@ public final class MarkdownLayoutEngine {
             List.of(new StyleElement("div", "write", List.of(), 0));
 
     private final LayoutCache cache = new LayoutCache();
-    private final BlockRenderer blockRenderer = new BlockRenderer();
-    private final SourceBlockRenderer sourceRenderer = new SourceBlockRenderer();
-    private final FocusMode focusMode = new FocusMode();
 
     private DocumentModel document;
     private AstIndex ast;
@@ -91,10 +83,6 @@ public final class MarkdownLayoutEngine {
         this.caretOffset = caretOffset;
     }
 
-    public void setFocusMode(boolean enabled) {
-        focusMode.setEnabled(enabled);
-    }
-
     public void invalidate() {
         cache.clear();
         current = null;
@@ -136,47 +124,6 @@ public final class MarkdownLayoutEngine {
 
     public Color foreground() {
         return styles == null ? Color.DARK_GRAY : rootStyle().color();
-    }
-
-    public void paint(Graphics2D graphics, Rectangle clip, Range selection) {
-        LayoutResult result = layout();
-        List<BlockBox> visible = result.blocks().stream()
-                .filter(block -> block.y() <= clip.y + clip.height && block.y() + block.height() >= clip.y)
-                .toList();
-        ComputedStyle root = rootStyle();
-        for (BlockBox block : visible) {
-            if (!block.source()) {
-                Graphics2D target = dimmed(graphics, block, root);
-                try {
-                    blockRenderer.paintBackground(new Graphics2DDrawSink(target), block);
-                } finally {
-                    if (target != graphics) {
-                        target.dispose();
-                    }
-                }
-            }
-        }
-        if (selection != null && selection.length() > 0) {
-            graphics.setColor(selectionColor());
-            for (Rectangle rectangle : selectionRects(selection, clip)) {
-                graphics.fill(rectangle);
-            }
-        }
-        for (BlockBox block : visible) {
-            Graphics2D target = dimmed(graphics, block, root);
-            try {
-                DrawSink sink = new Graphics2DDrawSink(target);
-                if (block.source()) {
-                    sourceRenderer.paint(sink, block);
-                } else {
-                    blockRenderer.paintContent(sink, block);
-                }
-            } finally {
-                if (target != graphics) {
-                    target.dispose();
-                }
-            }
-        }
     }
 
     public int hitTest(Point point) {
@@ -472,7 +419,7 @@ public final class MarkdownLayoutEngine {
         };
     }
 
-    private ComputedStyle rootStyle() {
+    public ComputedStyle rootStyle() {
         return styles.resolve(BlockKind.DOCUMENT, List.of(),
                 new ElementState("div", "write", false, 0, List.of()));
     }
@@ -511,18 +458,6 @@ public final class MarkdownLayoutEngine {
             return span;
         }
         return new BlockSpan(span.kind(), start, end, span.depth(), span.attributes());
-    }
-
-    private Graphics2D dimmed(Graphics2D graphics, BlockBox block, ComputedStyle root) {
-        return focusMode.isEnabled() && !block.source() ? focusMode.wrap(graphics, root) : graphics;
-    }
-
-    private Color selectionColor() {
-        String value = rootStyle().variables().get("--select-text-bg-color");
-        if (value != null && value.matches("#[0-9a-fA-F]{6}")) {
-            return new Color(Integer.parseInt(value.substring(1), 16));
-        }
-        return new Color(0xb6d7ff);
     }
 
     private static BlockBox blockAtOffset(LayoutResult result, int offset) {

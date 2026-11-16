@@ -60,7 +60,7 @@ class ObsidianLinkResolverTest {
     }
 
     @Test
-    void rejectsEscapeOutsideVaultAndSymlinkTargets() throws Exception {
+    void rejectsEscapeOutsideProjectAndSymlinkTargets() throws Exception {
         Path source = note("inbox/source.md");
         Path outside = root.resolveSibling("outside.md");
         Files.writeString(outside, "# Outside");

@@ -22,6 +22,7 @@ import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.Insert;
 import ru.mcs.plugin.mdeditor.model.LineEnding;
 import ru.mcs.plugin.mdeditor.model.Range;
+import ru.mcs.plugin.mdeditor.render.MarkdownRenderer;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;
@@ -217,12 +218,13 @@ class MarkdownLayoutEngineTest {
         MarkdownLayoutEngine engine = engine(markdown, blocks, 0, 800);
         BufferedImage image = new BufferedImage(800, 600, BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = image.createGraphics();
+        MarkdownRenderer renderer = new MarkdownRenderer(engine);
         try {
-            engine.paint(graphics, new Rectangle(0, 0, 800, 600), new Range(0, 0));
+            renderer.paint(graphics, new Rectangle(0, 0, 800, 600), new Range(0, 0));
             List<Long> frames = new ArrayList<>();
             for (int i = 0; i < 60; i++) {
                 long started = System.nanoTime();
-                engine.paint(graphics, new Rectangle(0, 0, 800, 600), new Range(0, 0));
+                renderer.paint(graphics, new Rectangle(0, 0, 800, 600), new Range(0, 0));
                 frames.add(System.nanoTime() - started);
             }
             frames.sort(Long::compareTo);

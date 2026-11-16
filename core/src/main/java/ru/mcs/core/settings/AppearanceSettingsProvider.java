@@ -7,7 +7,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import ru.mcs.core.i18n.Messages;
-import ru.mcs.core.theme.McsThemeManager;
+import ru.mcs.core.theme.ThemeController;
 import ru.mcs.spi.settings.Configurable;
 import ru.mcs.spi.settings.ConfigurableProvider;
 import ru.mcs.spi.settings.ConfigurationException;
@@ -17,9 +17,9 @@ public final class AppearanceSettingsProvider implements ConfigurableProvider {
 
     public static final String ID = "core.settings.appearance";
 
-    private final McsThemeManager themes;
+    private final ThemeController themes;
 
-    public AppearanceSettingsProvider(McsThemeManager themes) {
+    public AppearanceSettingsProvider(ThemeController themes) {
         this.themes = themes;
     }
 
@@ -47,14 +47,14 @@ public final class AppearanceSettingsProvider implements ConfigurableProvider {
 
     private static final class AppearanceConfigurable implements Configurable {
 
-        private final McsThemeManager themes;
+        private final ThemeController themes;
         private final JComboBox<ThemeChoice> theme;
 
-        private AppearanceConfigurable(McsThemeManager themes) {
+        private AppearanceConfigurable(ThemeController themes) {
             this.themes = themes;
             this.theme = new JComboBox<>();
-            this.theme.addItem(new ThemeChoice(AppSettings.SYSTEM_THEME, Messages.get("theme.system")));
-            for (McsThemeManager.ThemeInfo info : themes.getThemes()) {
+            this.theme.addItem(new ThemeChoice(ThemeController.SYSTEM, Messages.get("theme.system")));
+            for (ThemeController.ThemeInfo info : themes.getThemes()) {
                 String label = switch (info.id()) {
                     case "light" -> Messages.get("theme.light");
                     case "dark" -> Messages.get("theme.dark");

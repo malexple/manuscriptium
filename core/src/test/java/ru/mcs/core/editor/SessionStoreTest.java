@@ -45,7 +45,7 @@ class SessionStoreTest {
     }
 
     @Test
-    void deactivationRestoresLoadedStateDuringVaultSwitch() {
+    void deactivationRestoresLoadedStateDuringProjectSwitch() {
         SessionStore store = new SessionStore();
         store.loadState(Map.of("tabs", List.of(Map.of("file", A.toString(), "pinned", true))));
         store.activate(() -> new SessionStore.Session(List.of(), null));

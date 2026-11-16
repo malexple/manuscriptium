@@ -18,7 +18,6 @@ import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import ru.mcs.core.vault.VaultPaths;
 import ru.mcs.spi.editor.FileEditor;
 
 /** Простой текстовый редактор (UTF-8, сохраняет CRLF, если он был в файле). Временный до Фазы 5. */
@@ -62,7 +61,12 @@ final class TextFileEditor implements FileEditor {
             }
         });
         this.scroll = new JScrollPane(area);
-        this.obsidian = VaultPaths.isMarkdown(file) ? new ObsidianEditorSupport(file, area, navigation) : null;
+        this.obsidian = isMarkdown(file) ? new ObsidianEditorSupport(file, area, navigation) : null;
+    }
+
+    private static boolean isMarkdown(Path file) {
+        Path name = file.getFileName();
+        return name != null && name.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".md");
     }
 
     ObsidianEditorSupport obsidian() {

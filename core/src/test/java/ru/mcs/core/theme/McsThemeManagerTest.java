@@ -26,9 +26,9 @@ class McsThemeManagerTest {
     void listsBuiltInAndCustomThemesAndSwitchesWithoutRestart() throws Exception {
         Files.writeString(directory.resolve("custom.json"), customTheme("#010203"));
         AppSettings settings = new AppSettings();
-        McsThemeManager manager = new McsThemeManager(settings, directory, () -> Optional.of(false), 50);
+        McsThemeManager manager = new McsThemeManager(directory, settings.theme(), settings::setTheme, () -> Optional.of(false), 50);
 
-        assertThat(manager.getThemes()).extracting(McsThemeManager.ThemeInfo::id)
+        assertThat(manager.getThemes()).extracting(ThemeController.ThemeInfo::id)
                 .containsExactly("light", "dark", "custom");
         SwingUtilities.invokeAndWait(() -> manager.setTheme("dark"));
         assertThat(settings.theme()).isEqualTo("dark");
@@ -46,7 +46,7 @@ class McsThemeManagerTest {
         Path file = directory.resolve("custom.json");
         Files.writeString(file, customTheme("#010203"));
         AppSettings settings = new AppSettings();
-        try (McsThemeManager manager = new McsThemeManager(settings, directory, () -> Optional.of(false), 40)) {
+        try (McsThemeManager manager = new McsThemeManager(directory, settings.theme(), settings::setTheme, () -> Optional.of(false), 40)) {
             manager.start();
             SwingUtilities.invokeAndWait(() -> manager.setTheme("custom"));
             await(() -> new Color(1, 2, 3).equals(UIManager.get("Label.foreground")), "initial custom token");
@@ -65,7 +65,7 @@ class McsThemeManagerTest {
         AtomicBoolean systemDark = new AtomicBoolean(false);
         AppSettings settings = new AppSettings();
         try (McsThemeManager manager = new McsThemeManager(
-                settings, directory, () -> Optional.of(systemDark.get()), 40)) {
+                directory, settings.theme(), settings::setTheme, () -> Optional.of(systemDark.get()), 40)) {
             manager.start();
             await(() -> !manager.isDark(), "initial light system theme");
 
@@ -80,7 +80,7 @@ class McsThemeManagerTest {
     @Test
     void shellThemeListenersReceiveEffectiveDarkMode() throws Exception {
         AppSettings settings = new AppSettings();
-        McsThemeManager manager = new McsThemeManager(settings, directory, () -> Optional.of(false), 50);
+        McsThemeManager manager = new McsThemeManager(directory, settings.theme(), settings::setTheme, () -> Optional.of(false), 50);
         AtomicReference<ru.mcs.spi.editor.style.ShellThemeService.Snapshot> received = new AtomicReference<>();
         manager.addThemeListener(received::set);
 

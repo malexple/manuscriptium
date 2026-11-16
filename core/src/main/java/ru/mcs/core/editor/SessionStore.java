@@ -33,7 +33,7 @@ public final class SessionStore implements PersistentStateComponent {
         this.live = liveSession;
     }
 
-    /** Перед сменой Vault live-поставщик отключается, чтобы закрытие старых вкладок не затёрло новую сессию. */
+    /** Перед сменой Project live-поставщик отключается, чтобы закрытие старых вкладок не затёрло новую сессию. */
     public void deactivate() {
         this.live = null;
     }

@@ -3,7 +3,8 @@ package ru.mcs.plugin.mdeditor.widget;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Rectangle;
-import ru.mcs.plugin.mdeditor.render.DrawSink;
+import ru.mcs.plugin.mdeditor.draw.BlockWidget;
+import ru.mcs.plugin.mdeditor.draw.DrawSink;
 import ru.mcs.spi.editor.style.ComputedStyle;
 
 /** Свёрнутая YAML-карточка: клик переводит активный блок в source для редактирования. */

@@ -417,7 +417,7 @@ context.state().register("main", Scope.APPLICATION, state);
 
 `register()` сразу загружает сохранённые данные. Состояние может содержать только Map со строковыми ключами, List,
 String, Number, Boolean и null. Числа читайте как `Number`. `getState()` должен быть быстрым и потокобезопасным.
-`APPLICATION` соответствует каталогу данных приложения, `VAULT` — состоянию vault.
+`APPLICATION` соответствует каталогу данных приложения, `PROJECT` — состоянию project.
 
 ## 9. Фоновая работа и UI
 

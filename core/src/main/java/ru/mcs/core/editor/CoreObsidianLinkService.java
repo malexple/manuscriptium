@@ -24,8 +24,8 @@ public final class CoreObsidianLinkService implements ObsidianLinkService {
 
     private Optional<Target> resolveNow(Path source, String target) {
         ObsidianSyntax.Link link = link(target, false);
-        Path root = navigator.vaultRoot();
-        List<Path> notes = navigator.vaultNotes();
+        Path root = navigator.projectRoot();
+        List<Path> notes = navigator.projectNotes();
         String name = link.target().substring(link.target().lastIndexOf('/') + 1);
         boolean markdown = link.target().isBlank() || !name.contains(".")
                 || link.target().toLowerCase(Locale.ROOT).endsWith(".md");

@@ -1,6 +1,6 @@
 # Manuscriptium — план архитектурного рефакторинга
 
-Дата: 2026-11-16. Статус: проект плана для проверки перед изменениями кода.
+Дата: 2026-11-16. Статус: шаги 1–3 завершены; следующий шаг — выделение `spi-swing`.
 
 ## 1. Цель и границы
 
@@ -129,6 +129,14 @@
 
 ### Шаг 2. Разорвать циклы без изменения модульной структуры
 
+**Статус: завершён и проверен 2026-11-16.**
+
+- Устранены целевые обратные зависимости `MacOsSupport`, `i18n → plugin`, `theme ↔ settings`, `core.editor ↔ core.vault` и циклы на границах `markdown-editor` action/mode/layout/render/view.
+- Добавлены `CorePackageDependenciesTest` и `EditorPackageDependenciesTest`: всего 134 test suites, 507 тестов, 0 failures/errors/skipped. Прирост к baseline — ровно пять архитектурных тестов.
+- `clean test :app:devHome :app:jlink` завершилась успешно; девять Linux golden-тем прошли без обновления эталонов.
+- Bundled и external packaged smoke завершились с `failures={}`; внешний `plugin-template` собран и загружен отдельно.
+- На реальном packaged image проверены меню Paragraph/Format/Insert/View, ПКМ, палитра, Focus Mode, Typewriter Mode, Ctrl+Click-навигация в `Target.md`, Light/Dark через Settings и сохранение выбранной темы.
+
 **Изменения**
 
 1. Перенести `MacOsSupport` в подходящий платформенный пакет и убрать обратные ссылки на корневой пакет `core`.
@@ -153,6 +161,14 @@
 **Готово, когда:** целевые модули можно вводить без циклических зависимостей.
 
 ### Шаг 3. Переименовать Vault в Project внутри `core`
+
+**Статус: завершён и проверен 2026-11-16.**
+
+- Пакет `core.vault`, классы `Vault*`, `Scope.VAULT`, action/tool-window IDs, i18n, README и SDK-документация переведены на Project. В production-коде старый идентификатор остался только как явный legacy state id `core.vault` для миграции.
+- `StateManagerImpl` читает `core.vault.yml` только при отсутствии `core.project.yml`; новый файл создаётся при сохранении, legacy-файл остаётся нетронутым. При одновременном наличии приоритет у нового состояния.
+- Добавлены `ProjectStateMigrationTest`, `ProjectCompatibilityTest` и архитектурная проверка старых идентификаторов. Полный прогон: 136 test suites, 511 тестов, 0 failures/errors/skipped; все прежние тесты сохранены, девять golden-тем зелёные без обновления эталонов.
+- `clean test :app:devHome :app:jlink` успешна. Bundled smoke содержит `core.project` и завершился с `failures={}`; standalone plugin-template и external packaged smoke также зелёные.
+- На packaged image подтверждены открытие существующего проекта по legacy state, создание `inbox/created.md`, поиск, существующий view, клонирование ссылки с записью YAML, явное Open Project со сменой каталога и возврат, восстановление вкладок и повторный запуск уже по `core.project.yml`. `.manuscriptium`, session, views, Markdown, SQLite/Lucene сохранены.
 
 **Изменения**
 

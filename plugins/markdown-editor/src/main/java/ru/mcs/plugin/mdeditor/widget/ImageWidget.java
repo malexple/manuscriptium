@@ -6,7 +6,8 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
-import ru.mcs.plugin.mdeditor.render.DrawSink;
+import ru.mcs.plugin.mdeditor.draw.BlockWidget;
+import ru.mcs.plugin.mdeditor.draw.DrawSink;
 import ru.mcs.spi.editor.style.ComputedStyle;
 
 /** Блочное изображение с placeholder, относительным путём и Obsidian-resize handle. */

@@ -100,7 +100,7 @@ final class TransclusionSession {
         ObsidianLinkService links = registry.links();
         AtomicFileStore store = registry.fileStore();
         if (links == null || store == null) {
-            status.setText(text("transclusion.unavailable", "Vault navigation is unavailable"));
+            status.setText(text("transclusion.unavailable", "Project navigation is unavailable"));
             return;
         }
         links.resolve(source, target).thenCompose(resolved -> {

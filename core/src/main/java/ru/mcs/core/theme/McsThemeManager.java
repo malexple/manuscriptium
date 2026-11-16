@@ -25,13 +25,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
-import ru.mcs.core.settings.AppSettings;
 import ru.mcs.spi.editor.style.ShellThemeService;
 
 /** Темы приложения: FlatLaf + JSON-токены, системный режим и горячая перезагрузка файлов. */
-public final class McsThemeManager implements ShellThemeService, AutoCloseable {
+public final class McsThemeManager implements ShellThemeService, ThemeController, AutoCloseable {
 
-    static final String SYSTEM = AppSettings.SYSTEM_THEME;
+    static final String SYSTEM = ThemeController.SYSTEM;
     private static final System.Logger LOG = System.getLogger(McsThemeManager.class.getName());
     private static final List<String> BUILT_INS = List.of("light", "dark");
     private static final long DEFAULT_OS_POLL_MS = 2000;
@@ -44,29 +43,29 @@ public final class McsThemeManager implements ShellThemeService, AutoCloseable {
             .thenComparing(t -> t.name().toLowerCase(java.util.Locale.ROOT))
             .thenComparing(ThemeDefinition::id);
 
-    public record ThemeInfo(String id, String name, boolean dark) {
-    }
-
-    private final AppSettings settings;
     private final Path directory;
+    private final Consumer<String> selectionListener;
     private final SystemThemeDetector detector;
     private final long osPollMs;
     private final Map<String, Object> tokenBackup = new HashMap<>();
     private final Set<Consumer<Snapshot>> themeListeners = ConcurrentHashMap.newKeySet();
 
     private volatile Map<String, ThemeDefinition> themes = Map.of();
+    private volatile String selectedTheme;
     private volatile boolean dark;
     private volatile boolean running;
     private WatchService watchService;
     private Thread watcher;
 
-    public McsThemeManager(AppSettings settings, Path directory) {
-        this(settings, directory, SystemThemeDetector.platform(), DEFAULT_OS_POLL_MS);
+    public McsThemeManager(Path directory, String selectedTheme, Consumer<String> selectionListener) {
+        this(directory, selectedTheme, selectionListener, SystemThemeDetector.platform(), DEFAULT_OS_POLL_MS);
     }
 
-    McsThemeManager(AppSettings settings, Path directory, SystemThemeDetector detector, long osPollMs) {
-        this.settings = settings;
+    McsThemeManager(Path directory, String selectedTheme, Consumer<String> selectionListener,
+                    SystemThemeDetector detector, long osPollMs) {
         this.directory = directory.toAbsolutePath().normalize();
+        this.selectedTheme = selectedTheme;
+        this.selectionListener = selectionListener;
         this.detector = detector;
         this.osPollMs = osPollMs;
         reloadThemes();
@@ -76,8 +75,9 @@ public final class McsThemeManager implements ShellThemeService, AutoCloseable {
         return directory;
     }
 
+    @Override
     public String selectedTheme() {
-        return settings.theme();
+        return selectedTheme;
     }
 
     public boolean isDark() {
@@ -105,7 +105,8 @@ public final class McsThemeManager implements ShellThemeService, AutoCloseable {
         if (!SYSTEM.equals(id) && !themes.containsKey(id)) {
             throw new IllegalArgumentException("Unknown theme: " + id);
         }
-        settings.setTheme(id);
+        selectionListener.accept(id);
+        selectedTheme = id;
         applyOnEdt();
     }
 

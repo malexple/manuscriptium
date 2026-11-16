@@ -2,7 +2,8 @@ package ru.mcs.plugin.mdeditor.widget;
 
 import java.awt.Font;
 import java.awt.Rectangle;
-import ru.mcs.plugin.mdeditor.render.DrawSink;
+import ru.mcs.plugin.mdeditor.draw.BlockWidget;
+import ru.mcs.plugin.mdeditor.draw.DrawSink;
 import ru.mcs.spi.editor.style.ComputedStyle;
 
 /** Изображение, полученное через BlockRendererExtension (mermaid/sequence/flow и др.). */

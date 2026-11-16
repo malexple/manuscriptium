@@ -14,7 +14,6 @@ import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mcs.core.i18n.Messages;
-import ru.mcs.core.vault.VaultNote;
 
 class ObsidianLinkNavigatorTest {
 
@@ -31,7 +30,7 @@ class ObsidianLinkNavigatorTest {
         editors.registerProvider(new TextFileEditorProvider(navigator));
         AtomicReference<String> status = new AtomicReference<>();
         navigator.setStatusHandler(status::set);
-        navigator.setVault(root, List.of(note(source), note(target)));
+        navigator.setProject(root, List.of(source, target));
 
         SwingUtilities.invokeAndWait(() -> navigator.open(source,
                 new ObsidianSyntax.Link(0, 10, false, "Target", "Second title", "alias"), new JPanel()));
@@ -47,11 +46,6 @@ class ObsidianLinkNavigatorTest {
                 new ObsidianSyntax.Link(0, 10, false, "Missing", null, null), new JPanel()));
         await(() -> status.get() != null && status.get().contains("Missing"));
         assertThat(editors.getSelectedFile()).contains(target);
-    }
-
-    private static VaultNote note(Path file) {
-        String name = file.getFileName().toString();
-        return new VaultNote(file, name, name.substring(0, name.length() - 3));
     }
 
     private static void await(BooleanSupplier condition) throws Exception {

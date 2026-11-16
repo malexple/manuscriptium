@@ -5,7 +5,7 @@ import java.awt.Font;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
-import ru.mcs.plugin.mdeditor.render.DrawSink;
+import ru.mcs.plugin.mdeditor.draw.DrawSink;
 
 final class WidgetText {
 

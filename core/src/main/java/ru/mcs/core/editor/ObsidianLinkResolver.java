@@ -12,9 +12,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import ru.mcs.core.vault.VaultPaths;
+import ru.mcs.core.fs.FilePaths;
 
-/** Разрешение Obsidian-ссылок относительно текущей заметки и корня Vault без выхода за его пределы. */
+/** Разрешение Obsidian-ссылок относительно текущей заметки и корня Project без выхода за его пределы. */
 final class ObsidianLinkResolver {
 
     private ObsidianLinkResolver() {
@@ -55,7 +55,7 @@ final class ObsidianLinkResolver {
                 .filter(path -> safeRegularFile(root, path))
                 .filter(path -> matchesNote(root, path, wanted, hasDirectory))
                 .min(Comparator.comparingInt((Path path) -> root.relativize(path).getNameCount())
-                        .thenComparing(path -> VaultPaths.relativePath(root, path)));
+                        .thenComparing(path -> FilePaths.relativePath(root, path)));
     }
 
     static Optional<Path> attachment(Path root, Path source, String target) {
@@ -88,7 +88,7 @@ final class ObsidianLinkResolver {
     }
 
     private static boolean matchesNote(Path root, Path path, String wanted, boolean hasDirectory) {
-        String relative = VaultPaths.relativePath(root, path).toLowerCase(Locale.ROOT);
+        String relative = FilePaths.relativePath(root, path).toLowerCase(Locale.ROOT);
         if (hasDirectory) {
             return relative.equals(wanted) || relative.endsWith("/" + wanted);
         }
@@ -132,7 +132,7 @@ final class ObsidianLinkResolver {
             Files.walkFileTree(root, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                    return VaultPaths.isExcluded(root, dir) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+                    return isExcluded(root, dir) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
                 }
 
                 @Override
@@ -140,7 +140,7 @@ final class ObsidianLinkResolver {
                     Path fileName = file.getFileName();
                     if (attrs.isRegularFile() && fileName != null
                             && fileName.toString().equalsIgnoreCase(name)
-                            && !VaultPaths.isExcluded(root, file)) {
+                            && !isExcluded(root, file)) {
                         matches.add(file.toAbsolutePath().normalize());
                     }
                     return FileVisitResult.CONTINUE;
@@ -155,7 +155,17 @@ final class ObsidianLinkResolver {
             return Optional.empty();
         }
         return matches.stream().min(Comparator.comparingInt((Path path) -> root.relativize(path).getNameCount())
-                .thenComparing(path -> VaultPaths.relativePath(root, path)));
+                .thenComparing(path -> FilePaths.relativePath(root, path)));
+    }
+
+    private static boolean isExcluded(Path root, Path path) {
+        Path normalizedRoot = FilePaths.normalize(root);
+        Path normalized = FilePaths.normalize(path);
+        if (!normalized.startsWith(normalizedRoot) || normalized.equals(normalizedRoot)) {
+            return false;
+        }
+        String first = normalizedRoot.relativize(normalized).getName(0).toString();
+        return ".manuscriptium".equals(first) || ".git".equals(first);
     }
 
     private static Path effectiveRoot(Path root, Path source) {

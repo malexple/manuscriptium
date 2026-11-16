@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.core.vault.VaultNote;
 import ru.mcs.spi.editor.ObsidianLinkService;
 
 class CoreObsidianLinkServiceTest {
@@ -16,12 +15,12 @@ class CoreObsidianLinkServiceTest {
     Path root;
 
     @Test
-    void resolvesMarkdownFragmentAndAttachmentThroughExistingVaultResolver() throws Exception {
+    void resolvesMarkdownFragmentAndAttachmentThroughExistingProjectResolver() throws Exception {
         Path source = Files.writeString(root.resolve("source.md"), "source");
         Path chapter = Files.writeString(root.resolve("Chapter.md"), "# Part\nbody");
         Path image = Files.write(root.resolve("diagram.png"), new byte[]{1});
         ObsidianLinkNavigator navigator = new ObsidianLinkNavigator(new FileEditorManagerImpl());
-        navigator.setVault(root, List.of(note(source), note(chapter)));
+        navigator.setProject(root, List.of(source, chapter));
         CoreObsidianLinkService service = new CoreObsidianLinkService(navigator);
 
         ObsidianLinkService.Target resolved = service.resolve(source, "Chapter#Part").join().orElseThrow();
@@ -35,8 +34,4 @@ class CoreObsidianLinkServiceTest {
         assertThat(service.resolve(source, "../outside.md").join()).isEmpty();
     }
 
-    private static VaultNote note(Path file) {
-        String name = file.getFileName().toString();
-        return new VaultNote(file, name, name.substring(0, name.length() - 3));
-    }
 }

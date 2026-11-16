@@ -9,9 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import javax.swing.JComponent;
 import javax.swing.SwingWorker;
+import ru.mcs.core.fs.FilePaths;
 import ru.mcs.core.i18n.Messages;
-import ru.mcs.core.vault.VaultNote;
-import ru.mcs.core.vault.VaultPaths;
 
 /** Асинхронно разрешает ссылки вне EDT, затем открывает заметку, изображение или attachment. */
 public final class ObsidianLinkNavigator implements ObsidianNavigation {
@@ -30,34 +29,34 @@ public final class ObsidianLinkNavigator implements ObsidianNavigation {
         this.status = java.util.Objects.requireNonNull(status);
     }
 
-    public void setVault(Path root, List<VaultNote> notes) {
-        this.root = VaultPaths.normalize(root);
+    public void setProject(Path root, List<Path> notes) {
+        this.root = FilePaths.normalize(root);
         updateNotes(notes);
         generation.incrementAndGet();
     }
 
-    public void updateNotes(List<VaultNote> notes) {
-        this.notes = notes.stream().map(VaultNote::file).map(path -> path.toAbsolutePath().normalize()).toList();
+    public void updateNotes(List<Path> notes) {
+        this.notes = notes.stream().map(FilePaths::normalize).toList();
     }
 
-    public void clearVault() {
+    public void clearProject() {
         root = null;
         notes = List.of();
         generation.incrementAndGet();
     }
 
-    Path vaultRoot() {
+    Path projectRoot() {
         return root;
     }
 
-    List<Path> vaultNotes() {
+    List<Path> projectNotes() {
         return notes;
     }
 
     @Override
     public void open(Path source, ObsidianSyntax.Link link, JComponent anchor) {
-        Path vaultRoot = root;
-        List<Path> vaultNotes = notes;
+        Path projectRoot = root;
+        List<Path> projectNotes = notes;
         long expectedGeneration = generation.get();
         new SwingWorker<Resolution, Void>() {
             @Override
@@ -65,10 +64,10 @@ public final class ObsidianLinkNavigator implements ObsidianNavigation {
                 boolean markdown = !link.embed() || link.target().toLowerCase(Locale.ROOT).endsWith(".md")
                         || link.target().isBlank();
                 if (markdown) {
-                    return ObsidianLinkResolver.note(vaultRoot, source, vaultNotes, link.target())
+                    return ObsidianLinkResolver.note(projectRoot, source, projectNotes, link.target())
                             .map(path -> new Resolution(path, link.fragment(), true, null)).orElse(null);
                 }
-                Path attachment = ObsidianLinkResolver.attachment(vaultRoot, source, link.target()).orElse(null);
+                Path attachment = ObsidianLinkResolver.attachment(projectRoot, source, link.target()).orElse(null);
                 if (attachment == null) {
                     return null;
                 }
@@ -130,10 +129,10 @@ public final class ObsidianLinkNavigator implements ObsidianNavigation {
     }
 
     private String displayPath(Path file) {
-        Path vaultRoot = root;
+        Path projectRoot = root;
         Path normalized = file.toAbsolutePath().normalize();
-        if (vaultRoot != null && normalized.startsWith(vaultRoot)) {
-            return VaultPaths.relativePath(vaultRoot, normalized);
+        if (projectRoot != null && normalized.startsWith(projectRoot)) {
+            return FilePaths.relativePath(projectRoot, normalized);
         }
         Path name = normalized.getFileName();
         return name == null ? normalized.toString() : name.toString();

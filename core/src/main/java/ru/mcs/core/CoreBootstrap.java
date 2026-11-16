@@ -13,6 +13,7 @@ import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.core.notification.NotificationLayer;
 import ru.mcs.core.notification.NotificationsPanel;
+import ru.mcs.core.platform.MacOsSupport;
 import ru.mcs.core.plugin.PluginInstaller;
 import ru.mcs.core.plugin.PluginManager;
 import ru.mcs.core.plugin.PluginsConfigurableProvider;
@@ -22,7 +23,7 @@ import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.ui.NotificationType;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.ui.ToolWindowSpec;
-import ru.mcs.core.vault.VaultController;
+import ru.mcs.core.project.ProjectController;
 import ru.mcs.core.action.CommandPalette;
 import ru.mcs.core.shell.ShellDataContext;
 
@@ -82,8 +83,8 @@ public final class CoreBootstrap {
         s.toolWindows.register("core", ToolWindowSpec.of("core.notifications", Messages.get("notifications.title"),
                         ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications))
                 .withIcon(Icons.lucide("bell")));
-        VaultController vaultController = new VaultController(frame, s.actions, s.toolWindows, s.editors,
-                s.sessionStore, s.state, s.vaultState, s.statusBar, s.notifications, s.obsidianLinks);
+        ProjectController projectController = new ProjectController(frame, s.actions, s.toolWindows, s.editors,
+                s.sessionStore, s.state, s.projectState, s.statusBar, s.notifications, s.obsidianLinks);
 
         pm.setFailureListener((id, reason) -> s.notifications.notify("core",
                 Messages.get("plugin.failed.title", id), reason, NotificationType.ERROR));
@@ -95,16 +96,16 @@ public final class CoreBootstrap {
                     Messages.get("plugins.loading.failed", e.toString()), NotificationType.ERROR);
         }
 
-        // Вклады объявлены — провайдеры на месте: можно открыть Vault и восстановить его вкладки.
+        // Вклады объявлены — провайдеры на месте: можно открыть Project и восстановить его вкладки.
         s.statusBar.setMessage(Messages.get("plugins.status", pm.declaredIds(), pm.loadedIds()));
-        vaultController.openInitial();
+        projectController.openInitial();
 
         Timer autosave = new Timer(AUTOSAVE_MS, e -> s.state.saveChanged());
         autosave.start();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             s.themes.close();
             s.state.saveChanged();
-            vaultController.close();
+            projectController.close();
             pm.stopAll();
         }));
     }

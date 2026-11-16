@@ -14,7 +14,7 @@ import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
 import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.LineEnding;
 import ru.mcs.plugin.mdeditor.render.BlockRenderer;
-import ru.mcs.plugin.mdeditor.render.DrawSink;
+import ru.mcs.plugin.mdeditor.draw.DrawSink;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;

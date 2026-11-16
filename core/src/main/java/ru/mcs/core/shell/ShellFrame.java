@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import ru.mcs.core.MacOsSupport;
+import ru.mcs.core.platform.MacOsSupport;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.ActionMenuBar;
 import ru.mcs.core.action.ActionToolbar;

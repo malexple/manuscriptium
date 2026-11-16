@@ -10,7 +10,6 @@ import java.util.Locale;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.spi.i18n.I18n;
 
 /** Строки плагина: читаются напрямую из его jar-файлов (без загрузки кода и без требований к module-info). */
@@ -26,12 +25,11 @@ public final class PluginMessages implements I18n {
         this.bundle = bundle;
     }
 
-    public static PluginMessages create(PluginDescriptor descriptor, Locale locale) {
-        if (descriptor.i18n() == null || descriptor.directory() == null) {
+    public static PluginMessages create(Path directory, String base, Locale locale) {
+        if (directory == null || base == null) {
             return new PluginMessages(locale, MessageBundle.empty());
         }
-        List<Path> jars = jarsOf(descriptor.directory());
-        return fromJars(jars, descriptor.i18n(), locale);
+        return fromJars(jarsOf(directory), base, locale);
     }
 
     public static PluginMessages fromJars(List<Path> jars, String base, Locale locale) {

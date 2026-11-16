@@ -1,7 +1,7 @@
 package ru.mcs.core.settings;
 
 import javax.swing.JFrame;
-import ru.mcs.core.MacOsSupport;
+import ru.mcs.core.platform.MacOsSupport;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.action.ActionIds;

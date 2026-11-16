@@ -3,7 +3,8 @@ package ru.mcs.plugin.mdeditor.widget;
 import java.awt.Color;
 import java.awt.Rectangle;
 import javax.swing.JComponent;
-import ru.mcs.plugin.mdeditor.render.DrawSink;
+import ru.mcs.plugin.mdeditor.draw.BlockWidget;
+import ru.mcs.plugin.mdeditor.draw.DrawSink;
 
 /** Рамка и живой компонент трансклюзии; source-span остаётся только исходным ![[…]] в родительском документе. */
 public final class TransclusionWidget extends AbstractBlockWidget {

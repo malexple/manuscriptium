@@ -18,7 +18,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingWorker;
-import ru.mcs.plugin.mdeditor.action.EditorContext;
+import ru.mcs.plugin.mdeditor.action.EditorBlockContext;
 import ru.mcs.plugin.mdeditor.action.EditorContextMenuBuilder;
 import ru.mcs.plugin.mdeditor.action.TyporaKeymap;
 import ru.mcs.plugin.mdeditor.mode.EditorMode;
@@ -294,11 +294,11 @@ final class MarkdownFileEditor implements FileEditor {
         return activeCanvas().autoPairEnabled();
     }
 
-    private EditorContext editorContext() {
+    private EditorBlockContext editorContext() {
         EditorCanvas active = activeCanvas();
         AstIndex index = astIndex();
         if (index == null || document == null || index.version() != document.version()) {
-            return new EditorContext(BlockKind.PARAGRAPH, active.selectionRange().length() > 0, false, false);
+            return new EditorBlockContext(BlockKind.PARAGRAPH, active.selectionRange().length() > 0, false, false);
         }
         int offset = active.caretOffset();
         BlockKind kind = index.blockAt(offset).map(BlockSpan::kind).orElse(BlockKind.PARAGRAPH);
@@ -310,7 +310,7 @@ final class MarkdownFileEditor implements FileEditor {
             image |= span.kind() == BlockKind.IMAGE || span.kind() == BlockKind.IMAGE_REFERENCE
                     || span.kind() == BlockKind.WIKI_IMAGE || span.kind() == BlockKind.EMBED;
         }
-        return new EditorContext(kind, active.selectionRange().length() > 0, link, image);
+        return new EditorBlockContext(kind, active.selectionRange().length() > 0, link, image);
     }
 
     void addMarginNote(String text) {

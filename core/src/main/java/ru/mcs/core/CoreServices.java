@@ -30,8 +30,8 @@ import ru.mcs.core.statusbar.StatusBarModel;
 import ru.mcs.core.theme.McsThemeManager;
 import ru.mcs.core.toolwindow.LayoutStore;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
-import ru.mcs.core.vault.VaultPaths;
-import ru.mcs.core.vault.VaultState;
+import ru.mcs.core.project.ProjectPaths;
+import ru.mcs.core.project.ProjectState;
 import ru.mcs.spi.PluginContext;
 import ru.mcs.spi.editor.ObsidianLinkService;
 import ru.mcs.spi.editor.style.ShellThemeService;
@@ -40,8 +40,8 @@ import ru.mcs.spi.service.Scope;
 
 /**
  * Корневой набор сервисов приложения (application-level). Состояние: {@code <home>/state/*.yml};
- * VAULT-состояние — {@code <vault>/.manuscriptium/state}. Старый {@code home/workspace/state} читается только
- * до первого открытия Vault для совместимости с сессией предыдущих фаз.
+ * PROJECT-состояние — {@code <project>/.manuscriptium/state}. Старый {@code home/workspace/state} читается только
+ * до первого открытия Project для совместимости с сессией предыдущих фаз.
  * Язык интерфейса читается из настроек до создания любых UI-сервисов и дальше не меняется.
  */
 final class CoreServices {
@@ -63,17 +63,17 @@ final class CoreServices {
     final SessionStore sessionStore = new SessionStore();
     final WindowState windowState = new WindowState();
     final PluginState plugins = new PluginState();
-    final VaultState vaultState = new VaultState();
+    final ProjectState projectState = new ProjectState();
     final GeneralSettingsProvider generalSettings;
 
     CoreServices(Path home, boolean persist) {
-        Path legacyVaultState = home.resolve("workspace").resolve("state");
-        state = new StateManagerImpl(home.resolve("state"), legacyVaultState, persist);
-        state.register("core", "core.vault", Scope.APPLICATION, vaultState);
-        vaultState.vault().ifPresent(root -> state.changeVaultDirectory(VaultPaths.stateDir(root)));
+        Path legacyProjectState = home.resolve("workspace").resolve("state");
+        state = new StateManagerImpl(home.resolve("state"), legacyProjectState, persist);
+        state.register("core", "core.project", Scope.APPLICATION, projectState, "core.vault");
+        projectState.project().ifPresent(root -> state.changeProjectDirectory(ProjectPaths.stateDir(root)));
         state.register("core", "core.settings", Scope.APPLICATION, settings);
         Messages.init(settings.resolveLocale());
-        themes = new McsThemeManager(settings, home.resolve("themes"));
+        themes = new McsThemeManager(home.resolve("themes"), settings.theme(), settings::setTheme);
         generalSettings = new GeneralSettingsProvider(settings);
         configurables.register(generalSettings);
         configurables.register(new AppearanceSettingsProvider(themes));
@@ -83,7 +83,7 @@ final class CoreServices {
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);
-        state.register("core", "core.session", Scope.VAULT, sessionStore);
+        state.register("core", "core.session", Scope.PROJECT, sessionStore);
         state.register("core", "core.window", Scope.APPLICATION, windowState);
         state.register("core", "core.plugins", Scope.APPLICATION, plugins);
 
@@ -103,7 +103,7 @@ final class CoreServices {
         return new PluginContextImpl(id, actions.scopedFor(id), toolWindows.scopedFor(id), editors.scopedFor(id),
                 statusBar.scopedFor(id), notifications.scopedFor(id), bus.scopedFor(id),
                 services.scopedFor(id), state.scopedFor(id), configurables.scopedFor(id),
-                PluginMessages.create(d, Messages.locale()));
+                PluginMessages.create(d.directory(), d.i18n(), Messages.locale()));
     }
 
     /** Снять всё, что плагин зарегистрировал. Каждый шаг независим: сбой одного не мешает остальным. */

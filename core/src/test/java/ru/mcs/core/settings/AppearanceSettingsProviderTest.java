@@ -19,7 +19,7 @@ class AppearanceSettingsProviderTest {
     @Test
     void themeChoiceUsesApplyAndResetAndChangesLafImmediately() throws Exception {
         AppSettings settings = new AppSettings();
-        McsThemeManager manager = new McsThemeManager(settings, directory);
+        McsThemeManager manager = new McsThemeManager(directory, settings.theme(), settings::setTheme);
         Configurable configurable = new AppearanceSettingsProvider(manager).createConfigurable();
         JComboBox<?> combo = themeCombo(configurable);
 

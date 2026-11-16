@@ -18,10 +18,10 @@ class MarkdownFilesTest {
 
     @Test
     void createsShortObsidianLinkWithoutChangingFile() {
-        Path file = Path.of("vault", "folder", "My note.MD");
+        Path file = Path.of("project", "folder", "My note.MD");
 
         assertThat(MarkdownFiles.wikiLink(file)).isEqualTo("[[My note]]");
-        assertThat(file).isEqualTo(Path.of("vault", "folder", "My note.MD"));
+        assertThat(file).isEqualTo(Path.of("project", "folder", "My note.MD"));
     }
 
     @Test

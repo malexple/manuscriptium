@@ -39,10 +39,10 @@ import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.UIManager;
+import ru.mcs.plugin.mdeditor.action.EditorBlockContext;
 import ru.mcs.plugin.mdeditor.action.EditorContext;
 import ru.mcs.plugin.mdeditor.action.EditorContextMenuBuilder;
 import ru.mcs.plugin.mdeditor.layout.MarkdownLayoutEngine;
-import ru.mcs.plugin.mdeditor.mode.FocusMode;
 import ru.mcs.plugin.mdeditor.mode.TypewriterMode;
 import ru.mcs.plugin.mdeditor.model.DocumentChange;
 import ru.mcs.plugin.mdeditor.model.DocumentListener;
@@ -51,23 +51,24 @@ import ru.mcs.plugin.mdeditor.model.Range;
 import ru.mcs.plugin.mdeditor.model.Insert;
 import ru.mcs.plugin.mdeditor.model.Replace;
 import ru.mcs.plugin.mdeditor.reference.CitationIndex;
+import ru.mcs.plugin.mdeditor.render.MarkdownRenderer;
 import ru.mcs.plugin.mdeditor.widget.ImageWidget;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.style.EditorStyleService;
 
 /** Собственный lightweight Source-редактор: построчный рендер, ввод, selection, caret, IME и clipboard. */
-public final class EditorCanvas extends JComponent implements Scrollable {
+public final class EditorCanvas extends JComponent implements Scrollable, EditorContext {
 
     private final TextLayoutEngine textLayout = new TextLayoutEngine();
     private final MarkdownLayoutEngine markdownLayout = new MarkdownLayoutEngine();
+    private final MarkdownRenderer markdownRenderer = new MarkdownRenderer(markdownLayout);
     private final ClipboardService clipboardService;
     private final InputController inputController;
     private final CaretPainter caretPainter;
     private final SelectionPainter selectionPainter;
     private final ViewportController viewportController;
     private final ImeSupport imeSupport;
-    private final FocusMode focusMode = new FocusMode();
     private final TypewriterMode typewriterMode = new TypewriterMode();
     private final DocumentListener documentListener = new DocumentListener() {
         @Override
@@ -95,7 +96,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     private ImageResize imageResize;
     private JPopupMenu citationPopup;
     private EditorContextMenuBuilder contextMenuBuilder;
-    private Supplier<EditorContext> editorContext;
+    private Supplier<EditorBlockContext> editorContext;
     private boolean disposed;
     private boolean nativeImageDropEnabled;
     private int caretOffset;
@@ -196,6 +197,12 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         repaint();
     }
 
+    @Override
+    public JComponent component() {
+        return this;
+    }
+
+    @Override
     public DocumentModel document() {
         return document;
     }
@@ -446,13 +453,12 @@ public final class EditorCanvas extends JComponent implements Scrollable {
     }
 
     public void setFocusMode(boolean enabled) {
-        focusMode.setEnabled(enabled);
-        markdownLayout.setFocusMode(enabled);
+        markdownRenderer.setFocusMode(enabled);
         repaint();
     }
 
     public boolean focusMode() {
-        return focusMode.isEnabled();
+        return markdownRenderer.focusMode();
     }
 
     public void setTypewriterMode(boolean enabled) {
@@ -478,7 +484,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         return inputController.autoPairEnabled();
     }
 
-    public void installContextMenu(EditorContextMenuBuilder builder, Supplier<EditorContext> context) {
+    public void installContextMenu(EditorContextMenuBuilder builder, Supplier<EditorBlockContext> context) {
         contextMenuBuilder = builder;
         editorContext = context;
     }
@@ -502,6 +508,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         return clipboardService;
     }
 
+    @Override
     public int caretOffset() {
         return caretOffset;
     }
@@ -554,6 +561,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
         return new Point(point.x, point.y - typewriterMode.topPadding(this));
     }
 
+    @Override
     public Rectangle caretRect(int offset) {
         return document == null ? new Rectangle() : markdownMode()
                 ? markdownLayout.caretRect(offset) : textLayout.caretRect(offset);
@@ -845,7 +853,7 @@ public final class EditorCanvas extends JComponent implements Scrollable {
             clip = new Rectangle(0, 0, getWidth(), getHeight());
         }
         if (markdownMode()) {
-            markdownLayout.paint(graphics, clip, selectionRange());
+            markdownRenderer.paint(graphics, clip, selectionRange());
             imeSupport.paint(graphics);
             caretPainter.paint(graphics);
             return;

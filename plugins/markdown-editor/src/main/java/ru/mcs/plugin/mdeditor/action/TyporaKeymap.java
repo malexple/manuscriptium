@@ -6,7 +6,6 @@ import java.awt.event.KeyEvent;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
-import ru.mcs.plugin.mdeditor.view.EditorCanvas;
 import ru.mcs.spi.action.ActionManager;
 import ru.mcs.spi.action.ActionPlaces;
 
@@ -25,7 +24,7 @@ public final class TyporaKeymap {
         this.shortcutMask = shortcutMask;
     }
 
-    public void install(EditorCanvas canvas) {
+    public void install(EditorContext canvas) {
         bind(canvas, KeyEvent.VK_SLASH, shortcut(), EditorActionIds.TOGGLE_MODE);
         bind(canvas, KeyEvent.VK_F8, 0, EditorActionIds.FOCUS_MODE);
         bind(canvas, KeyEvent.VK_F9, 0, EditorActionIds.TYPEWRITER_MODE);
@@ -86,10 +85,11 @@ public final class TyporaKeymap {
         return shortcutMask | InputEvent.SHIFT_DOWN_MASK;
     }
 
-    private void bind(EditorCanvas canvas, int keyCode, int modifiers, String actionId) {
+    private void bind(EditorContext context, int keyCode, int modifiers, String actionId) {
         KeyStroke key = KeyStroke.getKeyStroke(keyCode, modifiers);
-        canvas.getInputMap(JComponent.WHEN_FOCUSED).put(key, actionId);
-        canvas.getActionMap().put(actionId, new AbstractAction() {
+        JComponent component = context.component();
+        component.getInputMap(JComponent.WHEN_FOCUSED).put(key, actionId);
+        component.getActionMap().put(actionId, new AbstractAction() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent event) {
                 EditorActionDispatcher.perform(actions, actionId, ActionPlaces.MAIN_MENU);

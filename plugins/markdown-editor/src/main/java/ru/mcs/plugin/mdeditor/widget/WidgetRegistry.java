@@ -12,7 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import javax.swing.JComponent;
-import ru.mcs.plugin.mdeditor.layout.InlineContent;
+import ru.mcs.plugin.mdeditor.draw.BlockWidget;
+import ru.mcs.plugin.mdeditor.draw.InlineContent;
 import ru.mcs.plugin.mdeditor.reference.CitationIndex;
 import ru.mcs.plugin.mdeditor.reference.CrossReferenceIndex;
 import ru.mcs.spi.editor.BlockKind;
@@ -23,9 +24,9 @@ import ru.mcs.spi.editor.BlockSpan;
 import ru.mcs.spi.editor.MathRenderingService;
 import ru.mcs.spi.editor.ObsidianLinkService;
 import ru.mcs.spi.editor.RenderedBlock;
-import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.editor.style.ComputedStyle;
 import ru.mcs.spi.i18n.I18n;
+import ru.mcs.spi.service.AtomicFileStore;
 
 /** Общие кэши и фабрика lightweight-виджетов; тяжёлая работа не выполняется на EDT. */
 public final class WidgetRegistry implements BlockRendererExtensionRegistry {

@@ -3,7 +3,7 @@ package ru.mcs.core.action;
 import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
-import ru.mcs.core.MacOsSupport;
+import ru.mcs.core.platform.MacOsSupport;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.McsSdk;

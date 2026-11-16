@@ -1,7 +1,7 @@
 package ru.mcs.app;
 
 import ru.mcs.core.CoreBootstrap;
-import ru.mcs.core.MacOsSupport;
+import ru.mcs.core.platform.MacOsSupport;
 
 public final class ManuscriptiumApp {
 

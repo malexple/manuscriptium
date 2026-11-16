@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
+import ru.mcs.plugin.mdeditor.draw.BlockWidget;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockRenderRequest;
 import ru.mcs.spi.editor.BlockRendererExtension;

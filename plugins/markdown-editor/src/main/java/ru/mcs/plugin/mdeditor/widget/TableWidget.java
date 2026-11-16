@@ -3,7 +3,8 @@ package ru.mcs.plugin.mdeditor.widget;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Rectangle;
-import ru.mcs.plugin.mdeditor.render.DrawSink;
+import ru.mcs.plugin.mdeditor.draw.BlockWidget;
+import ru.mcs.plugin.mdeditor.draw.DrawSink;
 import ru.mcs.spi.editor.style.ComputedStyle;
 
 /** Read-only grid для неактивной таблицы; редактирование выполняется над исходным Markdown-span. */

@@ -32,6 +32,7 @@ import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
 import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.LineEnding;
 import ru.mcs.plugin.mdeditor.model.Range;
+import ru.mcs.plugin.mdeditor.render.MarkdownRenderer;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;
@@ -150,7 +151,7 @@ class MarkdownGoldenTest {
                         RenderingHints.VALUE_FRACTIONALMETRICS_ON);
                 graphics.setColor(fixture.engine().background());
                 graphics.fillRect(0, 0, WIDTH, HEIGHT);
-                fixture.engine().paint(graphics, new Rectangle(0, 0, WIDTH, HEIGHT), new Range(0, 0));
+                new MarkdownRenderer(fixture.engine()).paint(graphics, new Rectangle(0, 0, WIDTH, HEIGHT), new Range(0, 0));
             } finally {
                 graphics.dispose();
             }

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import ru.mcs.plugin.mdeditor.draw.InlineContent;
 import ru.mcs.plugin.mdeditor.reference.CitationIndex;
 import ru.mcs.plugin.mdeditor.reference.CrossReferenceIndex;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;

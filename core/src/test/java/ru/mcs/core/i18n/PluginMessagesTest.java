@@ -14,9 +14,6 @@ import java.util.jar.JarOutputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.core.plugin.Activation;
-import ru.mcs.core.plugin.Contributions;
-import ru.mcs.core.plugin.PluginDescriptor;
 
 class PluginMessagesTest {
 
@@ -69,15 +66,13 @@ class PluginMessagesTest {
     @Test
     void createReadsJarsFromPluginDirectoryAndIgnoresOtherFiles() throws IOException {
         Files.writeString(dir.resolve("readme.txt"), "not a jar");
-        PluginDescriptor d = new PluginDescriptor("p", "P", "1", "0.8", "m", List.of(), List.of(), dir,
-                Activation.ON_DEMAND, Contributions.NONE, "p/messages");
-        assertThat(PluginMessages.create(d, Locale.of("ru")).get("hello")).isEqualTo("Привет");
+        assertThat(PluginMessages.create(dir, "p/messages", Locale.of("ru")).get("hello")).isEqualTo("Привет");
     }
 
     @Test
-    void descriptorWithoutI18nGivesPassthroughKeys() {
-        PluginDescriptor d = new PluginDescriptor("p", "P", "1", "0.8", "m", List.of(), List.of(), dir);
-        assertThat(PluginMessages.create(d, Locale.ENGLISH).get("hello")).isEqualTo("hello");
+    void missingDirectoryOrBundleNameGivesPassthroughKeys() {
+        assertThat(PluginMessages.create(dir, null, Locale.ENGLISH).get("hello")).isEqualTo("hello");
+        assertThat(PluginMessages.create(null, "p/messages", Locale.ENGLISH).get("hello")).isEqualTo("hello");
     }
 
     @Test

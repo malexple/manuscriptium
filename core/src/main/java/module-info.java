@@ -11,6 +11,7 @@ module ru.mcs.core {
     requires org.apache.lucene.core;
 
     exports ru.mcs.core;
+    exports ru.mcs.core.platform;
 
     uses ru.mcs.spi.Plugin;
 }

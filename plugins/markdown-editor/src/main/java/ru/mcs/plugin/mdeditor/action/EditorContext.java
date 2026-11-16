@@ -1,27 +1,17 @@
 package ru.mcs.plugin.mdeditor.action;
 
-import ru.mcs.spi.editor.BlockKind;
+import java.awt.Rectangle;
+import javax.swing.JComponent;
+import ru.mcs.plugin.mdeditor.model.DocumentModel;
 
-/** Неизменяемый контекст ПКМ; не содержит ссылок на живой AST или компонент после закрытия меню. */
-public record EditorContext(BlockKind blockKind, boolean hasSelection, boolean link, boolean image) {
+/** Минимальный живой контекст редактора для keymap и viewport-режимов. */
+public interface EditorContext {
 
-    public EditorContext {
-        blockKind = blockKind == null ? BlockKind.PARAGRAPH : blockKind;
-    }
+    JComponent component();
 
-    public static EditorContext paragraph() {
-        return new EditorContext(BlockKind.PARAGRAPH, false, false, false);
-    }
+    DocumentModel document();
 
-    public boolean code() {
-        return blockKind == BlockKind.FENCED_CODE || blockKind == BlockKind.INDENTED_CODE;
-    }
+    int caretOffset();
 
-    public boolean table() {
-        return blockKind == BlockKind.TABLE;
-    }
-
-    public boolean math() {
-        return blockKind == BlockKind.MATH_BLOCK || blockKind == BlockKind.MATH_INLINE;
-    }
+    Rectangle caretRect(int offset);
 }

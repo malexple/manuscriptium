@@ -36,14 +36,14 @@ class StateManagerImplTest {
     Path tmp;
 
     private Path appDir;
-    private Path vaultDir;
+    private Path projectDir;
     private StateManagerImpl manager;
 
     @BeforeEach
     void setUp() {
         appDir = tmp.resolve("app");
-        vaultDir = tmp.resolve("vault");
-        manager = new StateManagerImpl(appDir, vaultDir, true);
+        projectDir = tmp.resolve("project");
+        manager = new StateManagerImpl(appDir, projectDir, true);
     }
 
     @Test
@@ -89,7 +89,7 @@ class StateManagerImplTest {
 
     @Test
     void readOnlyManagerNeverWrites() {
-        StateManagerImpl readOnly = new StateManagerImpl(appDir, vaultDir, false);
+        StateManagerImpl readOnly = new StateManagerImpl(appDir, projectDir, false);
         MapState state = new MapState();
         readOnly.register("core", "x", Scope.APPLICATION, state);
         state.data.put("a", 1);
@@ -123,48 +123,48 @@ class StateManagerImplTest {
     }
 
     @Test
-    void vaultScopeUsesVaultDirectory() {
+    void projectScopeUsesProjectDirectory() {
         MapState state = new MapState();
-        manager.register("core", "v", Scope.VAULT, state);
+        manager.register("core", "v", Scope.PROJECT, state);
         state.data.put("a", 1);
         manager.saveChanged();
-        assertThat(vaultDir.resolve("v.yml")).exists();
+        assertThat(projectDir.resolve("v.yml")).exists();
         assertThat(appDir.resolve("v.yml")).doesNotExist();
     }
 
     @Test
-    void changingVaultReloadsOnlyVaultState() throws IOException {
-        Path secondVault = tmp.resolve("second");
-        Files.createDirectories(secondVault);
-        Files.writeString(secondVault.resolve("v.yml"), "a: 2\n");
-        MapState vaultState = new MapState();
-        vaultState.data.put("a", 1);
+    void changingProjectReloadsOnlyProjectState() throws IOException {
+        Path secondProject = tmp.resolve("second");
+        Files.createDirectories(secondProject);
+        Files.writeString(secondProject.resolve("v.yml"), "a: 2\n");
+        MapState projectState = new MapState();
+        projectState.data.put("a", 1);
         MapState appState = new MapState();
         appState.data.put("language", "ru");
-        manager.register("core", "v", Scope.VAULT, vaultState);
+        manager.register("core", "v", Scope.PROJECT, projectState);
         manager.register("core", "app", Scope.APPLICATION, appState);
 
-        manager.changeVaultDirectory(secondVault);
+        manager.changeProjectDirectory(secondProject);
 
-        assertThat(vaultState.data).containsEntry("a", 2);
+        assertThat(projectState.data).containsEntry("a", 2);
         assertThat(appState.data).containsEntry("language", "ru");
-        vaultState.data.put("a", 3);
+        projectState.data.put("a", 3);
         manager.saveChanged();
-        assertThat(secondVault.resolve("v.yml")).exists();
-        assertThat(vaultDir.resolve("v.yml")).doesNotExist();
+        assertThat(secondProject.resolve("v.yml")).exists();
+        assertThat(projectDir.resolve("v.yml")).doesNotExist();
     }
 
     @Test
-    void missingVaultStateResetsComponentAndNullVaultDisablesWrites() {
+    void missingProjectStateResetsComponentAndNullProjectDisablesWrites() {
         MapState state = new MapState();
         state.data.put("old", true);
-        manager.register("core", "v", Scope.VAULT, state);
+        manager.register("core", "v", Scope.PROJECT, state);
 
-        manager.changeVaultDirectory(null);
+        manager.changeProjectDirectory(null);
         assertThat(state.data).isEmpty();
         state.data.put("new", true);
         manager.saveChanged();
-        assertThat(vaultDir.resolve("v.yml")).doesNotExist();
+        assertThat(projectDir.resolve("v.yml")).doesNotExist();
     }
 
     @Test

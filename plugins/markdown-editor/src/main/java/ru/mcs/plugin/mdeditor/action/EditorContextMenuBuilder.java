@@ -22,7 +22,7 @@ public final class EditorContextMenuBuilder {
         this.actions = actions;
     }
 
-    public ActionGroup group(EditorContext context) {
+    public ActionGroup group(EditorBlockContext context) {
         DefaultActionGroup root = new DefaultActionGroup("", false);
         add(root, EditorActionIds.UNDO);
         add(root, EditorActionIds.REDO);
@@ -51,7 +51,7 @@ public final class EditorContextMenuBuilder {
         return root;
     }
 
-    public List<String> actionIds(EditorContext context) {
+    public List<String> actionIds(EditorBlockContext context) {
         List<String> ids = new ArrayList<>();
         for (AnAction child : group(context).getChildren(null)) {
             if (!(child instanceof Separator)) {
@@ -61,7 +61,7 @@ public final class EditorContextMenuBuilder {
         return ids;
     }
 
-    public JPopupMenu build(EditorContext context) {
+    public JPopupMenu build(EditorBlockContext context) {
         JPopupMenu popup = new JPopupMenu();
         fill(popup, group(context));
         return popup;

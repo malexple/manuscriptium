@@ -6,7 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.swing.JComponent;
 
 /**
- * JDK-only мост к Obsidian-навигации приложения. Разрешение путей и проверки Vault выполняет реализация core;
+ * JDK-only мост к Obsidian-навигации приложения. Разрешение путей и проверки Project выполняет реализация core;
  * плагин редактора не получает доступ к внутренним классам core.
  */
 public interface ObsidianLinkService {

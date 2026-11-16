@@ -39,35 +39,65 @@ public final class StateManagerImpl {
     }
 
     private final Path appDir;
-    private Path vaultDir;
+    private Path projectDir;
     private final boolean persist;
     private final Map<String, Entry> entries = new LinkedHashMap<>();
 
-    public StateManagerImpl(Path appDir, Path vaultDir, boolean persist) {
+    public StateManagerImpl(Path appDir, Path projectDir, boolean persist) {
         this.appDir = appDir;
-        this.vaultDir = vaultDir;
+        this.projectDir = projectDir;
         this.persist = persist;
     }
 
     public synchronized void register(String owner, String id, Scope scope, PersistentStateComponent component) {
-        if (id == null || !ID.matcher(id).matches() || id.equals(".") || id.equals("..")) {
-            throw new IllegalArgumentException("Invalid state id: '" + id + "'");
+        register(owner, id, scope, component, null);
+    }
+
+    /**
+     * Регистрирует состояние под новым id. Если его файла ещё нет, один раз читает {@code legacyId}; при следующей
+     * записи создаётся файл с новым id, а legacy-файл не изменяется и не удаляется.
+     */
+    public synchronized void register(String owner, String id, Scope scope, PersistentStateComponent component,
+                                      String legacyId) {
+        validateId(id);
+        if (legacyId != null) {
+            validateId(legacyId);
         }
         if (entries.containsKey(id)) {
             throw new IllegalArgumentException("State component already registered: " + id);
         }
         Entry entry = new Entry(owner, id, scope, component);
         Path file = fileOf(entry);
-        if (file != null && Files.isRegularFile(file)) {
+        Path source = file;
+        boolean migrated = false;
+        if (!isRegularFile(source) && legacyId != null) {
+            Path legacyFile = fileOf(scope, legacyId);
+            if (isRegularFile(legacyFile)) {
+                source = legacyFile;
+                migrated = true;
+            }
+        }
+        if (source != null && Files.isRegularFile(source)) {
             try {
-                String text = Files.readString(file, StandardCharsets.UTF_8);
-                entry.lastText = text;
+                String text = Files.readString(source, StandardCharsets.UTF_8);
                 component.loadState(StateYaml.parse(text));
+                // Для legacy-источника специально оставляем null: saveChanged() должен создать новый файл.
+                entry.lastText = migrated ? null : text;
             } catch (Throwable t) {
-                LOG.log(System.Logger.Level.WARNING, "Cannot load state '" + id + "' from " + file, t);
+                LOG.log(System.Logger.Level.WARNING, "Cannot load state '" + id + "' from " + source, t);
             }
         }
         entries.put(id, entry);
+    }
+
+    private static void validateId(String id) {
+        if (id == null || !ID.matcher(id).matches() || id.equals(".") || id.equals("..")) {
+            throw new IllegalArgumentException("Invalid state id: '" + id + "'");
+        }
+    }
+
+    private static boolean isRegularFile(Path file) {
+        return file != null && Files.isRegularFile(file);
     }
 
     public synchronized void unregister(String owner, String id) {
@@ -92,13 +122,13 @@ public final class StateManagerImpl {
     }
 
     /**
-     * Переключает область VAULT без записи в прежний каталог: вызывающий код заранее сохраняет старую сессию.
-     * Зарегистрированные компоненты сначала получают пустое состояние, затем данные нового Vault.
+     * Переключает область PROJECT без записи в прежний каталог: вызывающий код заранее сохраняет старую сессию.
+     * Зарегистрированные компоненты сначала получают пустое состояние, затем данные нового Project.
      */
-    public synchronized void changeVaultDirectory(Path directory) {
-        vaultDir = directory == null ? null : directory.toAbsolutePath().normalize();
+    public synchronized void changeProjectDirectory(Path directory) {
+        projectDir = directory == null ? null : directory.toAbsolutePath().normalize();
         for (Entry entry : entries.values()) {
-            if (entry.scope != Scope.VAULT) {
+            if (entry.scope != Scope.PROJECT) {
                 continue;
             }
             entry.lastText = null;
@@ -147,8 +177,12 @@ public final class StateManagerImpl {
     }
 
     private Path fileOf(Entry entry) {
-        Path dir = entry.scope == Scope.APPLICATION ? appDir : vaultDir;
-        return dir == null ? null : dir.resolve(entry.id + ".yml");
+        return fileOf(entry.scope, entry.id);
+    }
+
+    private Path fileOf(Scope scope, String id) {
+        Path dir = scope == Scope.APPLICATION ? appDir : projectDir;
+        return dir == null ? null : dir.resolve(id + ".yml");
     }
 
     private void save(Entry entry) {
