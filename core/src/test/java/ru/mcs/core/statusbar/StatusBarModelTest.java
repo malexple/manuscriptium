@@ -7,7 +7,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import org.junit.jupiter.api.Test;
 import ru.mcs.spi.ui.StatusBarTask;
-import ru.mcs.spi.ui.StatusBarWidget;
+import ru.mcs.spi.swing.ui.StatusBarWidget;
 
 class StatusBarModelTest {
 

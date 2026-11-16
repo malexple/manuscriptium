@@ -2,8 +2,8 @@ package ru.mcs.core.action;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.action.AnAction;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.action.AnAction;
 import ru.mcs.spi.action.Constraints;
 
 /** Представление ActionManager для одного плагина: запоминает регистрации, чтобы снять их при выгрузке. */

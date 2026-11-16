@@ -24,7 +24,7 @@ import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
-import ru.mcs.spi.editor.FileEditorManager;
+import ru.mcs.spi.swing.editor.FileEditorManager;
 import ru.mcs.spi.i18n.I18n;
 
 /** Панель открытых Markdown-вкладок; файловый ввод-вывод не выполняется на EDT. */

@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.settings.Configurable;
+import ru.mcs.spi.swing.settings.Configurable;
 
 class GeneralSettingsProviderTest {
 

@@ -10,7 +10,7 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import ru.mcs.plugin.mdeditor.mode.EditorMode;
 import ru.mcs.spi.i18n.I18n;
-import ru.mcs.spi.settings.Configurable;
+import ru.mcs.spi.swing.settings.Configurable;
 
 /** Настройка режима, который получают новые Markdown-вкладки. */
 final class MarkdownEditorConfigurable implements Configurable {

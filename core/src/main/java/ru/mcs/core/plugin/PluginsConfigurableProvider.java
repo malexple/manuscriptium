@@ -22,8 +22,8 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import ru.mcs.core.i18n.Messages;
-import ru.mcs.spi.settings.Configurable;
-import ru.mcs.spi.settings.ConfigurableProvider;
+import ru.mcs.spi.swing.settings.Configurable;
+import ru.mcs.spi.swing.settings.ConfigurableProvider;
 
 /** Встроенная страница Settings → Plugins. */
 public final class PluginsConfigurableProvider implements ConfigurableProvider {

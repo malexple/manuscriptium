@@ -6,8 +6,8 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import ru.mcs.spi.editor.FileEditor;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 
 /** Запасной провайдер: любой обычный файл до 5 МБ, который строго декодируется как UTF-8. */
 public final class TextFileEditorProvider implements FileEditorProvider {

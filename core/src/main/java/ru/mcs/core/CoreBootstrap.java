@@ -22,7 +22,7 @@ import ru.mcs.core.shell.ShellFrame;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.ui.NotificationType;
 import ru.mcs.spi.ui.ToolWindowAnchor;
-import ru.mcs.spi.ui.ToolWindowSpec;
+import ru.mcs.spi.swing.ui.ToolWindowSpec;
 import ru.mcs.core.project.ProjectController;
 import ru.mcs.core.action.CommandPalette;
 import ru.mcs.core.shell.ShellDataContext;

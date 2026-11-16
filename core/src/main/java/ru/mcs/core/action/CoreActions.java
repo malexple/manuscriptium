@@ -8,11 +8,11 @@ import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.McsSdk;
 import ru.mcs.spi.action.ActionIds;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.Constraints;
-import ru.mcs.spi.action.DefaultActionGroup;
+import ru.mcs.spi.swing.action.DefaultActionGroup;
 
 /** Стандартные группы и встроенные действия ядра. Тексты — из {@link Messages} (язык фиксируется при запуске). */
 public final class CoreActions {

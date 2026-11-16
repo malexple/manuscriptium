@@ -7,7 +7,7 @@ import java.awt.AlphaComposite;
 import java.awt.image.BufferedImage;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 class FocusModeTest {
 

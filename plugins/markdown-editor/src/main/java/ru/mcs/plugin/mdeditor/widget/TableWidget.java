@@ -5,7 +5,7 @@ import java.awt.Font;
 import java.awt.Rectangle;
 import ru.mcs.plugin.mdeditor.draw.BlockWidget;
 import ru.mcs.plugin.mdeditor.draw.DrawSink;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Read-only grid для неактивной таблицы; редактирование выполняется над исходным Markdown-span. */
 public final class TableWidget extends AbstractBlockWidget {

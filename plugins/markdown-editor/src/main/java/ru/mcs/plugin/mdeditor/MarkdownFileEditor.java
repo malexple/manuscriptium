@@ -33,13 +33,13 @@ import ru.mcs.plugin.mdeditor.model.MarkdownDocumentCodec.DecodedDocument;
 import ru.mcs.plugin.mdeditor.model.Replace;import ru.mcs.plugin.mdeditor.view.EditorCanvas;
 import ru.mcs.plugin.mdeditor.view.MarginNotesPane;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
-import ru.mcs.spi.action.ActionManager;
+import ru.mcs.spi.swing.action.ActionManager;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditor;
 import ru.mcs.spi.editor.MarkdownParser;
-import ru.mcs.spi.editor.style.EditorStyleService;
+import ru.mcs.spi.swing.editor.style.EditorStyleService;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 

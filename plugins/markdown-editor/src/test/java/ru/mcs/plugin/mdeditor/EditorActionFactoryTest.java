@@ -6,8 +6,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import ru.mcs.plugin.mdeditor.action.EditorActionIds;
 import ru.mcs.spi.action.ActionPlaces;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.DataContext;
 import ru.mcs.spi.i18n.I18n;
 

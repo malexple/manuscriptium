@@ -6,13 +6,13 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Supplier;
 import javax.swing.Icon;
-import ru.mcs.spi.action.ActionGroup;
+import ru.mcs.spi.swing.action.ActionGroup;
 import ru.mcs.spi.action.ActionPlaces;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.DataContext;
-import ru.mcs.spi.action.Presentation;
-import ru.mcs.spi.action.Separator;
+import ru.mcs.spi.swing.action.Presentation;
+import ru.mcs.spi.swing.action.Separator;
 
 /** Снимок видимых действий и их текстовый фильтр. Вызывается на EDT. */
 final class CommandPaletteModel {

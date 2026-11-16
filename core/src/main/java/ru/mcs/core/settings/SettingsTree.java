@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import ru.mcs.spi.settings.ConfigurableProvider;
+import ru.mcs.spi.swing.settings.ConfigurableProvider;
 
 /** Дерево страниц: сортировка по названию, вложенность через parentId, проверка ссылок и циклов. */
 final class SettingsTree {

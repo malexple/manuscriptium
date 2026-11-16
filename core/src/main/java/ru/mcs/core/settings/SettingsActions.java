@@ -5,11 +5,11 @@ import ru.mcs.core.platform.MacOsSupport;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.action.ActionIds;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.Constraints;
-import ru.mcs.spi.settings.SettingsManager;
+import ru.mcs.spi.swing.settings.SettingsManager;
 
 public final class SettingsActions {
 

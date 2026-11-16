@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.spi.editor.ObsidianLinkService;
+import ru.mcs.spi.swing.editor.ObsidianLinkService;
 
 class CoreObsidianLinkServiceTest {
 

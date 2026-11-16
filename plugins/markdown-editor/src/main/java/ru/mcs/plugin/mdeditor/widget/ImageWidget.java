@@ -8,7 +8,7 @@ import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import ru.mcs.plugin.mdeditor.draw.BlockWidget;
 import ru.mcs.plugin.mdeditor.draw.DrawSink;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Блочное изображение с placeholder, относительным путём и Obsidian-resize handle. */
 public final class ImageWidget extends AbstractBlockWidget {

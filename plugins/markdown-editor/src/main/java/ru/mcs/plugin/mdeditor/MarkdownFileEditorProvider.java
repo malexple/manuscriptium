@@ -5,11 +5,11 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.editor.FileEditor;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 import ru.mcs.spi.editor.MarkdownParser;
-import ru.mcs.spi.editor.style.EditorStyleService;
+import ru.mcs.spi.swing.editor.style.EditorStyleService;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 

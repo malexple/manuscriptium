@@ -6,9 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.action.ActionManager;
+import ru.mcs.spi.swing.action.ActionManager;
 import ru.mcs.spi.action.Constraints;
-import ru.mcs.spi.action.DefaultActionGroup;
+import ru.mcs.spi.swing.action.DefaultActionGroup;
 
 class ActionManagerImplTest {
 

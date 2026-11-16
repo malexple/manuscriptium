@@ -1,7 +1,7 @@
 package ru.mcs.core.action;
 
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 
 class TestAction extends AnAction {
 

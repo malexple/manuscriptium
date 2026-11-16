@@ -19,7 +19,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
-import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.swing.PluginContext;
 
 /** Виджеты небольшого управляемого подмножества front matter активной заметки. */
 final class PropertiesPanel extends JPanel {

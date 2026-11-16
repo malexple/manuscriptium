@@ -25,7 +25,7 @@ Manuscriptium — кроссплатформенное (Windows, Linux, macOS) �
 | Пакеты | `ru.mcs.spi`, `ru.mcs.core`, `ru.mcs.app`, `ru.mcs.plugin.<name>` |
 | SDK (`spi`) | Без внешних зависимостей (только JDK + Swing). Semver, поле `sdk-version` в `plugin.yml` |
 | Манифест плагина | `plugin.yml`: метаданные + декларативные вклады (действия, иконки, панели, настройки); i18n-ключи |
-| Точка входа плагина | `provides ru.mcs.spi.Plugin with ...` в `module-info.java`; загрузка `ServiceLoader.load(layer, Plugin.class)` |
+| Точка входа плагина | `provides ru.mcs.spi.swing.Plugin with ...` в `module-info.java`; загрузка `ServiceLoader.load(layer, Plugin.class)` |
 | Ленивая загрузка | Ядро знает вклады из `plugin.yml` до загрузки класса плагина |
 | Безопасность | Capability-модель через `ApplicationContext`; `permissions` — декларация для пользователя; при установке предупреждение «плагин имеет полный доступ к JVM». SecurityManager не используется |
 | Сервисы | `ServiceRegistry` двух уровней: application и vault; `PersistentStateComponent` регистрируется явно |

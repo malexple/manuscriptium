@@ -2,8 +2,8 @@ package ru.mcs.core.plugin.contrib;
 
 import javax.swing.Icon;
 import ru.mcs.core.plugin.PluginActivator;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 
 /**
  * Заглушка действия из plugin.yml: показывает текст из манифеста и загружает плагин при первом выполнении.

@@ -19,10 +19,10 @@ import org.junit.jupiter.api.Test;
 import ru.mcs.plugin.mdeditor.draw.BlockWidget;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockRenderRequest;
-import ru.mcs.spi.editor.BlockRendererExtension;
+import ru.mcs.spi.swing.editor.BlockRendererExtension;
 import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.RenderedBlock;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.RenderedBlock;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 class WidgetRegistryTest {
 

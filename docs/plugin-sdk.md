@@ -11,7 +11,7 @@ bundled-примеры: [`plugins/notes/`](../plugins/notes/) (список от
 
 - JDK 21;
 - Gradle 8.14.4 или новее в пределах совместимой major-версии;
-- исходники Manuscriptium для подключения `ru.mcs.spi` через composite build.
+- исходники Manuscriptium для подключения `ru.mcs.spi.swing` через composite build.
 
 Из корня репозитория выполните:
 
@@ -40,8 +40,8 @@ plugin-template/build/libs/manuscriptium-plugin-template-0.1.0.jar
 includeBuild('/path/to/manuscriptium')
 ```
 
-Composite build подставляет модуль `ru.mcs:spi:0.1.0-SNAPSHOT` напрямую из `spi/`, поэтому предварительная публикация
-SDK в Maven-репозиторий не нужна.
+Composite build подставляет модуль `ru.mcs:spi-swing:0.1.0-SNAPSHOT` напрямую из `spi-swing/`; базовый `spi/`
+подключается транзитивно, поэтому предварительная публикация SDK в Maven-репозиторий не нужна.
 
 ## 2. Структура проекта и артефакта
 
@@ -96,7 +96,7 @@ java {
 }
 
 dependencies {
-    compileOnly 'ru.mcs:spi:0.1.0-SNAPSHOT'
+    compileOnly 'ru.mcs:spi-swing:0.1.0-SNAPSHOT'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -105,24 +105,25 @@ tasks.withType(JavaCompile).configureEach {
 }
 ```
 
-`compileOnly` обязателен: SDK предоставляется приложением. Плагин зависит только от `ru.mcs.spi`, а не от `core` или
-`app` — это сохраняет границу API и позволяет загружать его в отдельный `ModuleLayer`.
+`compileOnly` обязателен: SDK предоставляется приложением. Desktop-плагин зависит от `ru.mcs.spi.swing`, который
+транзитивно предоставляет платформенно-нейтральный `ru.mcs.spi`, а не от `core` или `app` — это сохраняет границу API
+и позволяет загружать плагин в отдельный `ModuleLayer`.
 
 `module-info.java`:
 
 ```java
 module ru.example.myplugin {
-    requires ru.mcs.spi;
+    requires ru.mcs.spi.swing;
 
     // Нужен для SVG-ресурсов named-модуля.
     opens ru.example.myplugin.icons;
 
-    provides ru.mcs.spi.Plugin with ru.example.myplugin.MyPlugin;
+    provides ru.mcs.spi.swing.Plugin with ru.example.myplugin.MyPlugin;
 }
 ```
 
 Имя модуля должно совпадать с полем `module` в `plugin.yml`. В одном plugin layer должен быть один провайдер
-`ru.mcs.spi.Plugin`, который и является точкой входа плагина. Пакет ресурсов пометьте `opens`; чтобы javac считал его
+`ru.mcs.spi.swing.Plugin`, который и является точкой входа плагина. Пакет ресурсов пометьте `opens`; чтобы javac считал его
 непустым, можно добавить package-private класс-маркер, как в шаблоне.
 
 ## 4. `plugin.yml`
@@ -192,9 +193,13 @@ contributions:
 и до загрузки байткода. Внутри совместимой линии 0.9 допускаются только бинарно совместимые добавления: новые сервисные
 интерфейсы и default-методы; сигнатуры существующих контрактов не изменяются.
 
+Архитектурный шаг 4 — согласованное исключение до публикации приложения: Swing-контракты перенесены из пакетов
+`ru.mcs.spi.*` в `ru.mcs.spi.swing.*` без compatibility aliases. Существующие исходники плагинов нужно обновить и
+пересобрать; старые бинарные JAR не сохраняют совместимость с новой модульной границей.
+
 ## 5. Жизненный цикл
 
-Точка входа реализует `ru.mcs.spi.Plugin`:
+Точка входа реализует `ru.mcs.spi.swing.Plugin`:
 
 ```java
 public final class MyPlugin implements Plugin {

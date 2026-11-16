@@ -12,7 +12,7 @@ import ru.mcs.plugin.mdeditor.layout.LayoutResult;
 import ru.mcs.plugin.mdeditor.layout.MarkdownLayoutEngine;
 import ru.mcs.plugin.mdeditor.mode.FocusMode;
 import ru.mcs.plugin.mdeditor.model.Range;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Рисует готовый Markdown layout, не участвуя в расчёте координат и source offsets. */
 public final class MarkdownRenderer {

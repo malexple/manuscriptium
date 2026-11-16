@@ -6,8 +6,8 @@ import java.nio.file.Path;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
-import ru.mcs.spi.editor.FileEditor;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 
 /** Демонстрация: плагин поставляет свой редактор для файлов *.hello (приоритет выше встроенного текстового). */
 final class HelloEditorProvider implements FileEditorProvider {

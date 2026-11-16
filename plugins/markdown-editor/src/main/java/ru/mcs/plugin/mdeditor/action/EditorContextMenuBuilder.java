@@ -5,13 +5,13 @@ import java.util.List;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
-import ru.mcs.spi.action.ActionGroup;
-import ru.mcs.spi.action.ActionManager;
+import ru.mcs.spi.swing.action.ActionGroup;
+import ru.mcs.spi.swing.action.ActionManager;
 import ru.mcs.spi.action.ActionPlaces;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
-import ru.mcs.spi.action.DefaultActionGroup;
-import ru.mcs.spi.action.Separator;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
+import ru.mcs.spi.swing.action.DefaultActionGroup;
+import ru.mcs.spi.swing.action.Separator;
 
 /** Собирает ПКМ из тех же ActionGroup, что и главное меню, добавляя блок-специфичную команду. */
 public final class EditorContextMenuBuilder {

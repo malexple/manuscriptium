@@ -6,11 +6,11 @@ import ru.mcs.core.icon.PluginIcons;
 import ru.mcs.core.plugin.Contributions;
 import ru.mcs.core.plugin.PluginActivator;
 import ru.mcs.core.plugin.PluginDescriptor;
-import ru.mcs.spi.PluginContext;
-import ru.mcs.spi.action.ActionManager;
+import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.action.ActionManager;
 import ru.mcs.spi.action.Constraints;
-import ru.mcs.spi.action.DefaultActionGroup;
-import ru.mcs.spi.ui.ToolWindowSpec;
+import ru.mcs.spi.swing.action.DefaultActionGroup;
+import ru.mcs.spi.swing.ui.ToolWindowSpec;
 
 /**
  * Регистрирует вклады из plugin.yml через контекст плагина, не загружая его код:

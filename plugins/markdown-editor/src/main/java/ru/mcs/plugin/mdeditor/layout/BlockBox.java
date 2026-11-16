@@ -3,7 +3,7 @@ package ru.mcs.plugin.mdeditor.layout;
 import java.util.List;
 import ru.mcs.plugin.mdeditor.draw.BlockWidget;
 import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Готовый к рисованию блок с абсолютными canvas-координатами. */
 public final class BlockBox {

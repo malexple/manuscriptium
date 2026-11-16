@@ -8,8 +8,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.theme.ThemeController;
-import ru.mcs.spi.settings.Configurable;
-import ru.mcs.spi.settings.ConfigurableProvider;
+import ru.mcs.spi.swing.settings.Configurable;
+import ru.mcs.spi.swing.settings.ConfigurableProvider;
 import ru.mcs.spi.settings.ConfigurationException;
 
 /** Выбор темы в стиле IntelliJ: системная, встроенные и пользовательские JSON-темы. */

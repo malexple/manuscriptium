@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import ru.mcs.spi.settings.ConfigurableProvider;
-import ru.mcs.spi.settings.SettingsManager;
+import ru.mcs.spi.swing.settings.ConfigurableProvider;
+import ru.mcs.spi.swing.settings.SettingsManager;
 
 public final class SettingsManagerImpl implements SettingsManager {
 

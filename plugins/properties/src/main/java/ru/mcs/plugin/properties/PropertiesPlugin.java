@@ -2,8 +2,8 @@ package ru.mcs.plugin.properties;
 
 import java.nio.file.Path;
 import javax.swing.JComponent;
-import ru.mcs.spi.Plugin;
-import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.swing.Plugin;
+import ru.mcs.spi.swing.PluginContext;
 import ru.mcs.spi.editor.EditorTopics;
 import ru.mcs.spi.editor.FileEditorListener;
 

@@ -21,15 +21,17 @@ import ru.mcs.core.state.StateManagerImpl;
 import ru.mcs.core.statusbar.StatusBarModel;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.spi.action.ActionIds;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.Constraints;
 import ru.mcs.spi.ui.NotificationType;
 import ru.mcs.spi.ui.ToolWindowAnchor;
-import ru.mcs.spi.ui.ToolWindowSpec;
+import ru.mcs.spi.swing.ui.ToolWindowSpec;
 
 /** Координирует UI, сессию и жизненный цикл Project. Индексирование никогда не выполняется на EDT. */
 public final class ProjectController implements AutoCloseable {
+
+    private static final System.Logger LOG = System.getLogger(ProjectController.class.getName());
 
     private final JFrame frame;
     private final ActionManagerImpl actions;
@@ -405,6 +407,7 @@ public final class ProjectController implements AutoCloseable {
 
     private void openFailed(Path root, Throwable error, boolean interactive) {
         Throwable cause = error instanceof ExecutionException && error.getCause() != null ? error.getCause() : error;
+        LOG.log(System.Logger.Level.WARNING, "Cannot open project: " + root, cause);
         String detail = cause.getMessage() != null ? cause.getMessage() : cause.toString();
         notifications.notify("core", Messages.get("project.open.error.title"),
                 Messages.get("project.open.error", root, detail), NotificationType.ERROR);

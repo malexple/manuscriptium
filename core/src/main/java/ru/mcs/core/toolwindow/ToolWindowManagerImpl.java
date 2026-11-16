@@ -9,14 +9,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.spi.action.ActionIds;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.Constraints;
 import ru.mcs.spi.ui.ToolWindow;
 import ru.mcs.spi.ui.ToolWindowAnchor;
-import ru.mcs.spi.ui.ToolWindowManager;
-import ru.mcs.spi.ui.ToolWindowSpec;
+import ru.mcs.spi.swing.ui.ToolWindowManager;
+import ru.mcs.spi.swing.ui.ToolWindowSpec;
 
 /**
  * Модель панелей: реестр, активная панель на каждой стороне, размеры. Сохранение — через {@link LayoutStore}

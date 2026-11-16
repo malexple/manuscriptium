@@ -6,11 +6,11 @@ import java.util.function.Supplier;
 import javax.swing.JButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
-import ru.mcs.spi.action.ActionGroup;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.ActionGroup;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.DataContext;
-import ru.mcs.spi.action.Presentation;
+import ru.mcs.spi.swing.action.Presentation;
 
 /**
  * Тулбар из группы действий. Обновляется при изменении реестра и после выполнения действия;
@@ -53,7 +53,7 @@ public final class ActionToolbar extends JToolBar {
             return;
         }
         for (AnAction child : ActionUtil.children(group, ge)) {
-            if (child instanceof ru.mcs.spi.action.Separator) {
+            if (child instanceof ru.mcs.spi.swing.action.Separator) {
                 int n = getComponentCount();
                 if (n > 0 && !(getComponent(n - 1) instanceof JToolBar.Separator)) {
                     addSeparator();

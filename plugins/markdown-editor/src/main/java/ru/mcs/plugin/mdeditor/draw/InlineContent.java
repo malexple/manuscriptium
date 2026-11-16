@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.awt.image.BufferedImage;
 import java.util.function.Supplier;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Видимый текст, стили и монотонная карта границ в исходный Markdown. */
 public final class InlineContent {

@@ -76,6 +76,10 @@ final class ProjectService implements AutoCloseable {
     }
 
     static ProjectService open(Path root, Listener listener) throws IOException, SQLException {
+        return retryOnceOnIo(() -> openOnce(root, listener));
+    }
+
+    private static ProjectService openOnce(Path root, Listener listener) throws IOException, SQLException {
         ProjectService service = new ProjectService(root, listener);
         try {
             Future<?> initial = service.executor.submit((Callable<Void>) () -> {
@@ -89,6 +93,27 @@ final class ProjectService implements AutoCloseable {
             service.close();
             throw e;
         }
+    }
+
+    static <T> T retryOnceOnIo(IoOperation<T> operation) throws IOException, SQLException {
+        IOException firstFailure;
+        try {
+            return operation.run();
+        } catch (IOException e) {
+            firstFailure = e;
+        }
+        LOG.log(System.Logger.Level.WARNING, "Project cache initialization failed; retrying once", firstFailure);
+        try {
+            return operation.run();
+        } catch (IOException | SQLException | RuntimeException e) {
+            e.addSuppressed(firstFailure);
+            throw e;
+        }
+    }
+
+    @FunctionalInterface
+    interface IoOperation<T> {
+        T run() throws IOException, SQLException;
     }
 
     private static void await(Future<?> future, Path root) throws IOException, SQLException {

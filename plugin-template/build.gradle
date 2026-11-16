@@ -17,7 +17,7 @@ java {
 
 dependencies {
     // SDK предоставляется Manuscriptium во время выполнения и не упаковывается в плагин.
-    compileOnly 'ru.mcs:spi:0.1.0-SNAPSHOT'
+    compileOnly 'ru.mcs:spi-swing:0.1.0-SNAPSHOT'
 }
 
 tasks.withType(JavaCompile).configureEach {

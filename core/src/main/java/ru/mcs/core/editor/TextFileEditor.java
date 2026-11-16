@@ -18,7 +18,7 @@ import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import ru.mcs.spi.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditor;
 
 /** Простой текстовый редактор (UTF-8, сохраняет CRLF, если он был в файле). Временный до Фазы 5. */
 final class TextFileEditor implements FileEditor {

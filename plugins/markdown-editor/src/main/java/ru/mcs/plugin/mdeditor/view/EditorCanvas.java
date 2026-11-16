@@ -55,7 +55,7 @@ import ru.mcs.plugin.mdeditor.render.MarkdownRenderer;
 import ru.mcs.plugin.mdeditor.widget.ImageWidget;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.editor.style.EditorStyleService;
+import ru.mcs.spi.swing.editor.style.EditorStyleService;
 
 /** Собственный lightweight Source-редактор: построчный рендер, ввод, selection, caret, IME и clipboard. */
 public final class EditorCanvas extends JComponent implements Scrollable, EditorContext {

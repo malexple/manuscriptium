@@ -1,11 +1,15 @@
 package ru.mcs.core.project;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -169,6 +173,48 @@ class ProjectServiceTest {
         assertThat(persistedExisting.entries().getFirst().children()).extracting(ViewEntry::file)
                 .containsExactly("note.md");
         assertThat(persistedExisting.entries().get(1).file()).isEqualTo("note.md");
+    }
+
+    @Test
+    void retriesInitialCacheOpenOnceAfterIoFailure() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+
+        String result = ProjectService.retryOnceOnIo(() -> {
+            if (attempts.incrementAndGet() == 1) {
+                throw new IOException("transient cache failure");
+            }
+            return "opened";
+        });
+
+        assertThat(result).isEqualTo("opened");
+        assertThat(attempts).hasValue(2);
+    }
+
+    @Test
+    void persistentIoFailureKeepsFirstAttemptAsSuppressed() {
+        AtomicInteger attempts = new AtomicInteger();
+        IOException first = new IOException("first");
+
+        assertThatThrownBy(() -> ProjectService.retryOnceOnIo(() -> {
+            if (attempts.incrementAndGet() == 1) {
+                throw first;
+            }
+            throw new IOException("second");
+        })).isInstanceOf(IOException.class)
+                .hasMessage("second")
+                .satisfies(error -> assertThat(error.getSuppressed()).containsExactly(first));
+        assertThat(attempts).hasValue(2);
+    }
+
+    @Test
+    void doesNotRetrySqlFailure() {
+        AtomicInteger attempts = new AtomicInteger();
+
+        assertThatThrownBy(() -> ProjectService.retryOnceOnIo(() -> {
+            attempts.incrementAndGet();
+            throw new SQLException("invalid schema");
+        })).isInstanceOf(SQLException.class).hasMessage("invalid schema");
+        assertThat(attempts).hasValue(1);
     }
 
     private static ProjectSearchQuery search(String text, ProjectSearchScope scope) {

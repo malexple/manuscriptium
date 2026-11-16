@@ -14,8 +14,8 @@ import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
 import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.LineEnding;
 import ru.mcs.plugin.mdeditor.view.EditorCanvas;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 
 class TyporaKeymapTest {
 

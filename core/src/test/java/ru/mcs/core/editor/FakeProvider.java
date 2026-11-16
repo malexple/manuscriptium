@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 
 final class FakeProvider implements FileEditorProvider {
 

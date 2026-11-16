@@ -7,8 +7,8 @@ import javax.swing.SwingUtilities;
 import ru.mcs.plugin.mdeditor.action.EditorActionIds;
 import ru.mcs.plugin.mdeditor.action.WordCount;
 import ru.mcs.plugin.mdeditor.mode.EditorMode;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.i18n.I18n;
 
 /** Создаёт действия по запросу declarative ProxyAction из plugin.yml. */

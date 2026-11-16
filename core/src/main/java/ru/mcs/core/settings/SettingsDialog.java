@@ -25,9 +25,9 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreePath;
 import ru.mcs.core.i18n.Messages;
-import ru.mcs.spi.settings.Configurable;
-import ru.mcs.spi.settings.ConfigurableProvider;
-import ru.mcs.spi.settings.SettingsManager;
+import ru.mcs.spi.swing.settings.Configurable;
+import ru.mcs.spi.swing.settings.ConfigurableProvider;
+import ru.mcs.spi.swing.settings.SettingsManager;
 
 /** Модальный диалог настроек. Страница и её плагин создаются только при первом выборе в дереве. */
 final class SettingsDialog extends JDialog {

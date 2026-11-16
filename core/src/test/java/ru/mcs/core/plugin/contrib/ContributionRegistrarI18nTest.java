@@ -14,7 +14,7 @@ import ru.mcs.core.plugin.PluginDescriptorParser;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.toolwindow.LayoutStore;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
-import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.swing.PluginContext;
 import ru.mcs.spi.i18n.I18n;
 
 class ContributionRegistrarI18nTest {

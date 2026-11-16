@@ -17,8 +17,8 @@ import ru.mcs.core.plugin.PluginDescriptor;
 import ru.mcs.core.plugin.PluginDescriptorParser;
 import ru.mcs.core.plugin.contrib.ContributionRegistrar;
 import ru.mcs.core.shell.PluginContextImpl;
-import ru.mcs.spi.Plugin;
-import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.swing.Plugin;
+import ru.mcs.spi.swing.PluginContext;
 
 class ContributionToolWindowTest {
 

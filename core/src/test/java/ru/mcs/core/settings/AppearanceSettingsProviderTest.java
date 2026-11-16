@@ -9,7 +9,7 @@ import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mcs.core.theme.McsThemeManager;
-import ru.mcs.spi.settings.Configurable;
+import ru.mcs.spi.swing.settings.Configurable;
 
 class AppearanceSettingsProviderTest {
 

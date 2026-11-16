@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.settings.Configurable;
-import ru.mcs.spi.settings.ConfigurableProvider;
-import ru.mcs.spi.settings.SettingsManager;
+import ru.mcs.spi.swing.settings.Configurable;
+import ru.mcs.spi.swing.settings.ConfigurableProvider;
+import ru.mcs.spi.swing.settings.SettingsManager;
 
 class SettingsManagerImplTest {
 

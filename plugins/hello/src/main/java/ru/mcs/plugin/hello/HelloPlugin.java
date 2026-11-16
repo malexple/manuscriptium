@@ -7,15 +7,15 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
-import ru.mcs.spi.Plugin;
-import ru.mcs.spi.PluginContext;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.Plugin;
+import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.editor.EditorDataKeys;
 import ru.mcs.spi.editor.EditorTopics;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 import ru.mcs.spi.service.Scope;
-import ru.mcs.spi.settings.Configurable;
+import ru.mcs.spi.swing.settings.Configurable;
 import ru.mcs.spi.ui.StatusBarTask;
 
 /**

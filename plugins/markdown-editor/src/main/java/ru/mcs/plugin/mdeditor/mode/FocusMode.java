@@ -2,7 +2,7 @@ package ru.mcs.plugin.mdeditor.mode;
 
 import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Приглушает неактивные блоки; интенсивность может быть переопределена CSS-переменной темы. */
 public final class FocusMode {

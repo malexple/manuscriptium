@@ -1,9 +1,9 @@
 package ru.mcs.core.action;
 
 import java.util.function.Supplier;
-import ru.mcs.spi.action.ActionGroup;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.ActionGroup;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.DataContext;
 
 /** Безопасный вызов update/actionPerformed: исключение плагина не должно ломать меню и тулбар. */

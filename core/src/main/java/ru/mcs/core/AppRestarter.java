@@ -4,9 +4,15 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.LongFunction;
 import javax.swing.JOptionPane;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.shell.ShellFrame;
@@ -15,6 +21,8 @@ import ru.mcs.core.shell.ShellFrame;
 public final class AppRestarter {
 
     private static final String MAIN_CLASS = "ru.mcs.app.ManuscriptiumApp";
+    private static final String RESTART_PARENT_PREFIX = "--mcs-restart-parent=";
+    private static final long PREVIOUS_PROCESS_TIMEOUT_MS = 30_000;
 
     private AppRestarter() {
     }
@@ -30,15 +38,66 @@ public final class AppRestarter {
 
     private static void launch(ShellFrame frame, String[] args) {
         try {
-            List<String> command = command(System.getProperties(),
+            List<String> command = restartCommand(System.getProperties(),
                     ManagementFactory.getRuntimeMXBean().getInputArguments(), args,
-                    System.getProperty("os.name", ""));
+                    System.getProperty("os.name", ""), ProcessHandle.current().pid());
             new ProcessBuilder(command).inheritIO().start();
             System.exit(0);
         } catch (IOException | RuntimeException e) {
             JOptionPane.showMessageDialog(frame, Messages.get("plugins.restart.error", e.toString()),
                     Messages.get("plugins.restart.title"), JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    static List<String> restartCommand(Properties properties, List<String> jvmArgs, String[] args,
+                                       String osName, long parentPid) {
+        if (parentPid <= 0) {
+            throw new IllegalArgumentException("Parent process id must be positive");
+        }
+        List<String> command = command(properties, jvmArgs, args, osName);
+        command.add(RESTART_PARENT_PREFIX + parentPid);
+        return command;
+    }
+
+    /**
+     * Не даёт новому процессу открыть SQLite/Lucene до завершения shutdown hook прежнего процесса.
+     * Возвращает аргументы приложения без служебного restart-аргумента.
+     */
+    public static String[] awaitPreviousProcess(String[] args) {
+        return awaitPreviousProcess(args, AppRestarter::processExit, PREVIOUS_PROCESS_TIMEOUT_MS);
+    }
+
+    static String[] awaitPreviousProcess(String[] args, LongFunction<CompletableFuture<?>> processExits,
+                                         long timeoutMillis) {
+        if (args.length == 0 || !args[args.length - 1].startsWith(RESTART_PARENT_PREFIX)) {
+            return args;
+        }
+        String parentArgument = args[args.length - 1];
+        long parentPid;
+        try {
+            parentPid = Long.parseLong(parentArgument.substring(RESTART_PARENT_PREFIX.length()));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid restart parent process id", e);
+        }
+        String[] applicationArgs = Arrays.copyOf(args, args.length - 1);
+        try {
+            processExits.apply(parentPid).get(timeoutMillis, TimeUnit.MILLISECONDS);
+            return applicationArgs;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for the previous application process", e);
+        } catch (TimeoutException e) {
+            throw new IllegalStateException("Previous application process did not stop within "
+                    + timeoutMillis + " ms", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Cannot wait for the previous application process", e.getCause());
+        }
+    }
+
+    private static CompletableFuture<?> processExit(long pid) {
+        return ProcessHandle.of(pid)
+                .<CompletableFuture<?>>map(ProcessHandle::onExit)
+                .orElseGet(() -> CompletableFuture.completedFuture(null));
     }
 
     static List<String> command(Properties properties, List<String> jvmArgs, String[] args, String osName) {

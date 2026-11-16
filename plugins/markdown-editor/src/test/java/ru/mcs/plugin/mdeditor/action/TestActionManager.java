@@ -3,10 +3,10 @@ package ru.mcs.plugin.mdeditor.action;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.action.AnAction;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.action.AnAction;
 import ru.mcs.spi.action.Constraints;
-import ru.mcs.spi.action.DefaultActionGroup;
+import ru.mcs.spi.swing.action.DefaultActionGroup;
 
 /** Минимальный SPI-only ActionManager для тестов меню и keymap без зависимости от core. */
 final class TestActionManager implements ActionManager {
@@ -50,7 +50,7 @@ final class TestActionManager implements ActionManager {
         for (String id : EditorActionIds.ALL) {
             manager.registerAction(id, new AnAction(id) {
                 @Override
-                public void actionPerformed(ru.mcs.spi.action.AnActionEvent event) {
+                public void actionPerformed(ru.mcs.spi.swing.action.AnActionEvent event) {
                 }
             });
         }

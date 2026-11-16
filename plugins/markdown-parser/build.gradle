@@ -12,7 +12,7 @@ tasks.named('compileJava') {
 }
 
 dependencies {
-    compileOnly project(':spi')
+    compileOnly project(':spi-swing')
 
     implementation "com.vladsch.flexmark:flexmark:${flexmarkVersion}"
     implementation "com.vladsch.flexmark:flexmark-ext-yaml-front-matter:${flexmarkVersion}"
@@ -22,7 +22,7 @@ dependencies {
     implementation "com.vladsch.flexmark:flexmark-ext-tables:${flexmarkVersion}"
     implementation "com.vladsch.flexmark:flexmark-ext-gfm-strikethrough:${flexmarkVersion}"
 
-    testImplementation project(':spi')
+    testImplementation project(':spi-swing')
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

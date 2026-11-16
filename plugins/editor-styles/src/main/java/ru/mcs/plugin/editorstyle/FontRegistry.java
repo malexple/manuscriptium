@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 import ru.mcs.spi.editor.style.CssDiagnostic;
 import ru.mcs.spi.editor.style.FontFaceDefinition;
 import ru.mcs.spi.editor.style.StyleSheet;

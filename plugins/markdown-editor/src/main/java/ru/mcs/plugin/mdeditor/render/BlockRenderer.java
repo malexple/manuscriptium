@@ -5,8 +5,8 @@ import ru.mcs.plugin.mdeditor.draw.DrawSink;
 import ru.mcs.plugin.mdeditor.layout.BlockBox;
 import ru.mcs.plugin.mdeditor.layout.LineBox;
 import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.style.ComputedStyle;
-import ru.mcs.spi.editor.style.CssBorder;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.CssBorder;
 
 /** Тематическое оформление блока: фон, radius, границы и inline-содержимое. */
 public final class BlockRenderer {

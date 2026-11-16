@@ -5,10 +5,10 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
-import ru.mcs.spi.Plugin;
-import ru.mcs.spi.PluginContext;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.Plugin;
+import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 
 /** Минимальная точка входа: действие и панель создаются после активации onDemand. */
 public final class TemplatePlugin implements Plugin {

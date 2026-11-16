@@ -5,7 +5,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import ru.mcs.spi.ui.ToolWindow;
 import ru.mcs.spi.ui.ToolWindowAnchor;
-import ru.mcs.spi.ui.ToolWindowSpec;
+import ru.mcs.spi.swing.ui.ToolWindowSpec;
 
 public final class ToolWindowImpl implements ToolWindow {
 

@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import ru.mcs.spi.ui.StatusBar;
+import ru.mcs.spi.swing.ui.StatusBar;
 import ru.mcs.spi.ui.StatusBarTask;
-import ru.mcs.spi.ui.StatusBarWidget;
+import ru.mcs.spi.swing.ui.StatusBarWidget;
 
 /** Модель статус-бара (без Swing): виджеты, сообщение, фоновые задачи. Работает и в headless-режиме. */
 public final class StatusBarModel {

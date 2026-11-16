@@ -7,8 +7,8 @@ import java.util.Collections;
 import java.util.List;
 import javax.swing.tree.DefaultMutableTreeNode;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.settings.Configurable;
-import ru.mcs.spi.settings.ConfigurableProvider;
+import ru.mcs.spi.swing.settings.Configurable;
+import ru.mcs.spi.swing.settings.ConfigurableProvider;
 
 class SettingsTreeTest {
 

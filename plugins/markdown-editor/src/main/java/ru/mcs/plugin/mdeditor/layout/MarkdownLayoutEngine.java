@@ -17,11 +17,11 @@ import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
 import ru.mcs.spi.editor.AstIndex;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.style.ComputedStyle;
-import ru.mcs.spi.editor.style.CssBorder;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.CssBorder;
 import ru.mcs.spi.editor.style.CssEdges;
 import ru.mcs.spi.editor.style.CssLength;
-import ru.mcs.spi.editor.style.EditorStyleService;
+import ru.mcs.spi.swing.editor.style.EditorStyleService;
 import ru.mcs.spi.editor.style.ElementState;
 import ru.mcs.spi.editor.style.StyleElement;
 

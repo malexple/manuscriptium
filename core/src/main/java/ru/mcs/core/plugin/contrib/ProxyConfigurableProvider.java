@@ -1,8 +1,8 @@
 package ru.mcs.core.plugin.contrib;
 
 import ru.mcs.core.plugin.PluginActivator;
-import ru.mcs.spi.settings.Configurable;
-import ru.mcs.spi.settings.ConfigurableProvider;
+import ru.mcs.spi.swing.settings.Configurable;
+import ru.mcs.spi.swing.settings.ConfigurableProvider;
 
 /** Метаданные страницы доступны сразу; плагин активируется только при открытии страницы. */
 final class ProxyConfigurableProvider implements ConfigurableProvider {

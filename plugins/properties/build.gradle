@@ -1,8 +1,8 @@
 dependencies {
     // SDK предоставляется приложением, в jar плагина не попадает.
-    compileOnly project(':spi')
+    compileOnly project(':spi-swing')
 
-    testImplementation project(':spi')
+    testImplementation project(':spi-swing')
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

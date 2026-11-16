@@ -6,18 +6,18 @@ import java.util.concurrent.Executors;
 import javax.swing.JComponent;
 import ru.mcs.plugin.mdeditor.action.EditorActionIds;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
-import ru.mcs.spi.Plugin;
-import ru.mcs.spi.PluginContext;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.editor.BlockRendererExtensionRegistry;
-import ru.mcs.spi.editor.FileEditorProvider;
-import ru.mcs.spi.editor.MathRenderingService;
+import ru.mcs.spi.swing.Plugin;
+import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.editor.BlockRendererExtensionRegistry;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
+import ru.mcs.spi.swing.editor.MathRenderingService;
 import ru.mcs.spi.editor.MarkdownParser;
-import ru.mcs.spi.editor.ObsidianLinkService;
-import ru.mcs.spi.editor.style.EditorStyleService;
+import ru.mcs.spi.swing.editor.ObsidianLinkService;
+import ru.mcs.spi.swing.editor.style.EditorStyleService;
 import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
-import ru.mcs.spi.settings.Configurable;
+import ru.mcs.spi.swing.settings.Configurable;
 
 /** Каркас bundled Canvas-редактора. Все вклады объявлены в plugin.yml и создаются по запросу хоста. */
 public final class MarkdownEditorPlugin implements Plugin {

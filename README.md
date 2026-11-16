@@ -14,6 +14,15 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
 внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
 
+## Модульная граница SDK
+
+`spi` (`ru.mcs.spi`) содержит только платформенно-нейтральные контракты, идентификаторы, DTO, события и сервисы и не
+требует `java.desktop`. Все AWT/Swing-сигнатуры находятся в `spi-swing` (`ru.mcs.spi.swing`): `Plugin`, actions,
+file editors, rendering/style API, settings, status bar и tool windows. Модуль `spi-swing` транзитивно требует `spi`;
+поэтому desktop-клиенты и плагины подключают `spi-swing`, а нейтральные API остаются доступны без обратной зависимости
+`spi → spi-swing`. `SpiPurityTest` проверяет скомпилированные classfiles, а `SpiSwingModuleTest` — публичные контракты
+и JPMS exports.
+
 ## Markdown Canvas Editor — E0–E8
 
 `.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
@@ -52,7 +61,7 @@ Bundled-плагин `plugins/editor-styles` загружает девять Typ
 явный выбор темы редактора через `EditorStyleService` отключает это автоматическое следование. JSON-токены и переключение
 FlatLaf-тем оболочки не изменены.
 
-Плагин предоставляет JDK-only `EditorStyleService` с типизированным `ComputedStyle`. CSS-движок поддерживает каскад и `!important`,
+Плагин предоставляет `EditorStyleService` из `spi-swing` с типизированным AWT-ориентированным `ComputedStyle`. CSS-движок поддерживает каскад и `!important`,
 type/id/class/`:root`/`:hover`/`:nth-child(odd|even)`, descendant- и child-комбинаторы, группы селекторов, переменные `--name` и
 `var()`, размеры, цвета, отступы, границы, шрифты и локальные `@font-face`. Неподдерживаемые свойства и конструкции попадают в журнал
 как `CssDiagnostic` и не прерывают загрузку остальной темы. CSS и TTF/OTF-шрифты загружаются в daemon executor вне EDT; внешние

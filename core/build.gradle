@@ -1,5 +1,5 @@
 dependencies {
-    api project(':spi')
+    api project(':spi-swing')
     implementation "com.formdev:flatlaf:${flatlafVersion}"
     implementation "com.formdev:flatlaf-extras:${flatlafVersion}"
     // В flatlaf-extras JSVG optional (requires static): явная зависимость нужна для compileClasspath и jlink.

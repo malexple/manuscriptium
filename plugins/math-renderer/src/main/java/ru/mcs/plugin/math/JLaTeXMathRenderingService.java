@@ -7,7 +7,7 @@ import java.awt.image.BufferedImage;
 import org.scilab.forge.jlatexmath.TeXConstants;
 import org.scilab.forge.jlatexmath.TeXFormula;
 import org.scilab.forge.jlatexmath.TeXIcon;
-import ru.mcs.spi.editor.MathRenderingService;
+import ru.mcs.spi.swing.editor.MathRenderingService;
 
 final class JLaTeXMathRenderingService implements MathRenderingService {
 

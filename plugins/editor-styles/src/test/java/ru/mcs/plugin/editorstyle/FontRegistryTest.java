@@ -6,7 +6,7 @@ import java.awt.Font;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 import ru.mcs.spi.editor.style.FontFaceDefinition;
 import ru.mcs.spi.editor.style.StyleSheet;
 

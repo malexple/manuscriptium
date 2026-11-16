@@ -11,7 +11,7 @@ import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.state.StateYaml;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.ui.ToolWindowAnchor;
-import ru.mcs.spi.ui.ToolWindowSpec;
+import ru.mcs.spi.swing.ui.ToolWindowSpec;
 
 class ToolWindowManagerImplTest {
 

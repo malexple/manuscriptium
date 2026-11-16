@@ -18,7 +18,7 @@ import ru.mcs.core.settings.SettingsManagerImpl;
 import ru.mcs.core.shell.PluginContextImpl;
 import ru.mcs.core.toolwindow.LayoutStore;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
-import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.swing.PluginContext;
 import ru.mcs.spi.action.ActionIds;
 
 class ContributionRegistrarTest {

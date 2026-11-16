@@ -20,7 +20,7 @@ import ru.mcs.plugin.mdeditor.model.DocumentModelImpl;
 import ru.mcs.plugin.mdeditor.model.DocumentProperties;
 import ru.mcs.plugin.mdeditor.model.LineEnding;
 import ru.mcs.plugin.mdeditor.widget.WidgetRegistry;
-import ru.mcs.spi.editor.ObsidianLinkService;
+import ru.mcs.spi.swing.editor.ObsidianLinkService;
 import ru.mcs.spi.service.AtomicFileStore;
 
 class EditorCanvasCitationTest {

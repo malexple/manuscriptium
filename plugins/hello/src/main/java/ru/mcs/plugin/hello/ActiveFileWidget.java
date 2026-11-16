@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import ru.mcs.spi.editor.FileEditorListener;
-import ru.mcs.spi.ui.StatusBarWidget;
+import ru.mcs.spi.swing.ui.StatusBarWidget;
 
 /** Показывает имя активного файла. Обновляется по сообщениям шины (подписка на EDT). */
 final class ActiveFileWidget implements StatusBarWidget, FileEditorListener {

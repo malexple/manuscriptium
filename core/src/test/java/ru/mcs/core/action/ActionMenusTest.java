@@ -7,11 +7,11 @@ import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.DataContext;
-import ru.mcs.spi.action.DefaultActionGroup;
-import ru.mcs.spi.action.Separator;
+import ru.mcs.spi.swing.action.DefaultActionGroup;
+import ru.mcs.spi.swing.action.Separator;
 
 class ActionMenusTest {
 

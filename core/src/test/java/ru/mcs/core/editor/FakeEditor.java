@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
-import ru.mcs.spi.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditor;
 
 final class FakeEditor implements FileEditor {
 

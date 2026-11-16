@@ -30,8 +30,8 @@ import javax.swing.event.DocumentListener;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionPlaces;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.Constraints;
 import ru.mcs.spi.action.DataContext;
 

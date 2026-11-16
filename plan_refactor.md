@@ -1,6 +1,6 @@
 # Manuscriptium — план архитектурного рефакторинга
 
-Дата: 2026-11-16. Статус: шаги 1–3 завершены; следующий шаг — выделение `spi-swing`.
+Дата: 2026-11-16. Статус: шаги 1–4 завершены; следующий шаг — выделение универсального `editor`.
 
 ## 1. Цель и границы
 
@@ -196,6 +196,15 @@
 
 ### Шаг 4. Выделить `spi-swing`
 
+**Статус: завершён и проверен 2026-11-17.**
+
+- Создан JPMS-модуль `ru.mcs.spi.swing`; 29 production-файлов со Swing/AWT-контрактами перенесены из `spi` в пакеты `ru.mcs.spi.swing.*`. `spi` больше не требует `java.desktop`, split packages отсутствуют.
+- Обновлены Gradle/JPMS-зависимости, bundled-плагины, service declarations, standalone `plugin-template`, README и SDK-документация. Старые Swing-сигнатуры в `spi` не сохранялись: внешние плагины необходимо пересобрать против нового SDK.
+- Добавлены `SpiPurityTest` и `SpiSwingModuleTest`, а также regression-тесты restart-handshake и повторного открытия пересобираемых кэшей. Полный `clean test :app:devHome :app:jlink`: 138 test suites, 522 теста, 0 failures/errors/skipped; девять Linux golden-тем прошли без обновления эталонов.
+- Standalone `plugin-template` собран. Bundled и external packaged smoke завершились с `failures={}`; `ru.mcs.plugin.math` и внешний `ru.mcs.plugin.template` присутствуют в фактическом порядке загрузки, `template.hello` и `toolwindow.toggle.template.panel` зарегистрированы. CI-проверки приведены к этому составу и дополнены проверками `ru.mcs.spi` и `ru.mcs.spi.swing`.
+- На packaged image подтверждены Settings, Plugins, Install from disk, предупреждение о полном доступе плагина к JVM, установка внешнего JAR и restart prompt, Template/Hello/Notes/Properties tool windows, Project tree, вкладки, Canvas, status bar и Notifications.
+- Restart переведён на кроссплатформенный handshake по PID через `ProcessHandle`: новый процесс ждёт завершения прежнего до инициализации AWT, плагинов, SQLite и Lucene. Дополнительно первичное открытие Project выполняет один retry только после `IOException`; первая попытка закрывается, `SQLException` и runtime errors не повторяются. Два restart на tmpfs и два на исходной FUSE-ФС прошли; во втором FUSE-прогоне retry реально восстановил открытие после `EIO` в Lucene commit.
+
 **Изменения**
 
 1. Создать модуль `spi-swing` и перенести из `spi` типы, содержащие `JComponent`, AWT/Swing `Icon` и другие desktop UI-типы.
@@ -258,7 +267,7 @@
 1. Создать `markdown` с пакетами `api`, `parser`, `ast`, `editor`, `layout`, `render`, `widget`, `style`, `reference`, `frontmatter`, `properties`, `notes` и `math`.
 2. Перенести в него `plugins:markdown-parser`, `plugins:markdown-editor`, `plugins:editor-styles` и `plugins:math-renderer`.
 3. Перенести `plugins:properties` и `plugins:notes`, поскольку их текущая реализация работает с Markdown Front Matter и Markdown comments.
-4. Удалить отдельные plugin descriptors и `provides ru.mcs.spi.Plugin` для объединённых встроенных модулей. Внешние плагины продолжают загружаться через `core`.
+4. Удалить отдельные plugin descriptors и `provides ru.mcs.spi.swing.Plugin` для объединённых встроенных модулей. Внешние плагины продолжают загружаться через `core`.
 5. Экспортировать через JPMS только публичный `ru.mcs.markdown.api` и действительно необходимые пакеты. Flexmark и JLaTeXMath не появляются в сигнатурах SPI.
 6. Перенести ресурсы, иконки, CSS, i18n и тесты вместе с реализацией.
 7. Удалить `plugins:hello`, его манифест, ресурсы, тесты и включение в сборку.

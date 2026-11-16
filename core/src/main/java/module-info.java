@@ -1,5 +1,5 @@
 module ru.mcs.core {
-    requires transitive ru.mcs.spi;
+    requires transitive ru.mcs.spi.swing;
     requires java.management;
     requires jdk.management;
     requires java.sql;
@@ -13,5 +13,5 @@ module ru.mcs.core {
     exports ru.mcs.core;
     exports ru.mcs.core.platform;
 
-    uses ru.mcs.spi.Plugin;
+    uses ru.mcs.spi.swing.Plugin;
 }

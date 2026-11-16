@@ -8,10 +8,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.action.AnAction;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.action.AnAction;
 import ru.mcs.spi.action.Constraints;
-import ru.mcs.spi.action.DefaultActionGroup;
+import ru.mcs.spi.swing.action.DefaultActionGroup;
 
 public final class ActionManagerImpl implements ActionManager {
 

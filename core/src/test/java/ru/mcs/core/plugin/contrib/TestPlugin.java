@@ -7,11 +7,11 @@ import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import ru.mcs.spi.Plugin;
-import ru.mcs.spi.PluginContext;
-import ru.mcs.spi.editor.FileEditor;
-import ru.mcs.spi.editor.FileEditorProvider;
-import ru.mcs.spi.settings.Configurable;
+import ru.mcs.spi.swing.Plugin;
+import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
+import ru.mcs.spi.swing.settings.Configurable;
 
 final class TestPlugin implements Plugin {
 

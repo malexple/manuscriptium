@@ -1,5 +1,5 @@
 module ru.mcs.plugin.mdparser {
-    requires ru.mcs.spi;
+    requires ru.mcs.spi.swing;
     requires flexmark;
     requires flexmark.util.ast;
     requires flexmark.util.misc;
@@ -11,5 +11,5 @@ module ru.mcs.plugin.mdparser {
     requires flexmark.ext.wikilink;
     requires flexmark.ext.yaml.front.matter;
 
-    provides ru.mcs.spi.Plugin with ru.mcs.plugin.mdparser.MarkdownParserPlugin;
+    provides ru.mcs.spi.swing.Plugin with ru.mcs.plugin.mdparser.MarkdownParserPlugin;
 }

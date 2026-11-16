@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ru.mcs.spi.editor.BlockKind;
 import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.ObsidianLinkService;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.ObsidianLinkService;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 import ru.mcs.spi.service.AtomicFileStore;
 
 class TransclusionConcurrencyTest {

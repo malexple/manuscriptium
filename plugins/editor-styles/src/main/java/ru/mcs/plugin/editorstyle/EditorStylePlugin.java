@@ -1,8 +1,8 @@
 package ru.mcs.plugin.editorstyle;
 
-import ru.mcs.spi.Plugin;
-import ru.mcs.spi.PluginContext;
-import ru.mcs.spi.editor.style.EditorStyleService;
+import ru.mcs.spi.swing.Plugin;
+import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.editor.style.EditorStyleService;
 import ru.mcs.spi.editor.style.ShellThemeService;
 import ru.mcs.spi.service.Scope;
 

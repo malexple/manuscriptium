@@ -1,17 +1,17 @@
 package ru.mcs.core.shell;
 
 import ru.mcs.core.settings.SettingsManagerImpl;
-import ru.mcs.spi.PluginContext;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.editor.FileEditorManager;
+import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.editor.FileEditorManager;
 import ru.mcs.spi.event.MessageBus;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.ServiceRegistry;
 import ru.mcs.spi.service.StateManager;
-import ru.mcs.spi.settings.SettingsManager;
+import ru.mcs.spi.swing.settings.SettingsManager;
 import ru.mcs.spi.ui.NotificationManager;
-import ru.mcs.spi.ui.StatusBar;
-import ru.mcs.spi.ui.ToolWindowManager;
+import ru.mcs.spi.swing.ui.StatusBar;
+import ru.mcs.spi.swing.ui.ToolWindowManager;
 
 public final class PluginContextImpl implements PluginContext {
 

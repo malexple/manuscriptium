@@ -16,9 +16,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import ru.mcs.spi.editor.FileEditor;
-import ru.mcs.spi.editor.FileEditorManager;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditorManager;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 
 /**
  * Модель области редактора: провайдеры, открытые вкладки (порядок: закреплённые первыми), выбор, сессия.

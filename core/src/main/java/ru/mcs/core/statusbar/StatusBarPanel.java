@@ -17,7 +17,7 @@ import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
-import ru.mcs.spi.ui.StatusBarWidget;
+import ru.mcs.spi.swing.ui.StatusBarWidget;
 
 /** Статус-бар: сообщение и левые виджеты слева; правые виджеты и индикатор задач справа. */
 public final class StatusBarPanel extends JPanel {

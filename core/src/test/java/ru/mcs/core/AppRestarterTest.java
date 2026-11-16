@@ -6,6 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 class AppRestarterTest {
@@ -55,6 +58,67 @@ class AppRestarterTest {
 
         assertThat(command).containsExactly(Path.of("/runtime", "bin", "java.exe").toString(),
                 "-cp", "/app/classes", "ru.mcs.app.ManuscriptiumApp");
+    }
+
+    @Test
+    void restartCommandAddsParentProcessHandshake() {
+        Properties properties = new Properties();
+        properties.setProperty("java.home", "/runtime");
+        properties.setProperty("jdk.module.path", "/runtime/app");
+        properties.setProperty("jdk.module.main", "ru.mcs.app");
+        properties.setProperty("jdk.module.main.class", "ru.mcs.app.ManuscriptiumApp");
+
+        List<String> command = AppRestarter.restartCommand(properties, List.of(),
+                new String[] {"--home=/data"}, "Linux", 4242);
+
+        assertThat(command).endsWith("--home=/data", "--mcs-restart-parent=4242");
+    }
+
+    @Test
+    void waitsForPreviousProcessAndRemovesInternalArgument() {
+        AtomicBoolean exited = new AtomicBoolean();
+        CompletableFuture<?> exit = CompletableFuture.runAsync(() -> {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+            exited.set(true);
+        });
+
+        String[] args = AppRestarter.awaitPreviousProcess(
+                new String[] {"--home=/data", "--mcs-restart-parent=4242"}, ignored -> exit, 1000);
+
+        assertThat(exited).isTrue();
+        assertThat(args).containsExactly("--home=/data");
+    }
+
+    @Test
+    void missingPreviousProcessStillRemovesInternalArgument() {
+        String[] args = AppRestarter.awaitPreviousProcess(
+                new String[] {"--home=/data", "--mcs-restart-parent=4242"},
+                ignored -> CompletableFuture.completedFuture(null), 1000);
+
+        assertThat(args).containsExactly("--home=/data");
+    }
+
+    @Test
+    void ordinaryLaunchDoesNotWaitOrChangeArguments() {
+        String[] original = {"--home=/data"};
+
+        String[] args = AppRestarter.awaitPreviousProcess(original,
+                ignored -> new CompletableFuture<>(), 1);
+
+        assertThat(args).isSameAs(original);
+    }
+
+    @Test
+    void previousProcessTimeoutFailsBeforeOpeningProject() {
+        assertThatThrownBy(() -> AppRestarter.awaitPreviousProcess(
+                new String[] {"--mcs-restart-parent=4242"}, ignored -> new CompletableFuture<>(), 1))
+                .isInstanceOf(IllegalStateException.class)
+                .hasCauseInstanceOf(TimeoutException.class);
     }
 
     @Test

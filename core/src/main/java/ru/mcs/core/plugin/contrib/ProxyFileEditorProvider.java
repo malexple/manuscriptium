@@ -6,8 +6,8 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.List;
 import ru.mcs.core.plugin.PluginActivator;
-import ru.mcs.spi.editor.FileEditor;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 
 /** Заглушка провайдера из plugin.yml: подходит по маскам имени файла, плагин загружает при создании редактора. */
 final class ProxyFileEditorProvider implements FileEditorProvider {

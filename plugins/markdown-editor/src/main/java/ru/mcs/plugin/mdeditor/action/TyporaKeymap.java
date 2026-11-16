@@ -6,7 +6,7 @@ import java.awt.event.KeyEvent;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
-import ru.mcs.spi.action.ActionManager;
+import ru.mcs.spi.swing.action.ActionManager;
 import ru.mcs.spi.action.ActionPlaces;
 
 /** Профиль Typora: локальные клавиши редактора делегируют в общий ActionManager. */

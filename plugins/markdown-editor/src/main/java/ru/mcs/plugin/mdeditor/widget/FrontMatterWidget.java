@@ -5,7 +5,7 @@ import java.awt.Font;
 import java.awt.Rectangle;
 import ru.mcs.plugin.mdeditor.draw.BlockWidget;
 import ru.mcs.plugin.mdeditor.draw.DrawSink;
-import ru.mcs.spi.editor.style.ComputedStyle;
+import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Свёрнутая YAML-карточка: клик переводит активный блок в source для редактирования. */
 public final class FrontMatterWidget extends AbstractBlockWidget {

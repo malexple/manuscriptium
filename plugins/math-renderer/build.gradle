@@ -11,10 +11,10 @@ tasks.named('compileJava') {
 }
 
 dependencies {
-    compileOnly project(':spi')
+    compileOnly project(':spi-swing')
     implementation "org.scilab.forge:jlatexmath:${jlatexmathVersion}"
 
-    testImplementation project(':spi')
+    testImplementation project(':spi-swing')
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

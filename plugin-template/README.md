@@ -35,5 +35,5 @@ plugin-template/build/libs/manuscriptium-plugin-template-0.1.0.jar
 5. Добавьте реализацию в `TemplatePlugin` и при необходимости переименуйте класс; обновите `provides` в
    `module-info.java`.
 
-Зависимость `ru.mcs:spi` остаётся `compileOnly`: классы SDK уже есть у приложения и не должны попадать в JAR
-плагина. Полное руководство: `docs/plugin-sdk.md` в репозитории Manuscriptium.
+Зависимость `ru.mcs:spi-swing` остаётся `compileOnly`: классы SDK уже есть у приложения и не должны попадать в JAR
+плагина. Базовый `ru.mcs:spi` подключается транзитивно. Полное руководство: `docs/plugin-sdk.md` в репозитории Manuscriptium.

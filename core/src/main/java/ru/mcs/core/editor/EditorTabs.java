@@ -24,7 +24,7 @@ import javax.swing.SwingUtilities;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.ActionMenus;
 import ru.mcs.core.i18n.Messages;
-import ru.mcs.spi.action.ActionGroup;
+import ru.mcs.spi.swing.action.ActionGroup;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionPlaces;
 import ru.mcs.spi.action.DataContext;

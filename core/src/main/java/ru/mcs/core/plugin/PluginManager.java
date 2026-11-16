@@ -18,8 +18,8 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import ru.mcs.core.plugin.contrib.ContributionRegistrar;
 import ru.mcs.spi.McsSdk;
-import ru.mcs.spi.Plugin;
-import ru.mcs.spi.PluginContext;
+import ru.mcs.spi.swing.Plugin;
+import ru.mcs.spi.swing.PluginContext;
 
 /**
  * Находит плагины в {@code <pluginsDir>/<plugin>/plugin.yml + *.jar} каждого переданного каталога,
@@ -250,7 +250,7 @@ public final class PluginManager {
                 .filter(p -> p.type().getModule().getLayer() == layer)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
-                        "Module " + d.module() + " does not provide ru.mcs.spi.Plugin"))
+                        "Module " + d.module() + " does not provide ru.mcs.spi.swing.Plugin"))
                 .get();
         dc.layer = layer;
         dc.plugin = plugin;

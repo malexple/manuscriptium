@@ -16,7 +16,7 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.DocumentEvent;
-import ru.mcs.spi.editor.ObsidianLinkService;
+import ru.mcs.spi.swing.editor.ObsidianLinkService;
 import ru.mcs.spi.service.AtomicFileStore;
 
 /** Живая редактируемая сессия одного embed; разделяется layout-перестроениями одной и той же ссылки. */

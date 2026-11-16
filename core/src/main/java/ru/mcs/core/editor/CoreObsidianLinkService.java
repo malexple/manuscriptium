@@ -6,7 +6,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.JComponent;
-import ru.mcs.spi.editor.ObsidianLinkService;
+import ru.mcs.spi.swing.editor.ObsidianLinkService;
 
 /** Адаптер существующих ObsidianLinkResolver/ObsidianLinkNavigator к публичному SPI. */
 public final class CoreObsidianLinkService implements ObsidianLinkService {

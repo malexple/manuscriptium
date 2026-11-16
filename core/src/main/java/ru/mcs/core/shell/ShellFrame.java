@@ -21,7 +21,7 @@ import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionPlaces;
 import ru.mcs.spi.action.DataContext;
-import ru.mcs.spi.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditor;
 
 /** Оболочка: меню и тулбар, панели со stripes, вкладки редактора, статус-бар. */
 public final class ShellFrame extends JFrame {

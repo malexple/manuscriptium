@@ -1,6 +1,6 @@
 package ru.mcs.core.plugin;
 
-import ru.mcs.spi.Plugin;
+import ru.mcs.spi.swing.Plugin;
 
 /** Загружает плагин (если ещё не загружен) и возвращает его экземпляр. */
 @FunctionalInterface

@@ -9,12 +9,12 @@ import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
-import ru.mcs.spi.action.ActionGroup;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.ActionGroup;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.DataContext;
-import ru.mcs.spi.action.Presentation;
-import ru.mcs.spi.action.Separator;
+import ru.mcs.spi.swing.action.Presentation;
+import ru.mcs.spi.swing.action.Separator;
 
 /** Построение Swing-меню из групп действий. Элементы вычисляются в момент показа (update). */
 public final class ActionMenus {

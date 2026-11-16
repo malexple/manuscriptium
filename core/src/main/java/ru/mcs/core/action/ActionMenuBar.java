@@ -3,10 +3,10 @@ package ru.mcs.core.action;
 import java.util.function.Supplier;
 import javax.swing.JMenuBar;
 import javax.swing.SwingUtilities;
-import ru.mcs.spi.action.ActionGroup;
+import ru.mcs.spi.swing.action.ActionGroup;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionPlaces;
-import ru.mcs.spi.action.AnAction;
+import ru.mcs.spi.swing.action.AnAction;
 import ru.mcs.spi.action.DataContext;
 
 /** Главное меню: верхний уровень — подгруппы группы MainMenu; пустые группы скрываются. */

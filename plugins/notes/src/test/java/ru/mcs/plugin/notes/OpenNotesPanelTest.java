@@ -16,9 +16,9 @@ import javax.swing.JList;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.spi.editor.FileEditor;
-import ru.mcs.spi.editor.FileEditorManager;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditorManager;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 import ru.mcs.spi.i18n.I18n;
 
 class OpenNotesPanelTest {

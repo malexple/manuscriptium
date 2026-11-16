@@ -6,10 +6,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.mcs.spi.action.ActionPlaces;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.DataContext;
-import ru.mcs.spi.action.DefaultActionGroup;
+import ru.mcs.spi.swing.action.DefaultActionGroup;
 
 class CommandPaletteModelTest {
 

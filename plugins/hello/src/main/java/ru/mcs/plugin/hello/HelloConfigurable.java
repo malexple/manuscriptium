@@ -8,7 +8,7 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import ru.mcs.spi.i18n.I18n;
-import ru.mcs.spi.settings.Configurable;
+import ru.mcs.spi.swing.settings.Configurable;
 import ru.mcs.spi.settings.ConfigurationException;
 
 /** Страница настроек Hello: шаг, на который действие-счётчик увеличивает сохраняемое значение. */

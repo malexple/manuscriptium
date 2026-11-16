@@ -1,8 +1,8 @@
 package ru.mcs.plugin.mdeditor.action;
 
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.action.AnAction;
-import ru.mcs.spi.action.AnActionEvent;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.DataContext;
 
 /** Выполняет именно зарегистрированное действие для keymap и popup, включая его update-контракт. */

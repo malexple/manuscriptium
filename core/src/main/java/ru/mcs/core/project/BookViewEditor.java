@@ -26,7 +26,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import ru.mcs.core.i18n.Messages;
-import ru.mcs.spi.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditor;
 import ru.mcs.spi.service.AtomicFileStore;
 
 /** Виртуальная книжная вкладка: редакторы глав идут подряд, а сохранение адресует исходные файлы. */

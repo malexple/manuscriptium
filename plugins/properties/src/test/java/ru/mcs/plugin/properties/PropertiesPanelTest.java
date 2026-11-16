@@ -17,18 +17,18 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.spi.PluginContext;
-import ru.mcs.spi.action.ActionManager;
-import ru.mcs.spi.editor.FileEditorManager;
-import ru.mcs.spi.editor.FileEditorProvider;
+import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.action.ActionManager;
+import ru.mcs.spi.swing.editor.FileEditorManager;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 import ru.mcs.spi.event.MessageBus;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.ServiceRegistry;
 import ru.mcs.spi.service.StateManager;
-import ru.mcs.spi.settings.SettingsManager;
+import ru.mcs.spi.swing.settings.SettingsManager;
 import ru.mcs.spi.ui.NotificationManager;
-import ru.mcs.spi.ui.StatusBar;
-import ru.mcs.spi.ui.ToolWindowManager;
+import ru.mcs.spi.swing.ui.StatusBar;
+import ru.mcs.spi.swing.ui.ToolWindowManager;
 
 class PropertiesPanelTest {
 
@@ -190,7 +190,7 @@ class PropertiesPanelTest {
     }
 
     private static final class TestStatusBar implements StatusBar {
-        @Override public void addWidget(ru.mcs.spi.ui.StatusBarWidget widget) { }
+        @Override public void addWidget(ru.mcs.spi.swing.ui.StatusBarWidget widget) { }
         @Override public void removeWidget(String id) { }
         @Override public void setMessage(String message) { }
         @Override public ru.mcs.spi.ui.StatusBarTask startTask(String title) {
