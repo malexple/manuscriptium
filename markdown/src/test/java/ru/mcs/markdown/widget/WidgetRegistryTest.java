@@ -17,10 +17,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import ru.mcs.editor.draw.BlockWidget;
-import ru.mcs.spi.editor.BlockKind;
+import ru.mcs.markdown.api.BlockKind;
 import ru.mcs.spi.editor.BlockRenderRequest;
 import ru.mcs.spi.swing.editor.BlockRendererExtension;
-import ru.mcs.spi.editor.BlockSpan;
+import ru.mcs.markdown.api.BlockSpan;
 import ru.mcs.spi.swing.editor.RenderedBlock;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 

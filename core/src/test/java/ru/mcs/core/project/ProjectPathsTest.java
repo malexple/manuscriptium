@@ -26,13 +26,11 @@ class ProjectPathsTest {
         assertThat(ProjectPaths.isExcluded(tmp, tmp.resolve(".manuscriptium/views/x.md"))).isTrue();
         assertThat(ProjectPaths.isExcluded(tmp, tmp.resolve(".git/objects/x.md"))).isTrue();
         assertThat(ProjectPaths.isExcluded(tmp, tmp.resolve("notes/.git.md"))).isFalse();
-        assertThat(ProjectPaths.isExcluded(tmp, tmp.resolve(".obsidian/note.md"))).isFalse();
+        assertThat(ProjectPaths.isExcluded(tmp, tmp.resolve(".settings/note.txt"))).isFalse();
     }
 
     @Test
-    void detectsMarkdownCaseInsensitivelyAndRejectsOutsidePaths() {
-        assertThat(ProjectPaths.isMarkdown(tmp.resolve("NOTE.MD"))).isTrue();
-        assertThat(ProjectPaths.isMarkdown(tmp.resolve("note.markdown"))).isFalse();
+    void rejectsOutsidePaths() {
         assertThatThrownBy(() -> ProjectPaths.relativePath(tmp, tmp.resolveSibling("outside.md")))
                 .isInstanceOf(IllegalArgumentException.class);
     }

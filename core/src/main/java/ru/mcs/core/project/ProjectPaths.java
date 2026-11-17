@@ -2,8 +2,7 @@ package ru.mcs.core.project;
 
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.util.Locale;
-import ru.mcs.core.fs.FilePaths;
+import ru.mcs.spi.fs.FilePaths;
 
 /** Расположение служебных данных Project и переносимые относительные пути заметок. */
 public final class ProjectPaths {
@@ -38,12 +37,7 @@ public final class ProjectPaths {
         return metadataDir(root).resolve("lucene");
     }
 
-    public static boolean isMarkdown(Path file) {
-        Path name = file.getFileName();
-        return name != null && name.toString().toLowerCase(Locale.ROOT).endsWith(".md");
-    }
-
-    /** Markdown индексируется во всём Project, кроме служебного каталога и внутренностей Git. */
+    /** Файлы индексируются во всём Project, кроме служебного каталога и внутренностей Git. */
     public static boolean isExcluded(Path root, Path path) {
         Path normalizedRoot = normalize(root);
         Path normalized = path.toAbsolutePath().normalize();
@@ -55,8 +49,8 @@ public final class ProjectPaths {
         return METADATA_DIR.equals(name) || GIT_DIR.equals(name);
     }
 
-    /** Общая проверка ссылок views и имён новых заметок. */
-    static void validateRelativeMarkdown(String file, String description) {
+    /** Общая проверка переносимых ссылок views. */
+    static void validateRelativeDocument(String file, String description) {
         if (file.indexOf('\\') >= 0 || file.startsWith("/") || file.matches("^[A-Za-z]:($|/).*")) {
             throw new IllegalArgumentException(description + " must be a relative path with '/' separators");
         }
@@ -74,10 +68,7 @@ public final class ProjectPaths {
             }
         }
         if (parts[0].equals(METADATA_DIR) || parts[0].equals(".git")) {
-            throw new IllegalArgumentException(description + " points outside the note hierarchy");
-        }
-        if (!file.toLowerCase(Locale.ROOT).endsWith(".md")) {
-            throw new IllegalArgumentException(description + " must reference a Markdown file");
+            throw new IllegalArgumentException(description + " points outside the document hierarchy");
         }
     }
 

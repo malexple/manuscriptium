@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
 
 /** Преобразует Flexmark Node в parser-neutral spans, сохраняя исходные offsets каждого узла. */
 public final class NodeSpanMapper {

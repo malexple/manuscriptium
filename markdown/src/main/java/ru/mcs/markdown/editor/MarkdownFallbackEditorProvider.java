@@ -1,0 +1,66 @@
+package ru.mcs.markdown.editor;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import ru.mcs.spi.swing.editor.FileEditor;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
+
+/** Fallback для Markdown при отключённом языковом плагине: сохраняет wikilinks и fragment navigation. */
+public final class MarkdownFallbackEditorProvider implements FileEditorProvider {
+
+    static final long MAX_BYTES = 5L * 1024 * 1024;
+
+    private final ObsidianNavigation navigation;
+
+    public MarkdownFallbackEditorProvider() {
+        this.navigation = null;
+    }
+
+    public MarkdownFallbackEditorProvider(ObsidianLinkNavigator navigation) {
+        this.navigation = navigation;
+    }
+
+    MarkdownFallbackEditorProvider(ObsidianNavigation navigation) {
+        this.navigation = navigation;
+    }
+
+    @Override
+    public String getId() {
+        return "markdown.fallback";
+    }
+
+    @Override
+    public int getPriority() {
+        return -200;
+    }
+
+    @Override
+    public boolean accept(Path file) {
+        try {
+            Path name = file == null ? null : file.getFileName();
+            return name != null && name.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".md")
+                    && Files.isRegularFile(file) && Files.size(file) <= MAX_BYTES;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    @Override
+    public FileEditor createEditor(Path file) throws IOException {
+        byte[] bytes = Files.readAllBytes(file);
+        String text = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(bytes))
+                .toString();
+        boolean crlf = text.contains("\r\n");
+        if (crlf) {
+            text = text.replace("\r\n", "\n");
+        }
+        return new MarkdownFallbackEditor(file, text, crlf, navigation);
+    }
+}

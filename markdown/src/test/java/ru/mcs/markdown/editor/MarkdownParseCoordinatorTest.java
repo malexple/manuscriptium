@@ -12,9 +12,9 @@ import ru.mcs.editor.model.DocumentModelImpl;
 import ru.mcs.editor.model.DocumentProperties;
 import ru.mcs.editor.model.Insert;
 import ru.mcs.editor.model.LineEnding;
-import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.MarkdownParser;
+import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.MarkdownParser;
 
 class MarkdownParseCoordinatorTest {
 

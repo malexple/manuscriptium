@@ -23,14 +23,14 @@ class ProjectIndexTest {
         Files.createDirectories(tmp.resolve(".git"));
         Files.writeString(tmp.resolve(".git/ignored.md"), "# Ignored");
 
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
-            assertThat(index.count()).isEqualTo(2);
+            assertThat(index.count()).isEqualTo(3);
             assertThat(index.notes()).extracting(ProjectNote::path)
-                    .containsExactly("notes/article.md", "root.md");
-            MarkdownDocument article = index.find("notes/article.md").orElseThrow();
+                    .containsExactly("notes/article.md", "plain.txt", "root.md");
+            ru.mcs.spi.project.IndexedDocument article = index.find("notes/article.md").orElseThrow();
             assertThat(article.title()).isEqualTo("My article");
-            assertThat(article.frontMatter()).contains("tags: [java]");
+            assertThat(article.metadata()).contains("tags: [java]");
             assertThat(article.content()).endsWith("Body\n");
             assertThat(index.find("root.md").orElseThrow().title()).isEqualTo("Root heading");
         }
@@ -41,7 +41,7 @@ class ProjectIndexTest {
         Files.createDirectories(tmp.resolve("tree"));
         Path note = tmp.resolve("tree/note.md");
         Files.writeString(note, "# Before");
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             Files.writeString(note, "---\ntitle: After\n---\nnew body");
             index.refresh(note);
@@ -80,7 +80,7 @@ class ProjectIndexTest {
         Files.writeString(tmp.resolve("dirXname/b.md"), "b");
         Files.writeString(tmp.resolve("dir%name/c.md"), "c");
         Files.writeString(tmp.resolve("dirZname/d.md"), "d");
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             Files.delete(tmp.resolve("dir_name/a.md"));
             Files.delete(tmp.resolve("dir_name"));
@@ -100,14 +100,14 @@ class ProjectIndexTest {
     void deletedDatabaseIsRecreatedWithoutAnyMetadataSource() throws Exception {
         Files.writeString(tmp.resolve("portable.md"), "# Portable\nonly markdown matters");
         Path db = ProjectPaths.databaseFile(tmp);
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             assertThat(db).exists();
         }
         Files.deleteIfExists(db);
         Files.deleteIfExists(tmp.resolve(".manuscriptium/index.db-wal"));
         Files.deleteIfExists(tmp.resolve(".manuscriptium/index.db-shm"));
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             assertThat(index.count()).isZero();
             index.rebuild();
             assertThat(index.count()).isOne();
@@ -119,7 +119,7 @@ class ProjectIndexTest {
     void unreadableUtf8DoesNotAbortWholeScan() throws Exception {
         Files.writeString(tmp.resolve("good.md"), "good");
         Files.write(tmp.resolve("bad.md"), new byte[]{(byte) 0xC3, (byte) 0x28});
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             assertThat(index.count()).isOne();
             assertThat(index.notes().getFirst().path()).isEqualTo("good.md");

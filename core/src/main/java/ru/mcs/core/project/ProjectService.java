@@ -1,5 +1,7 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewEntry;
+import ru.mcs.spi.project.ViewDefinition;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,8 +19,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import ru.mcs.spi.project.IndexContributorRegistry;
 
-/** Жизненный цикл Project: индекс Markdown, виртуальные views, watcher и последовательные фоновые операции. */
+/** Жизненный цикл Project: универсальный индекс, виртуальные views, watcher и фоновые операции. */
 final class ProjectService implements AutoCloseable {
 
     interface Listener {
@@ -38,13 +41,13 @@ final class ProjectService implements AutoCloseable {
     private List<ViewDefinition> views = List.of();
     private List<String> viewErrors = List.of();
 
-    private ProjectService(Path root, Listener listener) throws IOException, SQLException {
+    private ProjectService(Path root, Listener listener, IndexContributorRegistry contributors) throws IOException, SQLException {
         if (!Files.isDirectory(root)) {
             throw new IOException("Project is not a directory: " + root);
         }
         this.root = ProjectPaths.normalize(root);
         this.listener = listener;
-        this.index = new ProjectIndex(this.root);
+        this.index = new ProjectIndex(this.root, contributors);
         this.viewStore = new ViewStore(this.root);
         this.executor = Executors.newSingleThreadExecutor(r -> {
             Thread thread = new Thread(r, "mcs-project-index");
@@ -76,11 +79,17 @@ final class ProjectService implements AutoCloseable {
     }
 
     static ProjectService open(Path root, Listener listener) throws IOException, SQLException {
-        return retryOnceOnIo(() -> openOnce(root, listener));
+        return open(root, listener, new ProjectIndexContributors());
     }
 
-    private static ProjectService openOnce(Path root, Listener listener) throws IOException, SQLException {
-        ProjectService service = new ProjectService(root, listener);
+    static ProjectService open(Path root, Listener listener, IndexContributorRegistry contributors)
+            throws IOException, SQLException {
+        return retryOnceOnIo(() -> openOnce(root, listener, contributors));
+    }
+
+    private static ProjectService openOnce(Path root, Listener listener, IndexContributorRegistry contributors)
+            throws IOException, SQLException {
+        ProjectService service = new ProjectService(root, listener, contributors);
         try {
             Future<?> initial = service.executor.submit((Callable<Void>) () -> {
                 service.rebuild();
@@ -275,7 +284,7 @@ final class ProjectService implements AutoCloseable {
                     return;
                 }
                 try {
-                    ProjectPaths.validateRelativeMarkdown(file, "link.file");
+                    ProjectPaths.validateRelativeDocument(file, "link.file");
                     Path note = root.resolve(file).normalize();
                     if (!note.startsWith(root) || !Files.isRegularFile(note, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
                         result.complete(null);

@@ -2,6 +2,7 @@ package ru.mcs.core.project;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
@@ -37,7 +38,7 @@ class LuceneProjectIndexTest {
                 """);
         Files.writeString(tmp.resolve("root.md"), "# Root\njava outside the notes subtree");
 
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             assertThat(ProjectPaths.luceneDir(tmp)).isDirectory();
 
@@ -45,10 +46,10 @@ class LuceneProjectIndexTest {
                     .containsExactly("notes/java.md");
             assertThat(paths(index, query("java", ProjectSearchScope.TITLE)))
                     .containsExactly("notes/java.md");
-            assertThat(paths(index, query("Alice", ProjectSearchScope.FRONT_MATTER)))
+            assertThat(paths(index, query("Alice", ProjectSearchScope.METADATA)))
                     .containsExactly("notes/java.md");
             assertThat(paths(index, query("Alice", ProjectSearchScope.CONTENT))).isEmpty();
-            assertThat(paths(index, query("backend", ProjectSearchScope.TAGS)))
+            assertThat(paths(index, query("backend", ProjectSearchScope.ATTRIBUTES)))
                     .containsExactly("notes/java.md");
             assertThat(paths(index, query("java.md", ProjectSearchScope.PATH)))
                     .containsExactly("notes/java.md");
@@ -58,15 +59,15 @@ class LuceneProjectIndexTest {
                     .contains("Поиск");
 
             ProjectSearchQuery notesOnly = new ProjectSearchQuery("java", ProjectSearchScope.ALL,
-                    "notes/", null, 100);
+                    "notes/", Map.of(), 100);
             assertThat(index.search(notesOnly)).extracting(ProjectSearchResult::path)
                     .containsExactly("notes/java.md");
             ProjectSearchQuery drafts = new ProjectSearchQuery("", ProjectSearchScope.ALL,
-                    "notes", true, 100);
+                    "notes", Map.of("draft", "true"), 100);
             assertThat(index.search(drafts)).extracting(ProjectSearchResult::path)
                     .containsExactly("notes/draft.md");
             ProjectSearchQuery published = new ProjectSearchQuery("", ProjectSearchScope.ALL,
-                    "notes", false, 100);
+                    "notes", Map.of("draft", "false"), 100);
             assertThat(index.search(published)).extracting(ProjectSearchResult::path)
                     .containsExactly("notes/java.md");
         }
@@ -77,7 +78,7 @@ class LuceneProjectIndexTest {
         Files.createDirectories(tmp.resolve("tree"));
         Path note = tmp.resolve("tree/note.md");
         Files.writeString(note, "# Before\noldneedle");
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             assertThat(paths(index, query("oldneedle", ProjectSearchScope.CONTENT)))
                     .containsExactly("tree/note.md");
@@ -94,15 +95,15 @@ class LuceneProjectIndexTest {
             assertThat(paths(index, query("oldneedle", ProjectSearchScope.ALL))).isEmpty();
             assertThat(paths(index, query("newneedle", ProjectSearchScope.CONTENT)))
                     .containsExactly("tree/note.md");
-            assertThat(paths(index, query("newtag", ProjectSearchScope.TAGS)))
+            assertThat(paths(index, query("newtag", ProjectSearchScope.ATTRIBUTES)))
                     .containsExactly("tree/note.md");
-            assertThat(index.search(new ProjectSearchQuery("", ProjectSearchScope.ALL, "", true, 100)))
+            assertThat(index.search(new ProjectSearchQuery("", ProjectSearchScope.ALL, "", Map.of("draft", "true"), 100)))
                     .extracting(ProjectSearchResult::title).containsExactly("After");
 
             Files.delete(note);
             index.refresh(note);
             assertThat(paths(index, query("newneedle", ProjectSearchScope.ALL))).isEmpty();
-            assertThat(index.search(new ProjectSearchQuery("", ProjectSearchScope.ALL, "", true, 100))).isEmpty();
+            assertThat(index.search(new ProjectSearchQuery("", ProjectSearchScope.ALL, "", Map.of("draft", "true"), 100))).isEmpty();
         }
     }
 
@@ -112,7 +113,7 @@ class LuceneProjectIndexTest {
         Files.createDirectories(tmp.resolve("dirXname"));
         Files.writeString(tmp.resolve("dir_name/a.md"), "sharedneedle");
         Files.writeString(tmp.resolve("dirXname/b.md"), "sharedneedle");
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             Files.delete(tmp.resolve("dir_name/a.md"));
             Files.delete(tmp.resolve("dir_name"));
@@ -125,7 +126,7 @@ class LuceneProjectIndexTest {
     @Test
     void deletedLuceneCacheIsRecreatedFromMarkdown() throws Exception {
         Files.writeString(tmp.resolve("portable.md"), "# Portable\nsearchcache");
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             assertThat(paths(index, query("searchcache", ProjectSearchScope.ALL))).containsExactly("portable.md");
         }
@@ -134,7 +135,7 @@ class LuceneProjectIndexTest {
                 Files.delete(file);
             }
         }
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             assertThat(paths(index, query("searchcache", ProjectSearchScope.ALL))).containsExactly("portable.md");
         }
@@ -144,7 +145,7 @@ class LuceneProjectIndexTest {
     void contentScopeSkipsBomAndCrlfFrontMatter() throws Exception {
         Files.writeString(tmp.resolve("crlf.md"),
                 "\uFEFF---\r\ntitle: Metadata only\r\ntags: [java]\r\n...\r\nbodyneedle\r\n");
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             assertThat(paths(index, query("bodyneedle", ProjectSearchScope.CONTENT)))
                     .containsExactly("crlf.md");
@@ -157,18 +158,18 @@ class LuceneProjectIndexTest {
     @Test
     void malformedYamlStillIndexesContentAndUsesSafeMetadataDefaults() throws Exception {
         Files.writeString(tmp.resolve("broken.md"), "---\ntags: [\ndraft: [\n---\nresilientneedle");
-        try (ProjectIndex index = new ProjectIndex(tmp)) {
+        try (ProjectIndex index = new ProjectIndex(tmp, TestIndexContributor.registry())) {
             index.rebuild();
             assertThat(paths(index, query("resilientneedle", ProjectSearchScope.CONTENT)))
                     .containsExactly("broken.md");
-            assertThat(index.search(new ProjectSearchQuery("", ProjectSearchScope.ALL, "", false, 100)))
+            assertThat(index.search(new ProjectSearchQuery("", ProjectSearchScope.ALL, "", Map.of("draft", "false"), 100)))
                     .extracting(ProjectSearchResult::path).containsExactly("broken.md");
-            assertThat(paths(index, query("anything", ProjectSearchScope.TAGS))).isEmpty();
+            assertThat(paths(index, query("anything", ProjectSearchScope.ATTRIBUTES))).isEmpty();
         }
     }
 
     private static ProjectSearchQuery query(String text, ProjectSearchScope scope) {
-        return new ProjectSearchQuery(text, scope, "", null, 100);
+        return new ProjectSearchQuery(text, scope, "", Map.of(), 100);
     }
 
     private static List<String> paths(ProjectIndex index, ProjectSearchQuery query) throws Exception {

@@ -1,5 +1,7 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewEntry;
+import ru.mcs.spi.project.ViewDefinition;
 import java.awt.GridLayout;
 import java.awt.Window;
 import java.util.ArrayList;

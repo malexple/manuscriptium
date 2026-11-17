@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Рекурсивный WatchService для Markdown и отдельное наблюдение за {@code .manuscriptium/views}. */
+/** Рекурсивный WatchService для документов и отдельное наблюдение за {@code .manuscriptium/views}. */
 final class ProjectFileWatcher implements AutoCloseable {
 
     interface Listener {

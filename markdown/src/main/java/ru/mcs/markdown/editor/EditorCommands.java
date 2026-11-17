@@ -10,8 +10,8 @@ import ru.mcs.editor.model.Insert;
 import ru.mcs.editor.model.Range;
 import ru.mcs.editor.model.Replace;
 import ru.mcs.markdown.editor.view.MarkdownCanvas;
-import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.editor.BlockSpan;
+import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.BlockSpan;
 
 /** Явные Markdown-команды меню/keymap. Все изменения идут через DocumentModel.apply. */
 final class EditorCommands {

@@ -1,5 +1,7 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewEntry;
+import ru.mcs.spi.project.ViewDefinition;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -7,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Операции только над ссылками YAML. Физические пути Markdown здесь не изменяются. */
+/** Операции только над ссылками YAML. Физические пути документов здесь не изменяются. */
 final class ViewOperations {
 
     private ViewOperations() {
@@ -41,7 +43,7 @@ final class ViewOperations {
         return true;
     }
 
-    /** Добавляет ссылку из физического дерева; сам Markdown-файл остаётся неизменным. */
+    /** Добавляет ссылку из физического дерева; сам файл документа остаётся неизменным. */
     static boolean addLink(ViewDefinition view, String file, List<Integer> targetPath) {
         ViewEntry target = targetPath.isEmpty() ? null : entryAt(view.entries(), targetPath);
         if (!targetPath.isEmpty() && target == null || target != null && !target.isNode()) {

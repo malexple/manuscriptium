@@ -10,12 +10,9 @@ import java.util.ServiceLoader;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.bus.MessageBusImpl;
-import ru.mcs.core.editor.CoreObsidianLinkService;
 import ru.mcs.core.editor.EditorEventsBridge;
 import ru.mcs.core.editor.FileEditorManagerImpl;
-import ru.mcs.core.editor.ObsidianLinkNavigator;
 import ru.mcs.core.editor.SessionStore;
-import ru.mcs.core.editor.TextFileEditorProvider;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.i18n.PluginMessages;
 import ru.mcs.core.notification.NotificationManagerImpl;
@@ -35,12 +32,15 @@ import ru.mcs.core.statusbar.StatusBarModel;
 import ru.mcs.core.theme.McsThemeManager;
 import ru.mcs.core.toolwindow.LayoutStore;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
+import ru.mcs.core.project.CoreProjectAccess;
+import ru.mcs.core.project.ProjectIndexContributors;
 import ru.mcs.core.project.ProjectPaths;
 import ru.mcs.core.project.ProjectState;
+import ru.mcs.spi.project.IndexContributorRegistry;
+import ru.mcs.spi.project.ProjectAccess;
 import ru.mcs.spi.swing.PluginContext;
 import ru.mcs.spi.swing.BuiltInModule;
 import ru.mcs.spi.swing.editor.FileEditorProvider;
-import ru.mcs.spi.swing.editor.ObsidianLinkService;
 import ru.mcs.spi.editor.style.ShellThemeService;
 import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
@@ -63,7 +63,8 @@ final class CoreServices {
     final ActionManagerImpl actions = new ActionManagerImpl();
     final ToolWindowManagerImpl toolWindows;
     final FileEditorManagerImpl editors = new FileEditorManagerImpl();
-    final ObsidianLinkNavigator obsidianLinks = new ObsidianLinkNavigator(editors);
+    final CoreProjectAccess projectAccess = new CoreProjectAccess();
+    final ProjectIndexContributors indexContributors = new ProjectIndexContributors();
     final MessageBusImpl bus = new MessageBusImpl();
     final StatusBarModel statusBar = new StatusBarModel();
     final NotificationManagerImpl notifications = new NotificationManagerImpl();
@@ -88,7 +89,8 @@ final class CoreServices {
         configurables.register(new AppearanceSettingsProvider(themes));
         services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
         services.register(ShellThemeService.class, themes);
-        services.register(ObsidianLinkService.class, new CoreObsidianLinkService(obsidianLinks));
+        services.register(ProjectAccess.class, projectAccess);
+        services.register(IndexContributorRegistry.class, indexContributors);
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);
@@ -98,7 +100,6 @@ final class CoreServices {
 
         CoreActions.registerStandardGroups(actions);
         toolWindows = new ToolWindowManagerImpl(actions, layout);
-        editors.registerProvider(new TextFileEditorProvider(obsidianLinks));
         for (FileEditorProvider provider : ServiceLoader.load(FileEditorProvider.class)) {
             editors.registerProvider(provider);
         }

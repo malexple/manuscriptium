@@ -1,5 +1,6 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewDefinition;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.event.MouseAdapter;

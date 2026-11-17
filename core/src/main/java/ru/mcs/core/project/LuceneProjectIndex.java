@@ -3,7 +3,6 @@ package ru.mcs.core.project;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -29,9 +28,7 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NIOFSDirectory;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
+import ru.mcs.spi.project.IndexedDocument;
 
 /** Локальный пересобираемый Lucene-кэш. Все вызовы сериализуются владельцем {@link ProjectIndex}. */
 final class LuceneProjectIndex implements AutoCloseable {
@@ -40,9 +37,9 @@ final class LuceneProjectIndex implements AutoCloseable {
     private static final String PATH = "path";
     private static final String TITLE = "title";
     private static final String CONTENT = "content";
-    private static final String FRONT_MATTER = "frontMatter";
-    private static final String TAGS = "tags";
-    private static final String DRAFT = "draft";
+    private static final String METADATA = "metadata";
+    private static final String ATTRIBUTES = "attributes";
+    private static final String ATTRIBUTE_PREFIX = "attribute.";
     private static final int MAX_TERMS = 32;
     private static final int SNIPPET_RADIUS = 90;
 
@@ -74,15 +71,15 @@ final class LuceneProjectIndex implements AutoCloseable {
         writer = indexWriter;
     }
 
-    void replaceAll(List<MarkdownDocument> documents) throws IOException {
+    void replaceAll(List<IndexedDocument> documents) throws IOException {
         writer.deleteAll();
-        for (MarkdownDocument document : documents) {
+        for (IndexedDocument document : documents) {
             writer.addDocument(toLucene(document));
         }
         writer.commit();
     }
 
-    void update(MarkdownDocument document) throws IOException {
+    void update(IndexedDocument document) throws IOException {
         writer.updateDocument(new Term(ID, document.path()), toLucene(document));
         writer.commit();
     }
@@ -129,9 +126,8 @@ final class LuceneProjectIndex implements AutoCloseable {
         if (!request.subtree().isEmpty()) {
             query.add(new PrefixQuery(new Term(ID, request.subtree() + "/")), BooleanClause.Occur.FILTER);
         }
-        if (request.draft() != null) {
-            query.add(new TermQuery(new Term(DRAFT, request.draft().toString())), BooleanClause.Occur.FILTER);
-        }
+        request.attributeFilters().forEach((key, value) -> query.add(
+                new TermQuery(new Term(ATTRIBUTE_PREFIX + key, value)), BooleanClause.Occur.FILTER));
         return query.build();
     }
 
@@ -144,8 +140,8 @@ final class LuceneProjectIndex implements AutoCloseable {
                 if (scope == ProjectSearchScope.ALL) {
                     float boost = switch (field) {
                         case TITLE -> 4.0f;
-                        case TAGS -> 3.0f;
-                        case PATH, FRONT_MATTER -> 2.0f;
+                        case ATTRIBUTES -> 3.0f;
+                        case PATH, METADATA -> 2.0f;
                         default -> 1.0f;
                     };
                     query = new BoostQuery(query, boost);
@@ -159,12 +155,12 @@ final class LuceneProjectIndex implements AutoCloseable {
 
     private static List<String> fields(ProjectSearchScope scope) {
         return switch (scope) {
-            case ALL -> List.of(TITLE, CONTENT, FRONT_MATTER, PATH, TAGS);
+            case ALL -> List.of(TITLE, CONTENT, METADATA, PATH, ATTRIBUTES);
             case TITLE -> List.of(TITLE);
             case CONTENT -> List.of(CONTENT);
-            case FRONT_MATTER -> List.of(FRONT_MATTER);
+            case METADATA -> List.of(METADATA);
             case PATH -> List.of(PATH);
-            case TAGS -> List.of(TAGS);
+            case ATTRIBUTES -> List.of(ATTRIBUTES);
         };
     }
 
@@ -184,16 +180,19 @@ final class LuceneProjectIndex implements AutoCloseable {
         return List.copyOf(terms);
     }
 
-    private static Document toLucene(MarkdownDocument source) {
-        FrontMatterMetadata metadata = FrontMatterMetadata.parse(source.frontMatter());
+    private static Document toLucene(IndexedDocument source) {
         Document document = new Document();
         document.add(new StringField(ID, source.path(), Field.Store.YES));
         document.add(new TextField(PATH, source.path(), Field.Store.YES));
         document.add(new TextField(TITLE, source.title(), Field.Store.YES));
-        document.add(new TextField(FRONT_MATTER, source.frontMatter(), Field.Store.YES));
-        document.add(new TextField(CONTENT, source.body(), Field.Store.YES));
-        document.add(new TextField(TAGS, String.join("\n", metadata.tags()), Field.Store.NO));
-        document.add(new StringField(DRAFT, Boolean.toString(metadata.draft()), Field.Store.NO));
+        document.add(new TextField(METADATA, source.metadata(), Field.Store.YES));
+        document.add(new TextField(CONTENT, source.searchContent(), Field.Store.YES));
+        document.add(new TextField(ATTRIBUTES, String.join("\n", source.attributes().values()), Field.Store.YES));
+        source.attributes().forEach((key, value) -> {
+            if (key.matches("[A-Za-z0-9_.-]{1,100}")) {
+                document.add(new StringField(ATTRIBUTE_PREFIX + key, value, Field.Store.NO));
+            }
+        });
         return document;
     }
 
@@ -201,10 +200,10 @@ final class LuceneProjectIndex implements AutoCloseable {
         List<String> sources = switch (scope) {
             case TITLE -> List.of(document.get(TITLE));
             case PATH -> List.of(document.get(PATH));
-            case FRONT_MATTER, TAGS -> List.of(document.get(FRONT_MATTER));
+            case METADATA, ATTRIBUTES -> List.of(document.get(METADATA), document.get(ATTRIBUTES));
             case CONTENT -> List.of(document.get(CONTENT));
             case ALL -> List.of(document.get(CONTENT), document.get(TITLE),
-                    document.get(FRONT_MATTER), document.get(PATH));
+                    document.get(METADATA), document.get(ATTRIBUTES), document.get(PATH));
         };
         for (String source : sources) {
             String normalized = source.replaceAll("\\s+", " ").trim();
@@ -251,47 +250,6 @@ final class LuceneProjectIndex implements AutoCloseable {
         analyzer.close();
         if (failure != null) {
             throw failure;
-        }
-    }
-
-    /** Невалидный YAML не мешает полнотекстовой индексации; structured-фильтры тогда используют значения по умолчанию. */
-    private record FrontMatterMetadata(List<String> tags, boolean draft) {
-
-        static FrontMatterMetadata parse(String frontMatter) {
-            if (frontMatter == null || frontMatter.isBlank()) {
-                return new FrontMatterMetadata(List.of(), false);
-            }
-            try {
-                Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
-                if (!(yaml.load(frontMatter) instanceof Map<?, ?> map)) {
-                    return new FrontMatterMetadata(List.of(), false);
-                }
-                List<String> tags = tags(map.get("tags"));
-                boolean draft = draft(map.get("draft"));
-                return new FrontMatterMetadata(tags, draft);
-            } catch (RuntimeException e) {
-                return new FrontMatterMetadata(List.of(), false);
-            }
-        }
-
-        private static List<String> tags(Object value) {
-            if (value instanceof Collection<?> collection) {
-                List<String> result = new ArrayList<>();
-                for (Object item : collection) {
-                    if (item != null) {
-                        result.add(item.toString());
-                    }
-                }
-                return List.copyOf(result);
-            }
-            return value == null || value.toString().isBlank() ? List.of() : List.of(value.toString());
-        }
-
-        private static boolean draft(Object value) {
-            if (value instanceof Boolean bool) {
-                return bool;
-            }
-            return value != null && Boolean.parseBoolean(value.toString());
         }
     }
 }

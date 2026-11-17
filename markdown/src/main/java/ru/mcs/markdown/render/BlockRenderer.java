@@ -4,7 +4,7 @@ import java.awt.Color;
 import ru.mcs.editor.draw.DrawSink;
 import ru.mcs.markdown.layout.BlockBox;
 import ru.mcs.markdown.layout.LineBox;
-import ru.mcs.spi.editor.BlockKind;
+import ru.mcs.markdown.api.BlockKind;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 import ru.mcs.spi.swing.editor.style.CssBorder;
 

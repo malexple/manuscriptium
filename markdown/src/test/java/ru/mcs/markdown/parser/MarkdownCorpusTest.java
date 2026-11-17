@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.editor.BlockSpan;
+import ru.mcs.markdown.api.BlockSpan;
 
 class MarkdownCorpusTest {
 

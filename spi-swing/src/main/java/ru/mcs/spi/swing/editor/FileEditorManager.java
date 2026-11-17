@@ -23,6 +23,11 @@ public interface FileEditorManager {
 
     Optional<Path> getSelectedFile();
 
+    /** Выбранный редактор для универсальных операций навигации, без приведения к реализации core. */
+    default Optional<FileEditor> selectedEditor() {
+        return Optional.empty();
+    }
+
     void selectFile(Path file);
 
     boolean isPinned(Path file);

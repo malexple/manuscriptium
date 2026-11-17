@@ -6,9 +6,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.MarkdownParser;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
+import ru.mcs.markdown.api.MarkdownParser;
 
 class TestMarkdownParser implements MarkdownParser {
 

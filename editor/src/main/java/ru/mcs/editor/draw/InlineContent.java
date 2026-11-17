@@ -8,7 +8,7 @@ import java.awt.image.BufferedImage;
 import java.util.function.Supplier;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
-/** Видимый текст, стили и монотонная карта границ в исходный Markdown. */
+/** Видимый текст, стили и монотонная карта границ в исходный документ. */
 public final class InlineContent {
 
     public record Style(ComputedStyle computed, Font font, String linkTarget, int taskOffset, boolean taskChecked) {

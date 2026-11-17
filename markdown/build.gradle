@@ -17,6 +17,7 @@ dependencies {
 
     implementation "com.formdev:flatlaf:${flatlafVersion}"
     implementation "com.formdev:flatlaf-extras:${flatlafVersion}"
+    implementation "org.yaml:snakeyaml:${snakeyamlVersion}"
     implementation "org.scilab.forge:jlatexmath:${jlatexmathVersion}"
     implementation "com.vladsch.flexmark:flexmark:${flexmarkVersion}"
     implementation "com.vladsch.flexmark:flexmark-ext-yaml-front-matter:${flexmarkVersion}"

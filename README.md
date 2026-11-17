@@ -17,6 +17,9 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 имеют собственный `ModuleLayer` и независимо включаются/отключаются с перезапуском. Установка внешнего JAR не изменяет
 файлы установленного приложения.
 
+Restart повторяет module/classpath и JVM-аргументы текущего процесса. Новый процесс ждёт завершения прежнего PID до открытия
+SQLite/Lucene и не наследует консоль Gradle/IDE: его stdout/stderr сохраняются в `<home>/logs/restart.log`.
+
 ## Модульная граница SDK
 
 `spi` (`ru.mcs.spi`) содержит только платформенно-нейтральные контракты, идентификаторы, DTO, события и сервисы и не
@@ -26,6 +29,18 @@ file editors, rendering/style API, settings, status bar и tool windows. Мод�
 `spi → spi-swing`. `SpiPurityTest` проверяет скомпилированные classfiles, а `SpiSwingModuleTest` — публичные контракты
 и JPMS exports.
 
+## Универсальный Project и языковые вклады
+
+`ProjectAccess`, `ViewDefinition`/`ViewEntry`, `IndexedDocument`, `IndexContributorRegistry`, `ProjectFileFactory` и
+`BranchStatisticsService` являются платформенными SPI-контрактами. Общий индекс хранит title, metadata, content,
+searchContent и произвольные attributes; SQLite schema имеет `user_version=2` и при смене версии пересобирается из исходных
+файлов. Binary-файлы индексируются по имени/пути с пустым текстом, `.manuscriptium` и `.git` не сканируются.
+
+Модуль `markdown` регистрирует `MarkdownIndexContributor`, `ProjectFileFactory`, `BookService` и `BranchStatisticsService`.
+MarkdownParser, EditorStyleService, Obsidian-навигация и fallback editor также находятся в `markdown`; production-зависимости
+`markdown → core` и `core → markdown` нет. `PlatformLanguagePurityTest` запрещает Markdown/Obsidian/Front Matter идентификаторы
+в production Java и resources платформы, а `NoForbiddenModuleDependenciesTest` проверяет направления и в JPMS, и в Gradle.
+
 ## Универсальный редактор
 
 `editor` (`ru.mcs.editor`) содержит языконезависимые DocumentModel/Piece Table, undo/redo и save-point, Canvas, layout,
@@ -34,7 +49,7 @@ Markdown, Obsidian или Front Matter; это проверяется `EditorPur
 
 Обычные файлы до 5 МиБ открывает `editor.text` через `ServiceLoader<FileEditorProvider>`: `core` объявляет только `uses`,
 а `app` включает модуль в runtime image. Загрузка и Save выполняются вне EDT; strict UTF-8, BOM, LF/CRLF/CR, атомарная
-запись и symlink-target semantics совпадают с Markdown editor. `core.markdown-fallback` сохраняет прежний редактор с
+запись и symlink-target semantics совпадают с Markdown editor. `markdown.fallback` сохраняет прежний редактор с
 Obsidian-навигацией для компоновки продукта без модуля `markdown`. Markdown расширяет базовый Canvas через
 `MarkdownCanvas extends EditorCanvas`; обратной зависимости `editor → markdown` нет.
 
@@ -57,7 +72,7 @@ Save-point учитывает undo/redo и правки во время фоно
 перезапуск и смена Project ждут завершения фонового сохранения.
 
 В E2 оба режима используют редактируемый собственный lightweight canvas и общую `DocumentModel`; основной Markdown и
-обычный текст не используют `JTextArea` (он остаётся только в core fallback и внутри transclusion editor). Поддержаны клавиатурный ввод, каретка и selection, drag/double/triple click, word wrap, Home/End/PageUp/PageDown,
+обычный текст не используют `JTextArea` (он остаётся только в Markdown fallback и внутри transclusion editor). Поддержаны клавиатурный ввод, каретка и selection, drag/double/triple click, word wrap, Home/End/PageUp/PageDown,
 текстовый clipboard, undo/redo с системным menu shortcut (`Cmd` на macOS), IME и скролл с инерцией. Построчная раскладка
 изменяет только затронутые физические строки, а рисование ограничено viewport. Source сохраняет эту исходную раскладку;
 Canvas начиная с E5 использует отдельный WYSIWYG layout над той же моделью документа.
@@ -77,7 +92,7 @@ math, task lists, tables и strikethrough. `AstIndex` выполняет пои�
 явный выбор темы редактора через `EditorStyleService` отключает это автоматическое следование. JSON-токены и переключение
 FlatLaf-тем оболочки не изменены.
 
-Модуль предоставляет `EditorStyleService` из `spi-swing` с типизированным AWT-ориентированным `ComputedStyle`. CSS-движок поддерживает каскад и `!important`,
+Модуль предоставляет `EditorStyleService` из `ru.mcs.markdown.api` с типизированным AWT-ориентированным `ComputedStyle` из `spi-swing`. CSS-движок поддерживает каскад и `!important`,
 type/id/class/`:root`/`:hover`/`:nth-child(odd|even)`, descendant- и child-комбинаторы, группы селекторов, переменные `--name` и
 `var()`, размеры, цвета, отступы, границы, шрифты и локальные `@font-face`. Неподдерживаемые свойства и конструкции попадают в журнал
 как `CssDiagnostic` и не прерывают загрузку остальной темы. CSS и TTF/OTF-шрифты загружаются в daemon executor вне EDT; внешние
@@ -237,8 +252,9 @@ symlink в файле или родительском каталоге запр�
 
 Панель **Search** открывается кнопкой поиска на toolbar, через **Tools → Search in Project** или **View → Show Search**.
 Запрос состоит из литеральных слов без специального Lucene-синтаксиса: регистр не важен, все слова должны встретиться
-в одной заметке. Область поиска — все поля, заголовок, тело Markdown, Front Matter, путь или теги. Тело и Front Matter
-индексируются отдельно. Дополнительно можно ограничить результаты относительным подкаталогом (например, `notes/java`)
+в одной заметке. Область поиска — все поля, заголовок, содержимое, metadata, путь или attributes. Для Markdown тело и
+Front Matter индексируются отдельно, tags/draft становятся generic attributes. Дополнительно можно ограничить результаты
+относительным подкаталогом (например, `notes/java`)
 и состоянием `draft`; фильтры работают и без текстового запроса.
 
 Поиск выполняется в фоновой очереди Project и не блокирует редактор. Показываются до 100 наиболее релевантных результатов
@@ -285,7 +301,7 @@ entries:
 
 ### Obsidian-разметка
 
-Fallback source-редактор `core.markdown-fallback` подсвечивает `[[wikilinks]]`, `![[embed]]` и callouts вида `> [!note]`, `> [!warning]`.
+Fallback source-редактор `markdown.fallback` подсвечивает `[[wikilinks]]`, `![[embed]]` и callouts вида `> [!note]`, `> [!warning]`.
 Он используется в компоновке без модуля `markdown`. С E8 Canvas также поддерживает wikilinks, embeds, callouts,
 комментарии и навигацию через SPI-сервисы без production-зависимости `markdown` от `core`.
 Поддержаны alias (`[[Note|alias]]`), заголовки (`[[Note#Heading]]`, `[[#Local heading]]`) и block-id

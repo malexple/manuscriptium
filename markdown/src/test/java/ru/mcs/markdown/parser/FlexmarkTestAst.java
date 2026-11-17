@@ -1,6 +1,6 @@
 package ru.mcs.markdown.parser;
 
-import ru.mcs.spi.editor.AstIndex;
+import ru.mcs.markdown.api.AstIndex;
 
 /** Тестовый мост к реальному Flexmark AST без production-зависимости редактора от парсера. */
 public final class FlexmarkTestAst {

@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import ru.mcs.markdown.parser.FlexmarkMarkdownParser.Segment;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
 
 /** Source-level расширения, для которых у Flexmark 0.64.8 нет готового AST-узла. */
 final class ObsidianSpanProcessor {

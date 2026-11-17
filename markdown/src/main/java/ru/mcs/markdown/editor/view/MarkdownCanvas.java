@@ -28,8 +28,8 @@ import ru.mcs.markdown.reference.CitationIndex;
 import ru.mcs.markdown.render.MarkdownRenderer;
 import ru.mcs.markdown.widget.ImageWidget;
 import ru.mcs.markdown.widget.WidgetRegistry;
-import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.swing.editor.style.EditorStyleService;
+import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.EditorStyleService;
 
 /** Markdown-расширение универсального Canvas: styled layout, widgets, links, tables и citations. */
 public final class MarkdownCanvas extends EditorCanvas {

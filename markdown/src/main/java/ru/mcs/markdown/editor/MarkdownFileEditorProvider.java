@@ -8,8 +8,8 @@ import ru.mcs.markdown.widget.WidgetRegistry;
 import ru.mcs.spi.swing.action.ActionManager;
 import ru.mcs.spi.swing.editor.FileEditor;
 import ru.mcs.spi.swing.editor.FileEditorProvider;
-import ru.mcs.spi.editor.MarkdownParser;
-import ru.mcs.spi.swing.editor.style.EditorStyleService;
+import ru.mcs.markdown.api.MarkdownParser;
+import ru.mcs.markdown.api.EditorStyleService;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 

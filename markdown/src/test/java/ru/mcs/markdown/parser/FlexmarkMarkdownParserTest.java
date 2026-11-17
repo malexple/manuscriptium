@@ -6,11 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.MarkdownParser;
-import ru.mcs.spi.editor.MarkdownParser.Change;
-import ru.mcs.spi.editor.MarkdownParser.ParseResult;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
+import ru.mcs.markdown.api.MarkdownParser;
+import ru.mcs.markdown.api.MarkdownParser.Change;
+import ru.mcs.markdown.api.MarkdownParser.ParseResult;
 
 class FlexmarkMarkdownParserTest {
 

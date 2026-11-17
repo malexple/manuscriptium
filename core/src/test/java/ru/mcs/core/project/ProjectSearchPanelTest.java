@@ -133,7 +133,7 @@ class ProjectSearchPanelTest {
 
         assertThat(captured.get().text()).isEmpty();
         assertThat(captured.get().subtree()).isEqualTo("notes/java");
-        assertThat(captured.get().draft()).isTrue();
+        assertThat(captured.get().attributeFilters()).containsEntry("draft", "true");
         assertThat(component(panel, JLabel.class, "project.search.status").getText())
                 .contains("index unavailable");
     }

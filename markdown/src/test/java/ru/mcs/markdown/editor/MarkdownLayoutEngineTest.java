@@ -23,11 +23,11 @@ import ru.mcs.editor.model.Insert;
 import ru.mcs.editor.model.LineEnding;
 import ru.mcs.editor.model.Range;
 import ru.mcs.markdown.render.MarkdownRenderer;
-import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.MarkdownParser.ParseMetrics;
-import ru.mcs.spi.editor.MarkdownParser.ParseResult;
+import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
+import ru.mcs.markdown.api.MarkdownParser.ParseMetrics;
+import ru.mcs.markdown.api.MarkdownParser.ParseResult;
 import ru.mcs.spi.editor.style.TextDecoration;
 
 class MarkdownLayoutEngineTest {

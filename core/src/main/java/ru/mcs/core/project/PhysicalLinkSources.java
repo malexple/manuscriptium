@@ -1,5 +1,7 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewEntry;
+import ru.mcs.spi.project.ViewDefinition;
 import java.awt.BorderLayout;
 import java.awt.Window;
 import java.util.ArrayList;
@@ -11,7 +13,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import ru.mcs.core.i18n.Messages;
 
-/** Конкретные YAML-ссылки на выбранный в Files Markdown-файл. */
+/** Конкретные YAML-ссылки на выбранный в Files документ. */
 final class PhysicalLinkSources {
 
     record Source(ViewDefinition view, List<Integer> path, String title) {

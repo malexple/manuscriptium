@@ -5,6 +5,7 @@ module ru.mcs.markdown {
     requires com.formdev.flatlaf;
     requires com.formdev.flatlaf.extras;
     requires jlatexmath;
+    requires org.yaml.snakeyaml;
     requires flexmark;
     requires flexmark.util.ast;
     requires flexmark.util.misc;

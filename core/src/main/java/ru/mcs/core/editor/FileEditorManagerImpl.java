@@ -151,6 +151,11 @@ public final class FileEditorManagerImpl implements FileEditorManager {
             }
 
             @Override
+            public Optional<FileEditor> selectedEditor() {
+                return self.selectedEditor();
+            }
+
+            @Override
             public void selectFile(Path file) {
                 self.selectFile(file);
             }

@@ -8,10 +8,10 @@ import javax.swing.SwingUtilities;
 import ru.mcs.editor.model.DocumentChange;
 import ru.mcs.editor.model.DocumentListener;
 import ru.mcs.editor.model.DocumentModel;
-import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.editor.MarkdownParser;
-import ru.mcs.spi.editor.MarkdownParser.Change;
-import ru.mcs.spi.editor.MarkdownParser.ParseResult;
+import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.MarkdownParser;
+import ru.mcs.markdown.api.MarkdownParser.Change;
+import ru.mcs.markdown.api.MarkdownParser.ParseResult;
 
 /** Последовательно парсит snapshots вне EDT и публикует только результат актуальной версии. */
 final class MarkdownParseCoordinator implements DocumentListener, AutoCloseable {

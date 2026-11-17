@@ -86,7 +86,7 @@ public final class CoreBootstrap {
                         ToolWindowAnchor.BOTTOM, () -> new NotificationsPanel(s.notifications))
                 .withIcon(Icons.lucide("bell")));
         ProjectController projectController = new ProjectController(frame, s.actions, s.toolWindows, s.editors,
-                s.sessionStore, s.state, s.projectState, s.statusBar, s.notifications, s.obsidianLinks);
+                s.sessionStore, s.state, s.projectState, s.statusBar, s.notifications, s.projectAccess, s.indexContributors, s.services);
 
         pm.setFailureListener((id, reason) -> s.notifications.notify("core",
                 Messages.get("plugin.failed.title", id), reason, NotificationType.ERROR));

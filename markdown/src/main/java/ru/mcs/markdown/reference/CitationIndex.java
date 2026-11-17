@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import ru.mcs.spi.swing.editor.ObsidianLinkService;
+import ru.mcs.markdown.api.ObsidianLinkService;
 import ru.mcs.spi.service.AtomicFileStore;
 
 /** BibTeX-источники, CSL author-date labels, completion и вычисляемый список литературы. */

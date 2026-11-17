@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.swing.JComponent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.spi.swing.editor.ObsidianLinkService;
+import ru.mcs.markdown.api.ObsidianLinkService;
 import ru.mcs.spi.service.AtomicFileStore;
 
 class CitationIndexTest {

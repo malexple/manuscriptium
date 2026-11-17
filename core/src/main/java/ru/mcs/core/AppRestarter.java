@@ -2,7 +2,11 @@ package ru.mcs.core;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -38,15 +42,53 @@ public final class AppRestarter {
 
     private static void launch(ShellFrame frame, String[] args) {
         try {
-            List<String> command = restartCommand(System.getProperties(),
-                    ManagementFactory.getRuntimeMXBean().getInputArguments(), args,
-                    System.getProperty("os.name", ""), ProcessHandle.current().pid());
-            new ProcessBuilder(command).inheritIO().start();
+            startRestartProcess(args);
             System.exit(0);
         } catch (IOException | RuntimeException e) {
             JOptionPane.showMessageDialog(frame, Messages.get("plugins.restart.error", e.toString()),
                     Messages.get("plugins.restart.title"), JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    static Process startRestartProcess(String[] args) throws IOException {
+        long parentPid = ProcessHandle.current().pid();
+        List<String> command = restartCommand(System.getProperties(),
+                ManagementFactory.getRuntimeMXBean().getInputArguments(), args,
+                System.getProperty("os.name", ""), parentPid);
+        Path log = restartLog(args);
+        try {
+            Files.createDirectories(log.getParent());
+            appendLog(log, "=== Restart requested at " + Instant.now() + ", parent pid=" + parentPid + " ===");
+            Process process = new ProcessBuilder(command)
+                    .redirectErrorStream(true)
+                    .redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile()))
+                    .start();
+            appendLog(log, "Restart process started, pid=" + process.pid());
+            return process;
+        } catch (IOException | RuntimeException error) {
+            try {
+                appendLog(log, "Restart process failed: " + error);
+            } catch (IOException loggingError) {
+                error.addSuppressed(loggingError);
+            }
+            throw error;
+        }
+    }
+
+    /** Журнал не зависит от консоли Gradle/IDE и сохраняет ошибки раннего запуска нового процесса. */
+    static Path restartLog(String[] args) {
+        String home = null;
+        for (String arg : args) {
+            if (arg.startsWith("--home=")) {
+                home = arg.substring("--home=".length());
+            }
+        }
+        return HomeDirs.resolve(home).resolve("logs").resolve("restart.log").toAbsolutePath().normalize();
+    }
+
+    private static void appendLog(Path log, String message) throws IOException {
+        Files.writeString(log, message + System.lineSeparator(), StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
     static List<String> restartCommand(Properties properties, List<String> jvmArgs, String[] args,

@@ -1,9 +1,12 @@
 package ru.mcs.core.project;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
-/** Неизменяемый поисковый запрос. Поддерево всегда хранится как переносимый относительный путь с '/'. */
-record ProjectSearchQuery(String text, ProjectSearchScope scope, String subtree, Boolean draft, int limit) {
+/** Неизменяемый поисковый запрос. Attribute filters не привязаны к конкретному языковому формату. */
+record ProjectSearchQuery(String text, ProjectSearchScope scope, String subtree,
+                          Map<String, String> attributeFilters, int limit) {
 
     static final int DEFAULT_LIMIT = 100;
     static final int MAX_TEXT_LENGTH = 1_000;
@@ -15,13 +18,20 @@ record ProjectSearchQuery(String text, ProjectSearchScope scope, String subtree,
         }
         scope = Objects.requireNonNullElse(scope, ProjectSearchScope.ALL);
         subtree = normalizeSubtree(subtree);
+        attributeFilters = attributeFilters == null ? Map.of() : Map.copyOf(new LinkedHashMap<>(attributeFilters));
+        attributeFilters.forEach((key, value) -> {
+            if (key == null || !key.matches("[A-Za-z0-9_.-]{1,100}")
+                    || value == null || value.length() > MAX_TEXT_LENGTH) {
+                throw new IllegalArgumentException("Invalid search attribute filter");
+            }
+        });
         if (limit < 1 || limit > 1_000) {
             throw new IllegalArgumentException("Search limit must be between 1 and 1000");
         }
     }
 
     boolean isEmpty() {
-        return text.isEmpty() && subtree.isEmpty() && draft == null;
+        return text.isEmpty() && subtree.isEmpty() && attributeFilters.isEmpty();
     }
 
     private static String normalizeSubtree(String value) {
@@ -42,7 +52,7 @@ record ProjectSearchQuery(String text, ProjectSearchScope scope, String subtree,
             }
         }
         if (parts[0].equals(ProjectPaths.METADATA_DIR) || parts[0].equals(".git")) {
-            throw new IllegalArgumentException("Search subtree is outside the note hierarchy");
+            throw new IllegalArgumentException("Search subtree is outside the document hierarchy");
         }
         return path;
     }

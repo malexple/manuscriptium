@@ -1,8 +1,11 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewEntry;
+import ru.mcs.spi.project.ViewDefinition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Map;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +25,7 @@ class ProjectServiceTest {
     @Test
     void watcherTracksCreateModifyAndRecursiveDelete() throws Exception {
         Files.writeString(tmp.resolve("initial.md"), "# Initial");
-        try (ProjectService service = ProjectService.open(tmp, snapshot -> { })) {
+        try (ProjectService service = ProjectService.open(tmp, snapshot -> { }, TestIndexContributor.registry())) {
             assertThat(service.notes()).extracting(ProjectNote::path).containsExactly("initial.md");
 
             Files.createDirectories(tmp.resolve("new/nested"));
@@ -49,7 +52,7 @@ class ProjectServiceTest {
     @Test
     void serviceDataStaysInsideProject() throws Exception {
         Files.writeString(tmp.resolve("note.md"), "note");
-        try (ProjectService ignored = ProjectService.open(tmp, snapshot -> { })) {
+        try (ProjectService ignored = ProjectService.open(tmp, snapshot -> { }, TestIndexContributor.registry())) {
             assertThat(ProjectPaths.databaseFile(tmp)).exists();
             assertThat(ProjectPaths.luceneDir(tmp)).isDirectory();
             assertThat(tmp.resolve("note.md")).exists();
@@ -59,7 +62,7 @@ class ProjectServiceTest {
     @Test
     void watcherReloadsExternalViewsAndKeepsValidOnesAfterYamlError() throws Exception {
         Files.writeString(tmp.resolve("note.md"), "# Note");
-        try (ProjectService service = ProjectService.open(tmp, snapshot -> { })) {
+        try (ProjectService service = ProjectService.open(tmp, snapshot -> { }, TestIndexContributor.registry())) {
             Path view = ProjectPaths.viewsDir(tmp).resolve("tree.yml");
             Files.writeString(view, "name: First\nentries:\n  - file: note.md\n");
             await(() -> service.snapshot().views().size() == 1
@@ -92,7 +95,7 @@ class ProjectServiceTest {
                   - node: Target
                     children: []
                 """);
-        try (ProjectService service = ProjectService.open(tmp, snapshot -> { })) {
+        try (ProjectService service = ProjectService.open(tmp, snapshot -> { }, TestIndexContributor.registry())) {
             assertThat(service.moveOrClone("tree", List.of(0, 0), "stale.md", List.of(1), true).get()).isFalse();
             assertThat(service.snapshot().views().getFirst().entries().get(1).children()).isEmpty();
             assertThat(service.moveOrClone("tree", List.of(0, 0), List.of(1), true).get()).isTrue();
@@ -130,7 +133,7 @@ class ProjectServiceTest {
                   - node: Target
                     children: []
                 """);
-        try (ProjectService service = ProjectService.open(tmp, snapshot -> { })) {
+        try (ProjectService service = ProjectService.open(tmp, snapshot -> { }, TestIndexContributor.registry())) {
             String createdId = service.addLink("note.md", null, "Classification", List.of()).get();
             assertThat(createdId).isEqualTo("classification-2");
             assertThat(Files.readString(occupied)).isEqualTo("name: [\n");
@@ -218,7 +221,7 @@ class ProjectServiceTest {
     }
 
     private static ProjectSearchQuery search(String text, ProjectSearchScope scope) {
-        return new ProjectSearchQuery(text, scope, "", null, 100);
+        return new ProjectSearchQuery(text, scope, "", Map.of(), 100);
     }
 
     private static boolean contains(List<ProjectNote> notes, String path) {

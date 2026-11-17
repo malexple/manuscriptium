@@ -8,7 +8,7 @@ import java.awt.RenderingHints;
 import javax.swing.Icon;
 import javax.swing.UIManager;
 
-/** Маленький значок двух ссылок поверх обычной иконки Markdown. */
+/** Маленький значок двух ссылок поверх обычной иконки документа. */
 final class CloneOverlayIcon implements Icon {
 
     private final Icon base;

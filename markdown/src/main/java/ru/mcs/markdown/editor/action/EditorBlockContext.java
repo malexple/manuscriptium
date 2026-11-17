@@ -1,6 +1,6 @@
 package ru.mcs.markdown.editor.action;
 
-import ru.mcs.spi.editor.BlockKind;
+import ru.mcs.markdown.api.BlockKind;
 
 /** Неизменяемый контекст ПКМ; не содержит ссылок на живой AST или компонент после закрытия меню. */
 public record EditorBlockContext(BlockKind blockKind, boolean hasSelection, boolean link, boolean image) {

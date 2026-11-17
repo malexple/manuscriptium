@@ -19,9 +19,9 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.swing.editor.ObsidianLinkService;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
+import ru.mcs.markdown.api.ObsidianLinkService;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 import ru.mcs.spi.service.AtomicFileStore;
 

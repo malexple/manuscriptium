@@ -1,26 +1,29 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewEntry;
+import ru.mcs.spi.project.ViewDefinition;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.editor.FileEditorManagerImpl;
-import ru.mcs.core.editor.ObsidianLinkNavigator;
 import ru.mcs.core.editor.SessionStore;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
 import ru.mcs.core.notification.NotificationManagerImpl;
-import ru.mcs.core.service.AtomicFileStoreImpl;
 import ru.mcs.core.state.StateManagerImpl;
 import ru.mcs.core.statusbar.StatusBarModel;
 import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.spi.action.ActionIds;
+import ru.mcs.spi.project.BranchStatisticsService;
+import ru.mcs.spi.project.ProjectFileFactory;
+import ru.mcs.spi.service.ServiceRegistry;
+import ru.mcs.spi.swing.project.BookService;
 import ru.mcs.spi.swing.action.AnAction;
 import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.Constraints;
@@ -41,8 +44,9 @@ public final class ProjectController implements AutoCloseable {
     private final ProjectState projectState;
     private final StatusBarModel statusBar;
     private final NotificationManagerImpl notifications;
-    private final ObsidianLinkNavigator obsidianLinks;
-    private final BranchStatistics branchStatistics;
+    private final CoreProjectAccess projectAccess;
+    private final ProjectIndexContributors indexContributors;
+    private final ServiceRegistry services;
     private final ProjectTreePanel treePanel;
     private final ProjectSearchPanel searchPanel;
 
@@ -53,7 +57,8 @@ public final class ProjectController implements AutoCloseable {
     public ProjectController(JFrame frame, ActionManagerImpl actions, ToolWindowManagerImpl toolWindows,
                            FileEditorManagerImpl editors, SessionStore sessionStore, StateManagerImpl state,
                            ProjectState projectState, StatusBarModel statusBar, NotificationManagerImpl notifications,
-                           ObsidianLinkNavigator obsidianLinks) {
+                           CoreProjectAccess projectAccess,
+                           ProjectIndexContributors indexContributors, ServiceRegistry services) {
         this.frame = frame;
         this.actions = actions;
         this.editors = editors;
@@ -62,10 +67,10 @@ public final class ProjectController implements AutoCloseable {
         this.projectState = projectState;
         this.statusBar = statusBar;
         this.notifications = notifications;
-        this.obsidianLinks = obsidianLinks;
-        this.obsidianLinks.setStatusHandler(statusBar::setMessage);
-        this.branchStatistics = new BranchStatistics(new AtomicFileStoreImpl(), ForkJoinPool.commonPool());
-        this.treePanel = new ProjectTreePanel(editors, this::moveOrClone, this::newMarkdown,
+        this.projectAccess = projectAccess;
+        this.indexContributors = indexContributors;
+        this.services = services;
+        this.treePanel = new ProjectTreePanel(editors, this::moveOrClone, this::newDocument,
                 this::addLink, this::moveLink, this::openBook, new ViewTreePanel.StatisticsHandler() {
             @Override
             public void physical(Path file) {
@@ -127,7 +132,7 @@ public final class ProjectController implements AutoCloseable {
         new SwingWorker<ProjectService, Void>() {
             @Override
             protected ProjectService doInBackground() throws Exception {
-                return ProjectService.open(normalized, snapshot -> snapshotChanged(normalized, snapshot));
+                return ProjectService.open(normalized, snapshot -> snapshotChanged(normalized, snapshot), indexContributors);
             }
 
             @Override
@@ -189,7 +194,8 @@ public final class ProjectController implements AutoCloseable {
         }
         projectState.setProject(opened.root());
         state.changeProjectDirectory(ProjectPaths.stateDir(opened.root()));
-        obsidianLinks.setProject(opened.root(), notePaths(opened.snapshot()));
+        projectAccess.setRoot(opened.root());
+        projectAccess.update(opened.snapshot());
         treePanel.setProject(opened.root(), opened.snapshot());
         searchPanel.setProject(opened);
         frame.setTitle(Messages.get("project.window.title", displayName(opened.root())));
@@ -208,7 +214,7 @@ public final class ProjectController implements AutoCloseable {
             if (current == null || !current.root().equals(ProjectPaths.normalize(root))) {
                 return;
             }
-            obsidianLinks.updateNotes(notePaths(snapshot));
+            projectAccess.update(snapshot);
             treePanel.setProject(current.root(), snapshot);
             updateStatus(snapshot);
         });
@@ -242,14 +248,15 @@ public final class ProjectController implements AutoCloseable {
         Path key = service.root().resolve(".manuscriptium/books/" + viewId + suffix + ".book");
         ViewEntry selected = nodePath.isEmpty() ? null : ViewOperations.entryAt(view.entries(), nodePath);
         String name = selected == null ? view.name() : selected.title();
-        editors.openEditor(key, new BookViewEditor(key, name, service.root(), view, nodePath,
-                new AtomicFileStoreImpl()));
+        services.find(BookService.class).ifPresent(books -> editors.openEditor(key,
+                books.createEditor(key, name, service.root(), view, nodePath)));
     }
 
     private void showPhysicalStatistics(Path selected) {
         ProjectService service = current;
         if (service != null) {
-            showStatistics(service, branchStatistics.physical(selected, service.snapshot().notes()));
+            services.find(BranchStatisticsService.class).ifPresent(statistics -> showStatistics(service,
+                    statistics.physical(selected, notePaths(service.snapshot()))));
         }
     }
 
@@ -261,12 +268,13 @@ public final class ProjectController implements AutoCloseable {
         ViewDefinition view = service.snapshot().views().stream()
                 .filter(candidate -> candidate.id().equals(viewId)).findFirst().orElse(null);
         if (view != null) {
-            showStatistics(service, branchStatistics.view(service.root(), view, nodePath));
+            services.find(BranchStatisticsService.class).ifPresent(statistics -> showStatistics(service,
+                    statistics.view(service.root(), view, nodePath)));
         }
     }
 
     private void showStatistics(ProjectService service,
-                                CompletableFuture<BranchStatistics.Statistics> calculation) {
+                                CompletableFuture<BranchStatisticsService.Statistics> calculation) {
         statusBar.setMessage(Messages.get("branch.statistics.loading"));
         calculation.whenComplete((statistics, error) -> javax.swing.SwingUtilities.invokeLater(() -> {
             if (current != service) {
@@ -340,14 +348,15 @@ public final class ProjectController implements AutoCloseable {
         linkResult(service, service.addLink(file, viewId, newViewName, targetPath), true);
     }
 
-    private void newMarkdown(Path directory) {
+    private void newDocument(Path directory) {
         ProjectService service = current;
-        if (service == null || creatingNote) {
+        ProjectFileFactory fileFactory = services.find(ProjectFileFactory.class).orElse(null);
+        if (service == null || fileFactory == null || creatingNote) {
             return;
         }
         Path root = service.root();
         Path parent = directory != null ? directory : treePanel.newNoteDirectory();
-        String defaultPath = defaultNotePath(root, parent);
+        String defaultPath = fileFactory.defaultPath(root, parent);
         Object answer = JOptionPane.showInputDialog(frame, Messages.get("project.newNote.message"),
                 Messages.get("project.newNote.title"), JOptionPane.QUESTION_MESSAGE,
                 null, null, defaultPath);
@@ -359,7 +368,7 @@ public final class ProjectController implements AutoCloseable {
         new SwingWorker<Path, Void>() {
             @Override
             protected Path doInBackground() throws Exception {
-                return MarkdownNoteCreator.create(root, answer.toString());
+                return fileFactory.create(root, answer.toString());
             }
 
             @Override
@@ -382,18 +391,6 @@ public final class ProjectController implements AutoCloseable {
                 }
             }
         }.execute();
-    }
-
-    private static String defaultNotePath(Path root, Path parent) {
-        Path directory = parent == null ? root : parent;
-        String prefix = directory.equals(root) ? "" : ProjectPaths.relativePath(root, directory) + "/";
-        for (int i = 1; i < 1000; i++) {
-            String name = i == 1 ? "untitled.md" : "untitled-" + i + ".md";
-            if (!java.nio.file.Files.exists(directory.resolve(name), java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
-                return prefix + name;
-            }
-        }
-        return prefix + "untitled.md";
     }
 
     private void noteFailed(Exception error) {
@@ -446,12 +443,13 @@ public final class ProjectController implements AutoCloseable {
                 Icons.lucide("scroll-text")) {
             @Override
             public void update(AnActionEvent e) {
-                e.getPresentation().setEnabled(current != null && !creatingNote);
+                e.getPresentation().setEnabled(current != null && !creatingNote
+                        && services.find(ProjectFileFactory.class).isPresent());
             }
 
             @Override
             public void actionPerformed(AnActionEvent e) {
-                newMarkdown(null);
+                newDocument(null);
             }
         });
         actions.addToGroup(ActionIds.FILE_MENU, "core.project.newNote", Constraints.after("core.project.open"));
@@ -495,7 +493,7 @@ public final class ProjectController implements AutoCloseable {
             current.close();
             current = null;
             searchPanel.setProject(null);
-            obsidianLinks.clearProject();
+            projectAccess.clear();
             actions.updateActions();
         }
     }

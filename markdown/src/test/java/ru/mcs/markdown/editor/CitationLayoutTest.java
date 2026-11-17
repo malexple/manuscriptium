@@ -21,7 +21,7 @@ import ru.mcs.editor.model.DocumentProperties;
 import ru.mcs.editor.model.LineEnding;
 import ru.mcs.markdown.widget.WidgetRegistry;
 import ru.mcs.markdown.parser.FlexmarkTestAst;
-import ru.mcs.spi.swing.editor.ObsidianLinkService;
+import ru.mcs.markdown.api.ObsidianLinkService;
 import ru.mcs.spi.i18n.I18n;
 import ru.mcs.spi.service.AtomicFileStore;
 

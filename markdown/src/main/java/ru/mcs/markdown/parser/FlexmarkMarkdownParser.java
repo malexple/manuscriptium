@@ -6,9 +6,9 @@ import com.vladsch.flexmark.util.ast.Node;
 import java.util.ArrayList;
 import java.util.List;
 import ru.mcs.markdown.ast.NodeSpanMapper;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
-import ru.mcs.spi.editor.MarkdownParser;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
+import ru.mcs.markdown.api.MarkdownParser;
 
 /** Flexmark AST с инкрементальным dirty-window reparse и неизменяемыми результатами. */
 public final class FlexmarkMarkdownParser implements MarkdownParser {

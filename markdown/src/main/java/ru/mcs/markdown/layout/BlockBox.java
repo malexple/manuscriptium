@@ -2,7 +2,7 @@ package ru.mcs.markdown.layout;
 
 import java.util.List;
 import ru.mcs.editor.draw.BlockWidget;
-import ru.mcs.spi.editor.BlockSpan;
+import ru.mcs.markdown.api.BlockSpan;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
 /** Готовый к рисованию блок с абсолютными canvas-координатами. */

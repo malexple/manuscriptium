@@ -6,7 +6,7 @@ import java.awt.Color;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.editor.BlockKind;
+import ru.mcs.markdown.api.BlockKind;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 import ru.mcs.spi.editor.style.CssDiagnostic;
 import ru.mcs.spi.editor.style.CssEdges;

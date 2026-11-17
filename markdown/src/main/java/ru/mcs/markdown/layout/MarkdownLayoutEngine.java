@@ -14,14 +14,14 @@ import ru.mcs.editor.model.Range;
 import ru.mcs.markdown.reference.CitationIndex;
 import ru.mcs.markdown.reference.CrossReferenceIndex;
 import ru.mcs.markdown.widget.WidgetRegistry;
-import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
+import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 import ru.mcs.spi.swing.editor.style.CssBorder;
 import ru.mcs.spi.editor.style.CssEdges;
 import ru.mcs.spi.editor.style.CssLength;
-import ru.mcs.spi.swing.editor.style.EditorStyleService;
+import ru.mcs.markdown.api.EditorStyleService;
 import ru.mcs.spi.editor.style.ElementState;
 import ru.mcs.spi.editor.style.StyleElement;
 

@@ -6,6 +6,7 @@ import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
@@ -134,7 +135,7 @@ final class ProjectSearchPanel extends JPanel {
         ProjectSearchQuery query;
         try {
             query = new ProjectSearchQuery(queryField.getText(), (ProjectSearchScope) scopeBox.getSelectedItem(),
-                    subtreeField.getText(), selectedDraft(), ProjectSearchQuery.DEFAULT_LIMIT);
+                    subtreeField.getText(), selectedAttributeFilters(), ProjectSearchQuery.DEFAULT_LIMIT);
         } catch (IllegalArgumentException e) {
             model.clear();
             status.setText(Messages.get("project.search.invalid", e.getMessage()));
@@ -185,13 +186,16 @@ final class ProjectSearchPanel extends JPanel {
     }
 
     private void searchIfConfigured() {
-        if (!queryField.getText().isBlank() || !subtreeField.getText().isBlank() || selectedDraft() != null) {
+        if (!queryField.getText().isBlank() || !subtreeField.getText().isBlank() || !selectedAttributeFilters().isEmpty()) {
             search();
         }
     }
 
-    private Boolean selectedDraft() {
-        return draftBox.getSelectedItem() instanceof DraftFilter filter ? filter.value : null;
+    private Map<String, String> selectedAttributeFilters() {
+        if (draftBox.getSelectedItem() instanceof DraftFilter filter && filter.value != null) {
+            return Map.of("draft", filter.value.toString());
+        }
+        return Map.of();
     }
 
     private void openSelected() {

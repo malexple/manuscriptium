@@ -12,7 +12,7 @@ public interface BlockWidget {
 
     Rectangle bounds();
 
-    /** Точный source-span виджета; полезен для hit-test и точечных Markdown-операций. */
+    /** Точный source-span виджета; полезен для hit-test и точечных операций с документом. */
     int sourceStart();
 
     int sourceEnd();

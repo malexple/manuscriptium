@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.Test;
-import ru.mcs.spi.editor.BlockKind;
+import ru.mcs.markdown.api.BlockKind;
 
 class EditorContextMenuBuilderTest {
 

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ru.mcs.spi.editor.BlockKind;
+import ru.mcs.markdown.api.BlockKind;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 import ru.mcs.spi.editor.style.CssDeclaration;
 import ru.mcs.spi.editor.style.CssDiagnostic;

@@ -1,5 +1,6 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewDefinition;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Files;

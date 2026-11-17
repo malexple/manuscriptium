@@ -30,7 +30,7 @@ jobs:
           set -o pipefail
           ./gradlew :app:run --args="--smoke" | tee gradle-run-smoke.log
           grep -q "MCS_SMOKE builtIns=\[markdown\] plugins=\[\]" gradle-run-smoke.log
-          grep -q "editorProviders=\[core.markdown-fallback, editor.text, markdown.editor\]" gradle-run-smoke.log
+          grep -q "editorProviders=\[editor.text, markdown.fallback, markdown.editor\]" gradle-run-smoke.log
           grep -q "builtInFailures={}" gradle-run-smoke.log
       - name: Build runtime image
         run: ./gradlew :app:jlink
@@ -49,7 +49,7 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then EXE=$EXE.bat; fi
           "$EXE" --smoke --home=app/build/dev-home | tee smoke.log
           grep -q "MCS_SMOKE builtIns=\[markdown\] plugins=\[\]" smoke.log
-          grep -q "editorProviders=\[core.markdown-fallback, editor.text, markdown.editor\]" smoke.log
+          grep -q "editorProviders=\[editor.text, markdown.fallback, markdown.editor\]" smoke.log
           grep -q "markdown.editor.toggleMode" smoke.log
           grep -q "toolWindows=\[properties.panel, notes.panel\]" smoke.log
           grep -q "builtInFailures={}" smoke.log

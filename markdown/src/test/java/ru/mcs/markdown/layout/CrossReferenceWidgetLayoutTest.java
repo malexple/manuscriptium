@@ -20,8 +20,8 @@ import ru.mcs.markdown.widget.ImageWidget;
 import ru.mcs.markdown.widget.TableWidget;
 import ru.mcs.markdown.widget.WidgetRegistry;
 import ru.mcs.markdown.parser.FlexmarkTestAst;
-import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.editor.BlockKind;
+import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.BlockKind;
 
 class CrossReferenceWidgetLayoutTest {
 

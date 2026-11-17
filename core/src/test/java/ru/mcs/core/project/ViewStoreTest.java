@@ -1,5 +1,7 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewEntry;
+import ru.mcs.spi.project.ViewDefinition;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -76,7 +78,7 @@ class ViewStoreTest {
                 "name: V\nentries:\n  - file: C:/a.md\n",
                 "name: V\nentries:\n  - file: dir\\\\a.md\n",
                 "name: V\nentries:\n  - file: a//b.md\n",
-                "name: V\nentries:\n  - file: a.txt\n",
+                "name: V\nentries:\n  - file: .manuscriptium/a.md\n",
                 "name: V\nentries:\n  - file: a.md\n    visibility: visible\n",
                 "name: V\nentries:\n  - file: a.md\n    tags: programming\n");
         for (int i = 0; i < documents.size(); i++) {

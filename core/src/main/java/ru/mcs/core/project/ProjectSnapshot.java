@@ -1,5 +1,6 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewDefinition;
 import java.util.List;
 
 /** Атомарный снимок для UI: физические заметки, виртуальные деревья и неблокирующие ошибки views. */

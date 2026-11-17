@@ -239,7 +239,7 @@
   зависимости `editor → markdown` нет, `EditorPurityTest` проверяет production classfiles и JPMS provides/requires.
 - Обычные файлы до 5 МиБ открывает `editor.text` через `ServiceLoader<FileEditorProvider>`; `core` не зависит от `editor`.
   Асинхронные загрузка/Save, strict UTF-8, BOM/EOL, save-point, atomic write и symlink-target Save покрыты тестами.
-- Прежний `JTextArea` оставлен только как `core.markdown-fallback` для `.md` с Obsidian-навигацией при отключённом
+- Прежний `JTextArea` оставлен только как `markdown.fallback` для `.md` с Obsidian-навигацией при отключённом
   Markdown-плагине. Восстановлена привязка Ctrl+Y для redo вместе с Ctrl+Shift+Z.
 - Полная проверка: 140 test suites, 531 тест, 0 failures/errors, 2 осознанных `@Disabled`; девять golden-тем, jlink,
   standalone plugin-template, bundled и external packaged smoke прошли.
@@ -334,6 +334,28 @@
 **Готово, когда:** вся прежняя Markdown-функциональность работает из одного модуля, а старые обязательные Markdown-плагины удалены.
 
 ### Шаг 7. Убрать Markdown и Obsidian из `core` и `spi`
+
+**Статус: завершён и проверен 2026-11-17.**
+
+- Markdown API, Obsidian-навигация, fallback editor, Book, Branch Statistics и создание заметок перенесены в `markdown`.
+  Platform-neutral Project/View/Index-контракты находятся в `spi`, Swing Book-контракт — в `spi-swing`; production
+  `markdown → core` отсутствует. `ProjectAccess` отсекает устаревшие async-операции через `revision()`.
+- Общий SQLite/Lucene-индекс работает с `IndexedDocument` и `IndexContributorRegistry`: путь, title, metadata, content,
+  searchContent и произвольные attributes не зависят от Markdown. Схема SQLite обновлена до `user_version=2`; старый кэш
+  удаляется и пересобирается из исходных файлов. Markdown title/Front Matter/body/tags/draft извлекает только
+  `MarkdownIndexContributor`. Binary-файлы индексируются по имени/пути, а invalid UTF-8 поддерживаемого формата пропускается.
+- `PlatformLanguagePurityTest` проверяет production Java и resources платформенных модулей;
+  `NoForbiddenModuleDependenciesTest` одновременно проверяет JPMS и Gradle dependencies. Полный `clean build :app:devHome
+  :app:jlink`: 542 теста, 0 failures/errors, 1 прежний `@Disabled`; девять golden-тем прошли без обновления эталонов.
+  Standalone Template, `:app:run --args="--smoke"`, bundled/external packaged smoke успешны. Patch независимо применён
+  к принятому шагу 6 + hotfix через Git и GNU patch; полная сборка и smoke повторены в применённой копии.
+- Restart запускает новый процесс с прежними module/classpath и JVM arguments, ждёт завершение прежнего PID и не зависит
+  от консоли Gradle/IDE. stdout/stderr нового процесса добавляются в `<home>/logs/restart.log`. Реальный process test и два
+  последовательных packaged UI restart подтвердили disable → restart → enable → restart внешнего Template JAR с повторной
+  активацией его tool window.
+- Packaged UI-приёмка подтвердила Ctrl+Click по секционной ссылке, секционную трансклюзию, таблицу и формулу, два
+  последовательных File → Save, поиск сохранённого текста, Book с двумя главами, Export Node и Branch Statistics.
+  В `BookViewEditor.saveAsync()` future теперь завершается только после обновления modified/save-state.
 
 **Изменения**
 

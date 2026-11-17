@@ -18,7 +18,6 @@ import ru.mcs.spi.swing.editor.FileEditor;
 import ru.mcs.spi.swing.editor.MathRenderingService;
 import ru.mcs.spi.swing.editor.RenderedBlock;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
-import ru.mcs.spi.swing.editor.style.EditorStyleService;
 import ru.mcs.spi.swing.settings.Configurable;
 import ru.mcs.spi.swing.ui.StatusBarWidget;
 import ru.mcs.spi.swing.ui.ToolWindowSpec;
@@ -29,7 +28,7 @@ class SpiSwingModuleTest {
     private static final Path MODULE_INFO = Path.of("build", "classes", "java", "main", "module-info.class");
     private static final List<Class<?>> CONTRACTS = List.of(
             Plugin.class, AnAction.class, FileEditor.class, MathRenderingService.class, RenderedBlock.class,
-            ComputedStyle.class, EditorStyleService.class, Configurable.class, StatusBarWidget.class,
+            ComputedStyle.class, Configurable.class, StatusBarWidget.class,
             ToolWindowSpec.class);
 
     @Test

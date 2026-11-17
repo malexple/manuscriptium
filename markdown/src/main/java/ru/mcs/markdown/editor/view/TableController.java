@@ -4,9 +4,9 @@ import java.util.function.UnaryOperator;
 import ru.mcs.editor.model.DocumentModel;
 import ru.mcs.editor.model.Replace;
 import ru.mcs.markdown.widget.TableModel;
-import ru.mcs.spi.editor.AstIndex;
-import ru.mcs.spi.editor.BlockKind;
-import ru.mcs.spi.editor.BlockSpan;
+import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
 
 /** Позиционные и структурные операции таблицы над её исходным span, без сериализации всего документа. */
 final class TableController {

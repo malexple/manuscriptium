@@ -1,5 +1,7 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.ViewEntry;
+import ru.mcs.spi.project.ViewDefinition;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.channels.FileChannel;
@@ -121,7 +123,7 @@ final class ViewStore {
             throw new IllegalArgumentException(path + ": 'children' is allowed only for a node");
         }
         String file = requiredString(map, "file", path);
-        ProjectPaths.validateRelativeMarkdown(file, path + ".file");
+        ProjectPaths.validateRelativeDocument(file, path + ".file");
         return ViewEntry.file(file, overrideTitle, visibility, tags);
     }
 

@@ -21,7 +21,7 @@ import ru.mcs.editor.model.DocumentProperties;
 import ru.mcs.editor.model.LineEnding;
 import ru.mcs.editor.view.ClipboardService;
 import ru.mcs.markdown.widget.WidgetRegistry;
-import ru.mcs.spi.swing.editor.ObsidianLinkService;
+import ru.mcs.markdown.api.ObsidianLinkService;
 import ru.mcs.spi.service.AtomicFileStore;
 
 class EditorCanvasCitationTest {
