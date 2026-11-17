@@ -80,4 +80,14 @@ class PluginMessagesTest {
         PluginMessages m = PluginMessages.fromJars(List.of(jar), "other/messages", Locale.ENGLISH);
         assertThat(m.get("hello")).isEqualTo("hello");
     }
+
+    @Test
+    void builtInModuleResourcesUseTheSameLocaleAndFallbackRules() {
+        PluginMessages russian = PluginMessages.fromModule(PluginMessagesTest.class,
+                "builtin/messages", Locale.of("ru"));
+        assertThat(russian.get("hello")).isEqualTo("Привет");
+        assertThat(russian.get("fallback")).isEqualTo("Fallback");
+        assertThat(PluginMessages.fromModule(PluginMessagesTest.class, null, Locale.ENGLISH).get("hello"))
+                .isEqualTo("hello");
+    }
 }

@@ -1,6 +1,6 @@
 # Manuscriptium — план архитектурного рефакторинга
 
-Дата: 2026-11-16. Статус: шаги 1–4 завершены; следующий шаг — выделение универсального `editor`.
+Дата: 2026-11-17. Статус: шаги 1–6 завершены; следующий шаг — удаление Markdown и Obsidian из `core` и `spi`.
 
 ## 1. Цель и границы
 
@@ -276,6 +276,32 @@
 **Готово, когда:** универсальный редактор работает без Markdown, а Markdown использует его без потери редактируемости.
 
 ### Шаг 6. Объединить встроенную Markdown-реализацию в `markdown`
+
+**Статус: завершён и проверен 2026-11-17.**
+
+- Создан JPMS-модуль `ru.mcs.markdown`; встроенные `markdown-parser`, `markdown-editor`, `editor-styles`, `math-renderer`,
+  `properties` и `notes` перенесены в него вместе с реализацией, ресурсами, девятью CSS-темами, golden/corpus/fonts и тестами.
+  Hello и все семь прежних bundled-plugin каталогов удалены. JPMS экспортирует только `ru.mcs.markdown.api`; Flexmark и
+  JLaTeXMath отсутствуют в публичных JVM-сигнатурах, `markdown → core` и `core → markdown` запрещены architecture tests.
+- Добавлен контракт `BuiltInModule`: `app` явно передаёт `MarkdownModule` в `CoreBootstrap`. Встроенный модуль использует
+  `PluginContext` и автоматическую очистку регистраций, но не имеет `plugin.yml`, отдельного `ModuleLayer`, `PluginState`
+  или переключателя в Settings → Plugins. Действия, редактор, settings, Properties и Notes регистрируются напрямую без
+  declarative proxy; state ids — `markdown.editor` и `markdown.style`.
+- Flexmark/JLaTeXMath включены в jlink image как automatic modules; прежние system-plugins больше не создаются.
+  `MarkdownModuleBoundaryTest`, `CoreBuiltInModulesTest`, module-resource i18n и package dependency tests фиксируют границу
+  и lifecycle, включая cleanup после исключения при старте.
+- Финальная проверка `clean test :app:devHome :app:jlink`: 140 test suites, 535 тестов, 0 failures/errors, 1 перенесённый
+  без включения пользовательский `@Disabled`; девять Linux golden-тем прошли без обновления эталонов. Standalone
+  `plugin-template clean build`, bundled smoke (`builtIns=[markdown] plugins=[]`) и external smoke
+  (`builtIns=[markdown] plugins=[ru.mcs.plugin.template]`) успешны; `failures={}` и `builtInFailures={}`.
+- Исправлен запуск через `:app:run`: Flexmark без `Automatic-Module-Name` не перемещался Gradle на module path.
+  Теперь `run` явно передаёт весь `runtimeClasspath` через `--module-path`; отдельный `:app:run --args="--smoke"`
+  добавлен в CI вместе с проверками встроенного Markdown и editor providers.
+- Packaged UI-приёмка на реальном jlink image: сложный Markdown с Front Matter, citation, callout, таблицей, формулой,
+  изображением, wikilink и transclusion; Canvas/Source и Save с файловыми assertions; Properties Apply с сохранением
+  unknown YAML; Notes Add/Edit; выбор `doe2020` в citation completion; Classification/Open as Book и Branch Statistics.
+  Hello отсутствует. Внешний Template имеет действие и tool window, отключается через Settings → Plugins с restart;
+  после его отключения встроенный Markdown продолжает работать.
 
 **Изменения**
 

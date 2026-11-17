@@ -37,6 +37,23 @@ public final class PluginMessages implements I18n {
         return new PluginMessages(locale, bundle);
     }
 
+    /** Читает локализацию встроенного JPMS-модуля без создания plugin.yml или отдельного ModuleLayer. */
+    public static PluginMessages fromModule(Class<?> owner, String base, Locale locale) {
+        if (owner == null || base == null) {
+            return new PluginMessages(locale, MessageBundle.empty());
+        }
+        MessageBundle bundle = MessageBundle.load(base, locale, path -> {
+            InputStream input = owner.getResourceAsStream("/" + path);
+            if (input == null) {
+                return null;
+            }
+            try (input) {
+                return new ByteArrayInputStream(input.readAllBytes());
+            }
+        });
+        return new PluginMessages(locale, bundle);
+    }
+
     private static List<Path> jarsOf(Path directory) {
         try (Stream<Path> s = Files.list(directory)) {
             return s.filter(p -> p.getFileName().toString().endsWith(".jar")).sorted().toList();

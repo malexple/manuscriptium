@@ -1,18 +1,21 @@
 # Manuscriptium
 
-Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, плагины и Project: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки включены bundled-плагины Hello, Markdown Canvas Editor, Markdown AST Parser, Typora Editor Styles, JLaTeXMath Renderer, «Заметки» и «Свойства».
+Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, внешние JAR-плагины и Project: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки JPMS-модуль `markdown` включает Canvas Editor, Flexmark AST Parser, девять Typora-подобных тем, JLaTeXMath Renderer, «Заметки» и «Свойства».
 
 ## Первый запуск 
 ```
 gradle wrapper --gradle-version 8.14.4   # нужен Gradle >= 8.14.4 для плагина jlink 4.x
 ./gradlew build
-./gradlew :app:run                       # окно с bundled-плагинами
-./gradlew :app:devHome :app:jlink          # плагины попадают в image/system-plugins
+./gradlew :app:run                       # окно с явно подключённым встроенным Markdown
+./gradlew :app:devHome :app:jlink          # core, editor, markdown и их зависимости попадают в runtime image
 app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 ```
 
-Bundled-плагины находятся в `system-plugins/` установленного приложения. Внешние устанавливаются в `plugins/`
-внутри каталога данных (`--home`), не изменяя файлы установленного приложения.
+Встроенные возможности продукта не являются внешними плагинами: `app` явно передаёт `MarkdownModule` в `CoreBootstrap`.
+Модуль `markdown` не имеет `plugin.yml`, не создаёт отдельный `ModuleLayer`, не отображается в **Settings → Plugins** и не
+отключается по отдельности. Внешние JAR по-прежнему устанавливаются в `plugins/` внутри каталога данных (`--home`),
+имеют собственный `ModuleLayer` и независимо включаются/отключаются с перезапуском. Установка внешнего JAR не изменяет
+файлы установленного приложения.
 
 ## Модульная граница SDK
 
@@ -32,12 +35,12 @@ Markdown, Obsidian или Front Matter; это проверяется `EditorPur
 Обычные файлы до 5 МиБ открывает `editor.text` через `ServiceLoader<FileEditorProvider>`: `core` объявляет только `uses`,
 а `app` включает модуль в runtime image. Загрузка и Save выполняются вне EDT; strict UTF-8, BOM, LF/CRLF/CR, атомарная
 запись и symlink-target semantics совпадают с Markdown editor. `core.markdown-fallback` сохраняет прежний редактор с
-Obsidian-навигацией только для `.md` на случай отключённого Markdown-плагина. Markdown расширяет базовый Canvas через
-`MarkdownCanvas extends EditorCanvas`; обратной зависимости `editor → markdown-editor` нет.
+Obsidian-навигацией для компоновки продукта без модуля `markdown`. Markdown расширяет базовый Canvas через
+`MarkdownCanvas extends EditorCanvas`; обратной зависимости `editor → markdown` нет.
 
 ## Markdown Canvas Editor — E0–E8
 
-`.md` открывается в той же вкладке редактора через bundled-плагин `plugins/markdown-editor` с приоритетом выше встроенного
+`.md` открывается в той же вкладке редактора через встроенный JPMS-модуль `markdown` с приоритетом выше встроенного
 текстового провайдера. Кнопки **Canvas** и **Source** внутри вкладки переключают представление без создания второй вкладки
 или окна предпросмотра; действие также доступно в View, toolbar и popup вкладки. Режим для новых вкладок настраивается в
 **Settings → Markdown Editor** и сохраняется между запусками.
@@ -59,7 +62,7 @@ Save-point учитывает undo/redo и правки во время фоно
 изменяет только затронутые физические строки, а рисование ограничено viewport. Source сохраняет эту исходную раскладку;
 Canvas начиная с E5 использует отдельный WYSIWYG layout над той же моделью документа.
 
-В E3 bundled-плагин `plugins/markdown-parser` предоставляет Flexmark AST через JDK-only SPI. `BlockSpan` сохраняет нулевые
+В E3 модуль `markdown` предоставляет Flexmark AST через JDK-only SPI. `BlockSpan` сохраняет нулевые
 полуоткрытые UTF-16 offsets и depth каждого узла; поддержаны Front Matter, wikilinks/embeds, callouts, footnotes, inline/block
 math, task lists, tables и strikethrough. `AstIndex` выполняет поиск блока по offset. Обычная правка перепарсивает только
 затронутые top-level блоки и переиспользует остальные; результаты вычисляются в общем daemon executor и применяются на EDT
@@ -69,12 +72,12 @@ math, task lists, tables и strikethrough. `AstIndex` выполняет пои�
 
 ### Темы редактора E4
 
-Bundled-плагин `plugins/editor-styles` загружает девять Typora-подобных CSS-тем: `github`, `newsprint`, `night`, `pixyll`,
+Модуль `markdown` загружает девять Typora-подобных CSS-тем: `github`, `newsprint`, `night`, `pixyll`,
 `whitey`, `vue`, `lapis`, `onedark` и `notion`. В автоматическом режиме светлая тема оболочки выбирает `github`, тёмная — `night`;
 явный выбор темы редактора через `EditorStyleService` отключает это автоматическое следование. JSON-токены и переключение
 FlatLaf-тем оболочки не изменены.
 
-Плагин предоставляет `EditorStyleService` из `spi-swing` с типизированным AWT-ориентированным `ComputedStyle`. CSS-движок поддерживает каскад и `!important`,
+Модуль предоставляет `EditorStyleService` из `spi-swing` с типизированным AWT-ориентированным `ComputedStyle`. CSS-движок поддерживает каскад и `!important`,
 type/id/class/`:root`/`:hover`/`:nth-child(odd|even)`, descendant- и child-комбинаторы, группы селекторов, переменные `--name` и
 `var()`, размеры, цвета, отступы, границы, шрифты и локальные `@font-face`. Неподдерживаемые свойства и конструкции попадают в журнал
 как `CssDiagnostic` и не прерывают загрузку остальной темы. CSS и TTF/OTF-шрифты загружаются в daemon executor вне EDT; внешние
@@ -101,12 +104,12 @@ hit test и selection используют отображение видимых
 Векторный checkbox переключает один символ `[ ]`/`[x]`; Ctrl/Cmd+Click открывает только HTTP/HTTPS-ссылки.
 
 Проверка рендеринга включает метрики со встроенным Liberation Sans, `DrawSink` command tests и девять Linux goldens при scale=2.
-При расхождении создаются `actual.png`, `expected.png` и `diff.png` в `plugins/editor-styles/build/reports/golden-diff/`.
+При расхождении создаются `actual.png`, `expected.png` и `diff.png` в `markdown/build/reports/golden-diff/`.
 Для пересоздания Linux-эталонов из корня проекта:
 
 ```
-./gradlew :plugins:editor-styles:test --tests ru.mcs.plugin.editorstyle.MarkdownGoldenTest \
-  -Dmanuscriptium.golden.update=plugins/editor-styles/src/test/resources/golden/linux
+./gradlew :markdown:test --tests ru.mcs.markdown.style.MarkdownGoldenTest \
+  -Dmanuscriptium.golden.update=markdown/src/test/resources/golden/linux
 ```
 
 ### Режимы и действия E6
@@ -149,8 +152,8 @@ overwrite: `photo.png`, `photo-1.png` и далее. В Markdown вставля�
 отключает, поскольку оба lightweight-редактора делят одно heavyweight окно. Это сохраняет настоящий XDND на Linux и предотвращает
 снятие `XdndAware` с окна.
 
-Bundled-плагин `plugins/math-renderer` скрывает JLaTeXMath в своём JPMS plugin layer и предоставляет JDK-only
-`MathRenderingService`. Inline math является неделимым `InlineContent.Atom` с source offsets, hit test, caret mapping и selection;
+Модуль `markdown` включает JLaTeXMath как automatic module в runtime image и предоставляет JDK-only
+`MathRenderingService` без JLaTeXMath-типов в публичных сигнатурах. Inline math является неделимым `InlineContent.Atom` с source offsets, hit test, caret mapping и selection;
 LaTeX fallback с пробелами не разбивает формулу на повторные изображения. Поддержаны `$…$`, однострочный `$$…$$` и многострочный
 display block. Рендеринг выполняется вне EDT.
 
@@ -194,7 +197,7 @@ Front matter `bibliography: refs.bib` и необязательный `csl: styl
 (200 слов/минуту, округление вверх). Диск читается вне EDT; физическая ветка использует индексированные `ProjectNote`, виртуальная —
 видимую проекцию книги. Устаревший результат после смены Project игнорируется.
 
-## Bundled-панели заметок и свойств
+## Встроенные панели заметок и свойств
 
 **Заметки** показывает открытые Markdown-вкладки. Двойной щелчок, Enter или кнопка открытия переключают активную
 заметку; для выбранного файла в фоне вычисляются слова, UTF-16-символы и строки исходного Markdown. **Copy Wiki Link**
@@ -283,8 +286,8 @@ entries:
 ### Obsidian-разметка
 
 Fallback source-редактор `core.markdown-fallback` подсвечивает `[[wikilinks]]`, `![[embed]]` и callouts вида `> [!note]`, `> [!warning]`.
-Он используется, если bundled Markdown Canvas Editor отключён. С E8 Canvas также поддерживает wikilinks, embeds, callouts,
-комментарии и навигацию через SPI-сервисы без production-зависимости плагина от `core`.
+Он используется в компоновке без модуля `markdown`. С E8 Canvas также поддерживает wikilinks, embeds, callouts,
+комментарии и навигацию через SPI-сервисы без production-зависимости `markdown` от `core`.
 Поддержаны alias (`[[Note|alias]]`), заголовки (`[[Note#Heading]]`, `[[#Local heading]]`) и block-id
 (`[[Note#^block-id]]`). Ctrl+Click (Cmd+Click на macOS) открывает заметку и выбирает адресованный заголовок или блок.
 Ссылки разрешаются относительно текущей заметки и корня Project; имя без каталога находит наиболее короткий совпадающий путь,
@@ -304,6 +307,5 @@ Fallback source-редактор `core.markdown-fallback` подсвечивае
 
 - [Руководство по Plugin SDK 0.9](docs/plugin-sdk.md).
 - [Standalone-шаблон JAR-плагина](plugin-template/).
-- [Расширенный демо-плагин Hello](plugins/hello/).
-- Bundled-примеры tool windows и фоновой работы: [Заметки](plugins/notes/) и [Свойства](plugins/properties/).
-- Bundled-примеры tool windows и фоновой работы: [Заметки](plugins/notes/) и [Свойства](plugins/properties/).
+- Встроенные реализации Notes и Properties находятся в `markdown`; они используют тот же `PluginContext`, но не являются
+  устанавливаемыми JAR-плагинами и не экспортируются как SDK.

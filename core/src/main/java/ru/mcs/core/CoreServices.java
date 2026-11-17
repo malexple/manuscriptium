@@ -1,7 +1,11 @@
 package ru.mcs.core;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceLoader;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
@@ -34,6 +38,7 @@ import ru.mcs.core.toolwindow.ToolWindowManagerImpl;
 import ru.mcs.core.project.ProjectPaths;
 import ru.mcs.core.project.ProjectState;
 import ru.mcs.spi.swing.PluginContext;
+import ru.mcs.spi.swing.BuiltInModule;
 import ru.mcs.spi.swing.editor.FileEditorProvider;
 import ru.mcs.spi.swing.editor.ObsidianLinkService;
 import ru.mcs.spi.editor.style.ShellThemeService;
@@ -67,6 +72,8 @@ final class CoreServices {
     final PluginState plugins = new PluginState();
     final ProjectState projectState = new ProjectState();
     final GeneralSettingsProvider generalSettings;
+    private final List<BuiltInModule> builtIns = new ArrayList<>();
+    private final Map<String, String> builtInFailures = new LinkedHashMap<>();
 
     CoreServices(Path home, boolean persist) {
         Path legacyProjectState = home.resolve("workspace").resolve("state");
@@ -103,6 +110,56 @@ final class CoreServices {
                 this::contextFor, this::release, plugins::isEnabled);
     }
 
+    /** Запускает явно скомпонованные модули продукта; внешние JAR этот список не пополняют. */
+    void startBuiltIns(List<BuiltInModule> modules) {
+        for (BuiltInModule module : modules) {
+            String id = module.id();
+            try {
+                module.start(contextFor(module));
+                builtIns.add(module);
+            } catch (Throwable t) {
+                builtInFailures.put(id, t.toString());
+                LOG.log(System.Logger.Level.ERROR, "Built-in module failed: " + id, t);
+                try {
+                    module.stop();
+                } catch (Throwable stopFailure) {
+                    LOG.log(System.Logger.Level.WARNING, "Failed built-in module cleanup: " + id, stopFailure);
+                }
+                release(id);
+            }
+        }
+    }
+
+    List<String> builtInIds() {
+        return builtIns.stream().map(BuiltInModule::id).toList();
+    }
+
+    Map<String, String> builtInFailures() {
+        return Map.copyOf(builtInFailures);
+    }
+
+    void stopBuiltIns() {
+        List<BuiltInModule> reversed = new ArrayList<>(builtIns);
+        Collections.reverse(reversed);
+        for (BuiltInModule module : reversed) {
+            try {
+                module.stop();
+            } catch (Throwable t) {
+                LOG.log(System.Logger.Level.WARNING, "Built-in module stop failed: " + module.id(), t);
+            }
+            release(module.id());
+        }
+        builtIns.clear();
+    }
+
+    private PluginContext contextFor(BuiltInModule module) {
+        String id = module.id();
+        return new PluginContextImpl(id, actions.scopedFor(id), toolWindows.scopedFor(id), editors.scopedFor(id),
+                statusBar.scopedFor(id), notifications.scopedFor(id), bus.scopedFor(id),
+                services.scopedFor(id), state.scopedFor(id), configurables.scopedFor(id),
+                PluginMessages.fromModule(module.getClass(), module.i18nBaseName(), Messages.locale()));
+    }
+
     private PluginContext contextFor(PluginDescriptor d) {
         String id = d.id();
         return new PluginContextImpl(id, actions.scopedFor(id), toolWindows.scopedFor(id), editors.scopedFor(id),
@@ -113,7 +170,10 @@ final class CoreServices {
 
     /** Снять всё, что плагин зарегистрировал. Каждый шаг независим: сбой одного не мешает остальным. */
     private void release(PluginDescriptor d) {
-        String id = d.id();
+        release(d.id());
+    }
+
+    private void release(String id) {
         safely(id, () -> state.unregisterOwner(id));
         safely(id, () -> editors.unregisterOwner(id));
         safely(id, () -> toolWindows.unregisterOwner(id));

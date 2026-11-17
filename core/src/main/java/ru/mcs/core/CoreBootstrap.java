@@ -20,6 +20,7 @@ import ru.mcs.core.plugin.PluginsConfigurableProvider;
 import ru.mcs.core.settings.SettingsActions;
 import ru.mcs.core.shell.ShellFrame;
 import ru.mcs.spi.action.ActionIds;
+import ru.mcs.spi.swing.BuiltInModule;
 import ru.mcs.spi.ui.NotificationType;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.swing.ui.ToolWindowSpec;
@@ -39,7 +40,7 @@ public final class CoreBootstrap {
     private CoreBootstrap() {
     }
 
-    public static void start(String[] args) {
+    public static void start(String[] args, BuiltInModule... builtIns) {
         Path home = HomeDirs.resolve(argValue(args, "--home="));
         try {
             new PluginInstaller(HomeDirs.pluginsDir(home)).applyPending();
@@ -48,15 +49,16 @@ public final class CoreBootstrap {
             LOG.log(System.Logger.Level.ERROR, "Cannot apply pending plugin update", e);
         }
         if (Arrays.asList(args).contains("--smoke")) {
-            runSmoke(home);
+            runSmoke(home, builtIns);
         } else {
-            SwingUtilities.invokeLater(() -> startUi(home, args));
+            SwingUtilities.invokeLater(() -> startUi(home, args, builtIns));
         }
     }
 
-    private static void startUi(Path home, String[] args) {
+    private static void startUi(Path home, String[] args, BuiltInModule... builtIns) {
         LafInstaller.install();
         CoreServices s = new CoreServices(home, true);
+        s.startBuiltIns(List.of(builtIns));
         s.themes.start();
 
         ShellFrame frame = new ShellFrame("Manuscriptium", s.actions, s.toolWindows, s.editors, s.statusBar,
@@ -107,11 +109,13 @@ public final class CoreBootstrap {
             s.state.saveChanged();
             projectController.close();
             pm.stopAll();
+            s.stopBuiltIns();
         }));
     }
 
-    private static void runSmoke(Path home) {
+    private static void runSmoke(Path home, BuiltInModule... builtIns) {
         CoreServices s = new CoreServices(home, false);
+        s.startBuiltIns(List.of(builtIns));
         PluginManager pm = s.newPluginManager(home);
         int code = 1;
         try {
@@ -119,7 +123,8 @@ public final class CoreBootstrap {
             List<String> lazy = new ArrayList<>(pm.declaredIds());
             lazy.removeAll(pm.loadedIds());
             pm.activateAll();
-            System.out.println("MCS_SMOKE plugins=" + pm.loadedIds()
+            System.out.println("MCS_SMOKE builtIns=" + s.builtInIds()
+                    + " plugins=" + pm.loadedIds()
                     + " lazy=" + lazy
                     + " locale=" + Messages.locale()
                     + " actions=" + s.actions.pluginActionIds()
@@ -132,12 +137,14 @@ public final class CoreBootstrap {
                             .map(p -> p.getId()).toList()
                     + " statusWidgets=" + s.statusBar.widgetIds()
                     + " state=" + s.state.ids()
-                    + " failures=" + pm.failures());
-            code = pm.failures().isEmpty() && !pm.loadedIds().isEmpty() ? 0 : 1;
+                    + " failures=" + pm.failures()
+                    + " builtInFailures=" + s.builtInFailures());
+            code = pm.failures().isEmpty() && s.builtInFailures().isEmpty() && !s.builtInIds().isEmpty() ? 0 : 1;
         } catch (Exception e) {
             e.printStackTrace();
         }
         pm.stopAll();
+        s.stopBuiltIns();
         System.exit(code);
     }
 
