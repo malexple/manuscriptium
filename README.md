@@ -9,7 +9,20 @@ gradle wrapper --gradle-version 8.14.4   # нужен Gradle >= 8.14.4 для п
 ./gradlew :app:run                       # окно с явно подключённым встроенным Markdown
 ./gradlew :app:devHome :app:jlink          # core, editor, markdown и их зависимости попадают в runtime image
 app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
+./gradlew :app:minimalSmoke             # независимый named-module запуск core + editor без markdown
 ```
+
+При пустом состоянии центральная панель предлагает **New File**, **New Project**, **Open Project** и **Open File**. Эти кнопки
+вызывают те же зарегистрированные действия, что и меню **File**. New File использует `CREATE_NEW` и не перезаписывает
+существующий файл; New Project создаёт вложенные каталоги, но не заменяет обычный файл каталогом. Отдельный Markdown-файл
+можно сразу редактировать и сохранять без предварительного открытия Project.
+
+`app` собирает полный Manuscriptium из `core`, `editor`, `markdown` и их метаданных. Тестовый source set `minimalSmoke`
+находится внутри того же Gradle-модуля `app`, но имеет собственный `module-info.java` и не включает ни основной output
+`app`, ни `markdown`. Его JPMS dependency assertions подтверждают, что платформенные модули не требуют `ru.mcs.markdown`,
+а единственный зарегистрированный editor provider — `editor.text`. Smoke открывает `plain.txt`, выполняет insert,
+undo/redo и дожидается завершения Save. Задача `:app:check` зависит от `minimalSmoke`, поэтому минимальная компоновка
+проверяется обычной сборкой; отдельный модуль `product-minimal` не создаётся.
 
 Встроенные возможности продукта не являются внешними плагинами: `app` явно передаёт `MarkdownModule` в `CoreBootstrap`.
 Модуль `markdown` не имеет `plugin.yml`, не создаёт отдельный `ModuleLayer`, не отображается в **Settings → Plugins** и не
@@ -69,7 +82,9 @@ Markdown, Obsidian или Front Matter; это проверяется `EditorPur
 а `app` включает модуль в runtime image. Загрузка и Save выполняются вне EDT; strict UTF-8, BOM, LF/CRLF/CR, атомарная
 запись и symlink-target semantics совпадают с Markdown editor. `markdown.fallback` сохраняет прежний редактор с
 Obsidian-навигацией для компоновки продукта без модуля `markdown`. Markdown расширяет базовый Canvas через
-`MarkdownCanvas extends EditorCanvas`; обратной зависимости `editor → markdown` нет.
+`MarkdownCanvas extends EditorCanvas`; обратной зависимости `editor → markdown` нет. Native image DnD по-прежнему включён
+в обычном desktop UI, но `DropTarget` не создаётся при `GraphicsEnvironment.isHeadless()`, поэтому текстовая модель и Save
+можно проверять в headless `minimalSmoke` без изменения обычного XDND-поведения.
 
 ## Markdown Canvas Editor — E0–E8
 

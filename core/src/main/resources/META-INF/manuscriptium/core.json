@@ -2,7 +2,9 @@
   "formatVersion": 1,
   "actions": [
     {"id": "core.project.open", "textKey": "project.open", "icon": "folder-open"},
+    {"id": "core.project.new", "textKey": "project.new", "icon": "folder-open"},
     {"id": "core.project.newNote", "textKey": "project.newNote", "icon": "scroll-text"},
+    {"id": "core.file.new", "textKey": "file.new", "icon": "scroll-text"},
     {"id": "core.file.open", "textKey": "file.open", "icon": "folder-open"},
     {"id": "core.file.save", "textKey": "file.save", "icon": "save"},
     {"id": "core.file.saveAll", "textKey": "file.saveAll", "icon": "save-all"},
@@ -27,8 +29,10 @@
     ]},
     {"id": "MainMenu.File", "textKey": "menu.file", "popup": true, "children": [
       {"command": "core.project.open", "position": "first"},
-      {"command": "core.project.newNote", "position": "after", "anchor": "core.project.open"},
-      {"command": "core.file.open", "position": "after", "anchor": "core.project.newNote"},
+      {"command": "core.project.new", "position": "after", "anchor": "core.project.open"},
+      {"command": "core.project.newNote", "position": "after", "anchor": "core.project.new"},
+      {"command": "core.file.new", "position": "after", "anchor": "core.project.newNote"},
+      {"command": "core.file.open", "position": "after", "anchor": "core.file.new"},
       {"command": "core.file.save", "position": "after", "anchor": "core.file.open"},
       {"command": "core.file.saveAll", "position": "after", "anchor": "core.file.save"},
       {"separator": "core.file.tabs.separator", "position": "after", "anchor": "core.file.saveAll"},
@@ -54,9 +58,11 @@
   "toolbars": [
     {"id": "MainToolbar", "children": [
       {"command": "core.project.open", "position": "first"},
-      {"command": "core.project.newNote", "position": "after", "anchor": "core.project.open"},
+      {"command": "core.project.new", "position": "after", "anchor": "core.project.open"},
+      {"command": "core.project.newNote", "position": "after", "anchor": "core.project.new"},
       {"command": "core.search.open", "position": "after", "anchor": "core.project.newNote"},
-      {"command": "core.file.open", "position": "after", "anchor": "core.search.open"},
+      {"command": "core.file.new", "position": "after", "anchor": "core.search.open"},
+      {"command": "core.file.open", "position": "after", "anchor": "core.file.new"},
       {"command": "core.file.save", "position": "after", "anchor": "core.file.open"},
       {"command": "core.file.saveAll", "position": "after", "anchor": "core.file.save"}
     ]}

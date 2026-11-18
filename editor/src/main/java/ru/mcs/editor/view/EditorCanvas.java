@@ -6,6 +6,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
@@ -195,7 +196,7 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
             return;
         }
         nativeImageDropEnabled = enabled;
-        setDropTarget(enabled
+        setDropTarget(enabled && !GraphicsEnvironment.isHeadless()
                 ? new DropTarget(this, DnDConstants.ACTION_COPY, new ImageDropTargetListener(), true) : null);
     }
 

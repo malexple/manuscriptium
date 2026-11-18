@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.ServiceLoader;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
 import ru.mcs.core.action.DesktopMetadata;
@@ -41,7 +40,6 @@ import ru.mcs.spi.project.IndexContributorRegistry;
 import ru.mcs.spi.project.ProjectAccess;
 import ru.mcs.spi.swing.PluginContext;
 import ru.mcs.spi.swing.BuiltInModule;
-import ru.mcs.spi.swing.editor.FileEditorProvider;
 import ru.mcs.spi.editor.style.ShellThemeService;
 import ru.mcs.spi.service.AtomicFileStore;
 import ru.mcs.spi.service.Scope;
@@ -104,9 +102,7 @@ final class CoreServices {
 
         metadata.bind();
         toolWindows = new ToolWindowManagerImpl(actions, layout);
-        for (FileEditorProvider provider : ServiceLoader.load(FileEditorProvider.class)) {
-            editors.registerProvider(provider);
-        }
+        CoreBootstrap.loadEditorProviders(editors);
         EditorEventsBridge.install(editors, bus);
     }
 

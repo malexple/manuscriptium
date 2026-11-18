@@ -1,6 +1,6 @@
 # Manuscriptium — план архитектурного рефакторинга
 
-Дата: 2026-11-18. Статус: шаги 1–8 завершены и проверены; следующий шаг — сборка `app` как продукта и `minimalSmoke` без Markdown.
+Дата: 2026-11-18. Статус: шаги 1–9 завершены и проверены; следующий шаг — обновление SDK и проверка пользовательских расширений.
 
 ## 1. Цель и границы
 
@@ -445,6 +445,30 @@
 **Готово, когда:** метаданные описывают реальную часть приложения, desktop отображает её, а модуль описаний не содержит исполняемой прикладной логики.
 
 ### Шаг 9. Собрать `app` как продукт и доказать независимость платформы
+
+**Статус: завершён и проверен 2026-11-18.**
+
+- Основной `app` по-прежнему явно собирает `core`, `editor` и `markdown`. Добавлен тестовый source set
+  `app/src/minimalSmoke` с самостоятельным JPMS descriptor того же `ru.mcs.app`: в его runtime не попадают основной
+  output `app` и `markdown`. `:app:check` зависит от `:app:minimalSmoke`; отдельный `product-minimal` не создавался.
+- `CoreBootstrap.createHeadlessEditorManager()` возвращает публичный `FileEditorManager`, не экспортируя implementation
+  package `core.editor`. `CoreServices` и минимальная компоновка используют общий `ServiceLoader`-цикл. Dependency assertions
+  проверяют отсутствие `requires ru.mcs.markdown` у `spi`, `spi-swing`, `metadata`, `editor` и `core`, отсутствие языкового
+  модуля в boot layer и единственный provider `editor.text`.
+- `minimalSmoke` открывает `plain.txt`, выполняет insert, undo, redo и завершённый Save; содержимое на диске равно
+  `alpha\nbeta\n`. Для headless-проверки `EditorCanvas` не создаёт native `DropTarget`, а в обычном UI XDND сохраняется.
+- Пустой `EditorTabs` содержит New File, New Project, Open Project и Open File, вызывающие зарегистрированные actions.
+  New File использует `Files.createFile`/`CREATE_NEW`; New Project использует `Files.createDirectories`. Тесты подтверждают
+  запрет перезаписи существующего файла и замены regular file каталогом. Базовые сервисы инициализируются без Project
+  и built-in модулей.
+- Полный `clean build :app:devHome :app:jlink :app:minimalSmoke`: 557 тестов, 0 failures/errors, 1 прежний
+  `MarkdownFileEditorTest.loadsOutsideEdtAndSwitchesModesInsideSameComponent` остаётся `@Disabled`. Runtime image содержит
+  `app`, `core`, `editor`, `markdown`, `metadata`, `spi` и `spi-swing`; девять Linux golden PNG побайтово не изменились.
+  `:app:run --args="--smoke"`, standalone `plugin-template clean build`, bundled/external packaged smoke успешны:
+  `failures={}`, `builtInFailures={}`, полный список editor providers и Markdown tool windows сохранён.
+- Packaged UI-приёмка чистого home подтвердила четыре quick-start кнопки, создание и открытие `Quick Start.md`, ввод,
+  Undo/Redo, File → Save с проверкой содержимого на диске и Canvas-заголовок. Создан вложенный Project и
+  `inbox/deep/Note.md`; Open File и Open Project выполнены через центральную панель. Ошибок UI в журнале нет.
 
 **Изменения**
 

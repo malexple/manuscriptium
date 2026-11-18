@@ -60,6 +60,18 @@ class CoreBuiltInModulesTest {
     }
 
     @Test
+    void initializesBaseServicesWithoutProjectOrBuiltInModules() {
+        CoreServices services = new CoreServices(home, false);
+
+        assertThat(services.projectState.project()).isEmpty();
+        assertThat(services.builtInIds()).isEmpty();
+        assertThat(services.builtInFailures()).isEmpty();
+        assertThat(services.editors.providerIds()).isEmpty();
+        assertThat(services.actions.getAction("MainMenu")).isNotNull();
+        assertThat(services.configurables.getProviders()).isNotEmpty();
+    }
+
+    @Test
     void failedModuleIsCleanedUpAndReported() {
         CoreServices services = new CoreServices(home, false);
         AtomicBoolean stopped = new AtomicBoolean();

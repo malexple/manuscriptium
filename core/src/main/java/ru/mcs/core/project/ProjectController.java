@@ -2,6 +2,7 @@ package ru.mcs.core.project;
 
 import ru.mcs.spi.project.ViewEntry;
 import ru.mcs.spi.project.ViewDefinition;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -52,6 +53,7 @@ public final class ProjectController implements AutoCloseable {
 
     private ProjectService current;
     private boolean busy;
+    private boolean creatingProject;
     private boolean creatingNote;
 
     public ProjectController(JFrame frame, ActionManagerImpl actions, ToolWindowManagerImpl toolWindows,
@@ -92,6 +94,7 @@ public final class ProjectController implements AutoCloseable {
                         ToolWindowAnchor.BOTTOM, () -> searchPanel)
                 .withIcon(Icons.lucide("search")));
         registerOpenAction(actions);
+        registerNewProjectAction(actions);
         registerNewNoteAction(actions);
         registerSearchAction(actions, toolWindows);
     }
@@ -419,7 +422,7 @@ public final class ProjectController implements AutoCloseable {
                 Icons.lucide("folder-open")) {
             @Override
             public void update(AnActionEvent e) {
-                e.getPresentation().setEnabled(!busy);
+                e.getPresentation().setEnabled(!busy && !creatingProject);
             }
 
             @Override
@@ -434,6 +437,60 @@ public final class ProjectController implements AutoCloseable {
                 }
             }
         });
+    }
+
+    private void registerNewProjectAction(ActionManagerImpl actions) {
+        actions.registerAction("core.project.new", new AnAction(Messages.get("project.new"), null,
+                Icons.lucide("folder-open")) {
+            @Override
+            public void update(AnActionEvent e) {
+                e.getPresentation().setEnabled(!busy && !creatingProject);
+            }
+
+            @Override
+            public void actionPerformed(AnActionEvent e) {
+                Path defaultPath = Path.of(System.getProperty("user.home"), "Manuscriptium");
+                Object answer = JOptionPane.showInputDialog(frame, Messages.get("project.new.message"),
+                        Messages.get("project.new.title"), JOptionPane.QUESTION_MESSAGE,
+                        null, null, defaultPath.toString());
+                if (answer == null || answer.toString().isBlank()) {
+                    return;
+                }
+                Path root;
+                try {
+                    root = Path.of(answer.toString()).toAbsolutePath().normalize();
+                } catch (RuntimeException ex) {
+                    openFailed(defaultPath, ex, true);
+                    return;
+                }
+                creatingProject = true;
+                actions.updateActions();
+                new SwingWorker<Path, Void>() {
+                    @Override
+                    protected Path doInBackground() throws Exception {
+                        return createProjectDirectory(root);
+                    }
+
+                    @Override
+                    protected void done() {
+                        creatingProject = false;
+                        actions.updateActions();
+                        try {
+                            open(get());
+                        } catch (InterruptedException ex) {
+                            Thread.currentThread().interrupt();
+                            openFailed(root, ex, true);
+                        } catch (ExecutionException | RuntimeException ex) {
+                            openFailed(root, ex, true);
+                        }
+                    }
+                }.execute();
+            }
+        });
+    }
+
+    static Path createProjectDirectory(Path root) throws java.io.IOException {
+        return Files.createDirectories(root.toAbsolutePath().normalize());
     }
 
     private void registerNewNoteAction(ActionManagerImpl actions) {

@@ -3,10 +3,21 @@ plugins {
     id 'org.beryx.jlink' version '4.2.0'
 }
 
+sourceSets {
+    minimalSmoke {
+        java.srcDir 'src/minimalSmoke/java'
+        resources.srcDir 'src/minimalSmoke/resources'
+    }
+}
+
 dependencies {
     implementation project(':core')
     implementation project(':editor')
     implementation project(':markdown')
+
+    // Независимый тестовый состав внутри app: основной output и markdown сюда не попадают.
+    minimalSmokeImplementation project(':core')
+    minimalSmokeImplementation project(':editor')
 }
 
 application {
@@ -43,6 +54,31 @@ tasks.named('run', JavaExec) {
     jvmArgumentProviders.add({
         ['--module-path', sourceSets.main.runtimeClasspath.asPath]
     } as org.gradle.process.CommandLineArgumentProvider)
+}
+
+tasks.register('minimalSmoke', JavaExec) {
+    group = 'verification'
+    description = 'Opens, edits, undo/redoes and saves a text file with core + editor, without markdown.'
+    dependsOn 'minimalSmokeClasses'
+    mainModule = 'ru.mcs.app'
+    mainClass = 'ru.mcs.app.MinimalSmoke'
+    modularity.inferModulePath = true
+    classpath = sourceSets.minimalSmoke.runtimeClasspath
+    systemProperty 'java.awt.headless', 'true'
+    systemProperty 'file.encoding', 'UTF-8'
+
+    doFirst {
+        String runtimePath = sourceSets.minimalSmoke.runtimeClasspath.asPath
+        if (runtimePath.split(java.util.regex.Pattern.quote(File.pathSeparator)).any {
+            it.endsWith('/markdown') || it.contains('/markdown/build/') || it.contains('\\markdown\\build\\')
+        }) {
+            throw new GradleException('minimalSmoke runtime path must not contain markdown: ' + runtimePath)
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'minimalSmoke'
 }
 
 jlink {

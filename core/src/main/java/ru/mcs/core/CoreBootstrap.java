@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ServiceLoader;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import ru.mcs.core.action.CoreActions;
@@ -26,7 +27,10 @@ import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.swing.ui.ToolWindowSpec;
 import ru.mcs.core.project.ProjectController;
 import ru.mcs.core.action.CommandPalette;
+import ru.mcs.core.editor.FileEditorManagerImpl;
 import ru.mcs.core.shell.ShellDataContext;
+import ru.mcs.spi.swing.editor.FileEditorManager;
+import ru.mcs.spi.swing.editor.FileEditorProvider;
 
 /**
  * Запуск ядра. Аргументы: {@code --home=PATH} (каталог данных), {@code --smoke} (без UI и без записи на диск:
@@ -53,6 +57,21 @@ public final class CoreBootstrap {
         } else {
             SwingUtilities.invokeLater(() -> startUi(home, args, builtIns));
         }
+    }
+
+    /**
+     * Создаёт редакторские сервисы без UI и Project. Провайдеры приходят только из текущего ModuleLayer/classpath;
+     * состав продукта определяет набор доступных форматов.
+     */
+    public static FileEditorManager createHeadlessEditorManager() {
+        return loadEditorProviders(new FileEditorManagerImpl());
+    }
+
+    static FileEditorManagerImpl loadEditorProviders(FileEditorManagerImpl editors) {
+        for (FileEditorProvider provider : ServiceLoader.load(FileEditorProvider.class)) {
+            editors.registerProvider(provider);
+        }
+        return editors;
     }
 
     private static void startUi(Path home, String[] args, BuiltInModule... builtIns) {

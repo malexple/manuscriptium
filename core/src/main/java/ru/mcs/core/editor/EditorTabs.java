@@ -1,11 +1,14 @@
 package ru.mcs.core.editor;
 
 import com.formdev.flatlaf.FlatClientProperties;
+import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -25,6 +28,8 @@ import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.ActionMenus;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.spi.swing.action.ActionGroup;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.action.ActionIds;
 import ru.mcs.spi.action.ActionPlaces;
 import ru.mcs.spi.action.DataContext;
@@ -47,7 +52,7 @@ public final class EditorTabs extends JPanel {
         this.actions = actions;
         this.ctx = ctx;
         setLayout(cards);
-        add(new JLabel(Messages.get("editor.empty"), SwingConstants.CENTER), "empty");
+        add(createEmptyState(), "empty");
         add(tabs, "tabs");
 
         tabs.addChangeListener(e -> {
@@ -72,6 +77,40 @@ public final class EditorTabs extends JPanel {
             }
         });
         rebuild();
+    }
+
+    private JPanel createEmptyState() {
+        JPanel center = new JPanel(new GridBagLayout());
+        JPanel content = new JPanel(new BorderLayout(0, 16));
+        content.add(new JLabel(Messages.get("editor.empty"), SwingConstants.CENTER), BorderLayout.NORTH);
+        JPanel buttons = new JPanel(new GridLayout(0, 1, 8, 8));
+        addStartButton(buttons, "editor.empty.newFile", "file.new", "core.file.new");
+        addStartButton(buttons, "editor.empty.newProject", "project.new", "core.project.new");
+        addStartButton(buttons, "editor.empty.openProject", "project.open", "core.project.open");
+        addStartButton(buttons, "editor.empty.openFile", "file.open", "core.file.open");
+        content.add(buttons, BorderLayout.CENTER);
+        center.add(content);
+        return center;
+    }
+
+    private void addStartButton(JPanel buttons, String name, String textKey, String actionId) {
+        JButton button = new JButton(Messages.get(textKey));
+        button.setName(name);
+        button.addActionListener(e -> runStartAction(actionId));
+        buttons.add(button);
+    }
+
+    private void runStartAction(String actionId) {
+        AnAction action = actions.getAction(actionId);
+        if (action == null) {
+            return;
+        }
+        AnActionEvent event = new AnActionEvent(action.getTemplatePresentation().copy(),
+                ActionPlaces.MAIN_MENU, ctx.get());
+        action.update(event);
+        if (event.getPresentation().isEnabled()) {
+            action.actionPerformed(event);
+        }
     }
 
     private void rebuild() {

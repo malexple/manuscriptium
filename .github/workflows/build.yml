@@ -24,6 +24,13 @@ jobs:
       - name: Build standalone plugin template
         run: ./gradlew -p plugin-template build
         shell: bash
+      - name: Smoke test without Markdown (core + editor named modules)
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :app:minimalSmoke | tee minimal-smoke.log
+          grep -q "MCS_MINIMAL_SMOKE modules=\[ru.mcs.core, ru.mcs.editor\] markdown=absent" minimal-smoke.log
+          grep -q "editorProviders=\[editor.text\] undoRedo=ok saved=plain.txt" minimal-smoke.log
       - name: Smoke test of Gradle run (complete runtime module path)
         shell: bash
         run: |
