@@ -1,0 +1,90 @@
+{
+  "formatVersion": 1,
+  "actions": [
+    {"id": "core.project.open", "textKey": "project.open", "icon": "folder-open"},
+    {"id": "core.project.newNote", "textKey": "project.newNote", "icon": "scroll-text"},
+    {"id": "core.file.open", "textKey": "file.open", "icon": "folder-open"},
+    {"id": "core.file.save", "textKey": "file.save", "icon": "save"},
+    {"id": "core.file.saveAll", "textKey": "file.saveAll", "icon": "save-all"},
+    {"id": "core.tab.close", "textKey": "tab.close", "icon": "x"},
+    {"id": "core.tab.pin", "textKey": "tab.pin", "icon": "pin"},
+    {"id": "core.file.tabs.separator"},
+    {"id": "core.file.settings.separator", "excludesCapabilities": ["macos"]},
+    {"id": "core.settings.open", "textKey": "settings.action", "icon": "settings", "excludesCapabilities": ["macos"]},
+    {"id": "core.exit", "textKey": "action.exit", "icon": "log-out", "excludesCapabilities": ["macos"]},
+    {"id": "core.about", "textKey": "action.about", "icon": "circle-question-mark", "excludesCapabilities": ["macos"]},
+    {"id": "core.search.open", "textKey": "project.search.action", "icon": "search"},
+    {"id": "core.findAction", "icon": "search"},
+    {"id": "toolwindow.toggle.core.project"},
+    {"id": "toolwindow.toggle.core.search"}
+  ],
+  "menus": [
+    {"id": "MainMenu", "popup": false, "children": [
+      {"command": "MainMenu.File"},
+      {"command": "MainMenu.View"},
+      {"command": "MainMenu.Tools"},
+      {"command": "MainMenu.Help"}
+    ]},
+    {"id": "MainMenu.File", "textKey": "menu.file", "popup": true, "children": [
+      {"command": "core.project.open", "position": "first"},
+      {"command": "core.project.newNote", "position": "after", "anchor": "core.project.open"},
+      {"command": "core.file.open", "position": "after", "anchor": "core.project.newNote"},
+      {"command": "core.file.save", "position": "after", "anchor": "core.file.open"},
+      {"command": "core.file.saveAll", "position": "after", "anchor": "core.file.save"},
+      {"separator": "core.file.tabs.separator", "position": "after", "anchor": "core.file.saveAll"},
+      {"command": "core.tab.close", "position": "after", "anchor": "core.file.tabs.separator"},
+      {"command": "core.tab.pin", "position": "after", "anchor": "core.tab.close"},
+      {"separator": "core.file.settings.separator", "position": "after", "anchor": "core.tab.pin"},
+      {"command": "core.settings.open", "position": "before", "anchor": "core.exit"},
+      {"command": "core.exit"}
+    ]},
+    {"id": "MainMenu.View", "textKey": "menu.view", "popup": true},
+    {"id": "MainMenu.Tools", "textKey": "menu.tools", "popup": true, "children": [
+      {"command": "core.search.open", "position": "first"},
+      {"command": "core.findAction"}
+    ]},
+    {"id": "MainMenu.Help", "textKey": "menu.help", "popup": true, "children": [
+      {"command": "core.about"}
+    ]},
+    {"id": "EditorTabPopup", "popup": true, "children": [
+      {"command": "core.tab.close"},
+      {"command": "core.tab.pin", "position": "after", "anchor": "core.tab.close"}
+    ]}
+  ],
+  "toolbars": [
+    {"id": "MainToolbar", "children": [
+      {"command": "core.project.open", "position": "first"},
+      {"command": "core.project.newNote", "position": "after", "anchor": "core.project.open"},
+      {"command": "core.search.open", "position": "after", "anchor": "core.project.newNote"},
+      {"command": "core.file.open", "position": "after", "anchor": "core.search.open"},
+      {"command": "core.file.save", "position": "after", "anchor": "core.file.open"},
+      {"command": "core.file.saveAll", "position": "after", "anchor": "core.file.save"}
+    ]}
+  ],
+  "settingsPages": [
+    {
+      "id": "core.settings.general",
+      "titleKey": "settings.general",
+      "targets": ["desktop"],
+      "fields": [{
+        "id": "language",
+        "type": "choice",
+        "labelKey": "settings.language",
+        "stateKey": "language",
+        "noteKey": "settings.restart",
+        "options": [
+          {"value": "auto", "labelKey": "language.auto"},
+          {"value": "en", "labelKey": "language.en"},
+          {"value": "ru", "labelKey": "language.ru"}
+        ]
+      }]
+    }
+  ],
+  "keymap": [
+    {"command": "core.findAction", "keystroke": "shift shortcut A", "targets": ["desktop"]}
+  ],
+  "panels": [
+    {"id": "core.project", "titleKey": "project.title", "command": "toolwindow.toggle.core.project", "anchor": "left", "icon": "folder-open"},
+    {"id": "core.search", "titleKey": "project.search.title", "command": "toolwindow.toggle.core.search", "anchor": "bottom", "icon": "search"}
+  ]
+}

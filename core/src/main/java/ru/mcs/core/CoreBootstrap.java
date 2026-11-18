@@ -59,24 +59,30 @@ public final class CoreBootstrap {
         LafInstaller.install();
         CoreServices s = new CoreServices(home, true);
         s.startBuiltIns(List.of(builtIns));
+        s.bindMetadata();
         s.themes.start();
 
         ShellFrame frame = new ShellFrame("Manuscriptium", s.actions, s.toolWindows, s.editors, s.statusBar,
                 s.windowState);
         NotificationLayer.install(frame, s.notifications);
         EditorActions.register(s.actions, s.editors, frame);
+        s.bindMetadata();
         CoreActions.registerShellActions(s.actions, frame);
+        s.bindMetadata();
         CommandPalette.install(
                 frame,
                 s.actions,
-                () -> new ShellDataContext(s.editors)
+                () -> new ShellDataContext(s.editors),
+                s.metadata.keyStroke(CommandPalette.ACTION_ID)
         );
+        s.bindMetadata();
         PluginManager pm = s.newPluginManager(home);
         PluginRestartController restarter = new PluginRestartController(frame, args);
         s.generalSettings.onRestartRequired(restarter::markRequired);
         s.configurables.register(new PluginsConfigurableProvider(pm, s.plugins,
                 new PluginInstaller(HomeDirs.pluginsDir(home)), restarter::markRequired));
         SettingsActions.register(s.actions, frame, s.configurables, s.state::saveChanged, restarter::promptIfNeeded);
+        s.bindMetadata();
         MacOsSupport.installApplicationMenu(
                 () -> CoreActions.showAbout(frame),
                 () -> SettingsActions.open(frame, s.configurables, s.state::saveChanged, restarter::promptIfNeeded),
@@ -87,6 +93,7 @@ public final class CoreBootstrap {
                 .withIcon(Icons.lucide("bell")));
         ProjectController projectController = new ProjectController(frame, s.actions, s.toolWindows, s.editors,
                 s.sessionStore, s.state, s.projectState, s.statusBar, s.notifications, s.projectAccess, s.indexContributors, s.services);
+        s.bindMetadata();
 
         pm.setFailureListener((id, reason) -> s.notifications.notify("core",
                 Messages.get("plugin.failed.title", id), reason, NotificationType.ERROR));
@@ -116,6 +123,7 @@ public final class CoreBootstrap {
     private static void runSmoke(Path home, BuiltInModule... builtIns) {
         CoreServices s = new CoreServices(home, false);
         s.startBuiltIns(List.of(builtIns));
+        s.bindMetadata();
         PluginManager pm = s.newPluginManager(home);
         int code = 1;
         try {

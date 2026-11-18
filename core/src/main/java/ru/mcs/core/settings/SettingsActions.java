@@ -40,9 +40,7 @@ public final class SettingsActions {
                 open(frame, settings, saveState, afterClose);
             }
         });
-        if (!macOs) {
-            actions.addToGroup(ActionIds.FILE_MENU, ACTION_ID, Constraints.before("core.exit"));
-        }
+        // DesktopMetadata добавляет действие в File только вне macOS.
     }
 
     public static void open(JFrame frame, SettingsManager settings, Runnable saveState) {

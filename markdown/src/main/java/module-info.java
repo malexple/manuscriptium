@@ -1,6 +1,7 @@
 module ru.mcs.markdown {
     requires transitive ru.mcs.spi.swing;
     requires ru.mcs.editor;
+    requires ru.mcs.metadata;
 
     requires com.formdev.flatlaf;
     requires com.formdev.flatlaf.extras;
@@ -18,6 +19,9 @@ module ru.mcs.markdown {
     requires flexmark.ext.yaml.front.matter;
 
     exports ru.mcs.markdown.api;
+
+    provides ru.mcs.metadata.MetadataProvider
+            with ru.mcs.markdown.api.MarkdownMetadataProvider;
 
     // Ресурсы SVG доступны Swing SVG loader; implementation packages не экспортируются.
     opens ru.mcs.markdown.editor.icons;

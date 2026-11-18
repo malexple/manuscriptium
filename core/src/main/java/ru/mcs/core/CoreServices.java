@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import ru.mcs.core.action.ActionManagerImpl;
 import ru.mcs.core.action.CoreActions;
+import ru.mcs.core.action.DesktopMetadata;
 import ru.mcs.core.bus.MessageBusImpl;
 import ru.mcs.core.editor.EditorEventsBridge;
 import ru.mcs.core.editor.FileEditorManagerImpl;
@@ -61,6 +62,7 @@ final class CoreServices {
     final SettingsManagerImpl configurables = new SettingsManagerImpl();
     final ServiceRegistryImpl services = new ServiceRegistryImpl();
     final ActionManagerImpl actions = new ActionManagerImpl();
+    final DesktopMetadata metadata;
     final ToolWindowManagerImpl toolWindows;
     final FileEditorManagerImpl editors = new FileEditorManagerImpl();
     final CoreProjectAccess projectAccess = new CoreProjectAccess();
@@ -84,7 +86,9 @@ final class CoreServices {
         state.register("core", "core.settings", Scope.APPLICATION, settings);
         Messages.init(settings.resolveLocale());
         themes = new McsThemeManager(home.resolve("themes"), settings.theme(), settings::setTheme);
-        generalSettings = new GeneralSettingsProvider(settings);
+        metadata = new DesktopMetadata(actions, ru.mcs.core.platform.MacOsSupport.isMacOs());
+        generalSettings = new GeneralSettingsProvider(settings,
+                metadata.settingsPage(GeneralSettingsProvider.ID));
         configurables.register(generalSettings);
         configurables.register(new AppearanceSettingsProvider(themes));
         services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
@@ -98,12 +102,16 @@ final class CoreServices {
         state.register("core", "core.window", Scope.APPLICATION, windowState);
         state.register("core", "core.plugins", Scope.APPLICATION, plugins);
 
-        CoreActions.registerStandardGroups(actions);
+        metadata.bind();
         toolWindows = new ToolWindowManagerImpl(actions, layout);
         for (FileEditorProvider provider : ServiceLoader.load(FileEditorProvider.class)) {
             editors.registerProvider(provider);
         }
         EditorEventsBridge.install(editors, bus);
+    }
+
+    void bindMetadata() {
+        metadata.bind();
     }
 
     PluginManager newPluginManager(Path home) {

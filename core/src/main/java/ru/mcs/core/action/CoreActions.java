@@ -49,12 +49,7 @@ public final class CoreActions {
             }
         });
 
-        // На macOS эти команды уже находятся в нативном меню приложения.
-        // Сами действия остаются зарегистрированными и доступными в палитре команд.
-        if (!macOs) {
-            am.addToGroup(ActionIds.FILE_MENU, "core.exit", Constraints.LAST);
-            am.addToGroup(ActionIds.HELP_MENU, "core.about", Constraints.LAST);
-        }
+        // На macOS нативное меню и исключение Swing-дублей управляются DesktopMetadata.
     }
 
     public static void showAbout(JFrame frame) {

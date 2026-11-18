@@ -3,13 +3,23 @@ package ru.mcs.editor.view;
 import java.awt.Toolkit;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.util.Locale;
+import java.util.Set;
 import javax.swing.Action;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
+import ru.mcs.editor.action.EditorMetadataProvider;
+import ru.mcs.metadata.MetadataCatalog;
+import ru.mcs.metadata.MetadataDocument;
+import ru.mcs.metadata.TargetContext;
 
 /** Централизованный keymap: menu shortcut ОС для undo/clipboard, Option для word navigation на macOS. */
 public final class KeyBindingResolver {
+
+    private static final MetadataDocument METADATA = MetadataCatalog.from(new EditorMetadataProvider())
+            .get("editor").document();
+    private static final TargetContext DESKTOP = new TargetContext("desktop", Set.of("swing"));
 
     private final int shortcutMask;
     private final int wordMask;
@@ -59,12 +69,50 @@ public final class KeyBindingResolver {
         bind(canvas, key(KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK), "previousTableCell",
                 () -> canvas.navigateTable(-1));
         bind(canvas, key(KeyEvent.VK_A, shortcutMask), "selectAll", input::selectAll);
-        bind(canvas, key(KeyEvent.VK_C, shortcutMask), "copy", input::copy);
-        bind(canvas, key(KeyEvent.VK_X, shortcutMask), "cut", input::cut);
-        bind(canvas, key(KeyEvent.VK_V, shortcutMask), "paste", input::paste);
-        bind(canvas, key(KeyEvent.VK_Z, shortcutMask), "undo", input::undo);
-        bind(canvas, key(KeyEvent.VK_Z, shortcutMask | InputEvent.SHIFT_DOWN_MASK), "redo", input::redo);
-        bind(canvas, key(KeyEvent.VK_Y, shortcutMask), "redo", input::redo);
+        installMetadataKeymap(canvas, input);
+    }
+
+    private void installMetadataKeymap(EditorCanvas canvas, InputController input) {
+        for (MetadataDocument.KeyBinding binding : METADATA.keymap()) {
+            if (!binding.applicability().matches(DESKTOP)) {
+                continue;
+            }
+            Runnable action = switch (binding.commandId()) {
+                case "editor.text.cut" -> input::cut;
+                case "editor.text.copy" -> input::copy;
+                case "editor.text.paste" -> input::paste;
+                case "editor.text.undo" -> input::undo;
+                case "editor.text.redo" -> input::redo;
+                default -> throw new IllegalStateException(
+                        "Editor command is not implemented: " + binding.commandId());
+            };
+            String name = binding.commandId().substring(binding.commandId().lastIndexOf('.') + 1);
+            bind(canvas, keystroke(binding.keystroke()), name, action);
+        }
+    }
+
+    private KeyStroke keystroke(String description) {
+        int modifiers = 0;
+        String key = null;
+        for (String token : description.trim().split("\\s+")) {
+            switch (token.toLowerCase(Locale.ROOT)) {
+                case "shortcut" -> modifiers |= shortcutMask;
+                case "shift" -> modifiers |= InputEvent.SHIFT_DOWN_MASK;
+                case "ctrl", "control" -> modifiers |= InputEvent.CTRL_DOWN_MASK;
+                case "alt", "option" -> modifiers |= InputEvent.ALT_DOWN_MASK;
+                case "meta" -> modifiers |= InputEvent.META_DOWN_MASK;
+                default -> {
+                    if (key != null) {
+                        throw new IllegalArgumentException("Invalid keystroke: " + description);
+                    }
+                    key = token;
+                }
+            }
+        }
+        if (key == null || key.length() != 1) {
+            throw new IllegalArgumentException("Unsupported keystroke: " + description);
+        }
+        return key(KeyEvent.getExtendedKeyCodeForChar(key.charAt(0)), modifiers);
     }
 
     int shortcutMask() {

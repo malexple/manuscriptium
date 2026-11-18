@@ -45,7 +45,7 @@ class MarkdownModuleBoundaryTest {
     }
 
     @Test
-    void moduleExportsOnlyApiAndHasNoPluginProvider() throws IOException {
+    void moduleExportsOnlyApiAndProvidesOnlyPlatformMetadata() throws IOException {
         ModuleDescriptor descriptor;
         try (InputStream input = Files.newInputStream(CLASSES.resolve("module-info.class"))) {
             descriptor = ModuleDescriptor.read(input);
@@ -54,9 +54,12 @@ class MarkdownModuleBoundaryTest {
         assertThat(descriptor.exports()).extracting(export -> export.source())
                 .containsExactly("ru.mcs.markdown.api");
         assertThat(descriptor.requires().stream().map(ModuleDescriptor.Requires::name))
-                .contains("ru.mcs.spi.swing", "ru.mcs.editor")
+                .contains("ru.mcs.spi.swing", "ru.mcs.editor", "ru.mcs.metadata")
                 .doesNotContain("ru.mcs.core", "ru.mcs.plugin.mdeditor", "ru.mcs.plugin.mdparser");
-        assertThat(descriptor.provides()).isEmpty();
+        assertThat(descriptor.provides()).singleElement().satisfies(provides -> {
+            assertThat(provides.service()).isEqualTo("ru.mcs.metadata.MetadataProvider");
+            assertThat(provides.providers()).containsExactly("ru.mcs.markdown.api.MarkdownMetadataProvider");
+        });
         List<String> publicSignatures = new ArrayList<>();
         Class<?> api = MarkdownModuleMarker.apiClass();
         for (var method : api.getMethods()) {

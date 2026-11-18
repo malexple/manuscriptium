@@ -434,8 +434,6 @@ public final class ProjectController implements AutoCloseable {
                 }
             }
         });
-        actions.addToGroup(ActionIds.FILE_MENU, "core.project.open", Constraints.FIRST);
-        actions.addToGroup(ActionIds.MAIN_TOOLBAR, "core.project.open", Constraints.FIRST);
     }
 
     private void registerNewNoteAction(ActionManagerImpl actions) {
@@ -452,8 +450,6 @@ public final class ProjectController implements AutoCloseable {
                 newDocument(null);
             }
         });
-        actions.addToGroup(ActionIds.FILE_MENU, "core.project.newNote", Constraints.after("core.project.open"));
-        actions.addToGroup(ActionIds.MAIN_TOOLBAR, "core.project.newNote", Constraints.after("core.project.open"));
     }
 
     private void registerSearchAction(ActionManagerImpl actions, ToolWindowManagerImpl toolWindows) {
@@ -465,8 +461,6 @@ public final class ProjectController implements AutoCloseable {
                 javax.swing.SwingUtilities.invokeLater(searchPanel::focusQuery);
             }
         });
-        actions.addToGroup(ActionIds.TOOLS_MENU, "core.search.open", Constraints.FIRST);
-        actions.addToGroup(ActionIds.MAIN_TOOLBAR, "core.search.open", Constraints.after("core.project.newNote"));
     }
 
     private void openSearchResult(ProjectSearchResult result) {

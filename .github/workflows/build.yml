@@ -58,6 +58,7 @@ jobs:
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.spi$'
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.spi.swing$'
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.editor$'
+          app/build/image/bin/java --list-modules | grep -q '^ru.mcs.metadata$'
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.markdown$'
       - name: Smoke test of the runtime image (built-in modules + external template JAR)
         shell: bash

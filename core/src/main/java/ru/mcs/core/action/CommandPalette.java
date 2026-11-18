@@ -48,6 +48,16 @@ public final class CommandPalette {
             ActionManagerImpl actions,
             Supplier<DataContext> context
     ) {
+        install(frame, actions, context, KeyStroke.getKeyStroke(
+                KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
+    }
+
+    public static void install(
+            JFrame frame,
+            ActionManagerImpl actions,
+            Supplier<DataContext> context,
+            KeyStroke shortcut
+    ) {
         actions.registerAction(
                 ACTION_ID,
                 new AnAction("Find Action...", "Search and run an action", Icons.lucide("search")) {
@@ -57,12 +67,7 @@ public final class CommandPalette {
                     }
                 }
         );
-        actions.addToGroup(ActionIds.TOOLS_MENU, ACTION_ID, Constraints.LAST);
-
-        KeyStroke shortcut = KeyStroke.getKeyStroke(
-                KeyEvent.VK_A,
-                InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK
-        );
+        // Принадлежность Tools menu описана в core.json.
         frame.getRootPane().registerKeyboardAction(
                 e -> show(frame, actions, context),
                 shortcut,

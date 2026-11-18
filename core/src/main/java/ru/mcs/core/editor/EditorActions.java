@@ -98,20 +98,7 @@ public final class EditorActions {
             }
         });
 
-        DefaultActionGroup file = (DefaultActionGroup) am.getAction(ActionIds.FILE_MENU);
-        am.addToGroup(ActionIds.FILE_MENU, "core.file.open", Constraints.LAST);
-        am.addToGroup(ActionIds.FILE_MENU, "core.file.save", Constraints.LAST);
-        am.addToGroup(ActionIds.FILE_MENU, "core.file.saveAll", Constraints.LAST);
-        am.addToGroup(ActionIds.MAIN_TOOLBAR, "core.file.open", Constraints.LAST);
-        am.addToGroup(ActionIds.MAIN_TOOLBAR, "core.file.save", Constraints.LAST);
-        am.addToGroup(ActionIds.MAIN_TOOLBAR, "core.file.saveAll", Constraints.LAST);
-        file.addSeparator();
-        am.addToGroup(ActionIds.FILE_MENU, "core.tab.close", Constraints.LAST);
-        am.addToGroup(ActionIds.FILE_MENU, "core.tab.pin", Constraints.LAST);
-        file.addSeparator();
-
-        am.addToGroup(ActionIds.EDITOR_TAB_POPUP, "core.tab.close", Constraints.LAST);
-        am.addToGroup(ActionIds.EDITOR_TAB_POPUP, "core.tab.pin", Constraints.LAST);
+        // Меню, toolbar и popup связывает DesktopMetadata после регистрации реализаций.
     }
 
     private static void save(JFrame frame, FileEditor editor) {

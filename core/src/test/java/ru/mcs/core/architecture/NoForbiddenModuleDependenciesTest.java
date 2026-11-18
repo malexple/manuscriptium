@@ -18,6 +18,7 @@ class NoForbiddenModuleDependenciesTest {
             "spi", List.of("spi-swing", "editor", "markdown", "core", "app"),
             "spi-swing", List.of("editor", "markdown", "core", "app"),
             "editor", List.of("markdown", "core", "app"),
+            "metadata", List.of("spi", "spi-swing", "editor", "markdown", "core", "app"),
             "core", List.of("markdown", "app"),
             "markdown", List.of("core", "app"));
 

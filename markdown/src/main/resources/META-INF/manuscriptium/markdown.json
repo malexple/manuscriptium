@@ -1,0 +1,438 @@
+{
+  "formatVersion": 1,
+  "actions": [
+    {
+      "id": "markdown.editor.toggleMode",
+      "textKey": "action.toggleMode",
+      "descriptionKey": "description.toggleMode",
+      "parents": [
+        "MainMenu.View",
+        "MainToolbar",
+        "EditorTabPopup"
+      ]
+    },
+    {
+      "id": "markdown.editor.focusMode",
+      "parents": [
+        "MainMenu.View"
+      ]
+    },
+    {
+      "id": "markdown.editor.typewriterMode",
+      "parents": [
+        "MainMenu.View"
+      ]
+    },
+    {
+      "id": "markdown.editor.autoPair",
+      "parents": [
+        "MainMenu.View"
+      ]
+    },
+    {
+      "id": "markdown.editor.wordCount",
+      "textKey": "action.wordCount",
+      "descriptionKey": "description.wordCount",
+      "parents": [
+        "MainMenu.Tools"
+      ]
+    },
+    {
+      "id": "markdown.editor.undo",
+      "textKey": "action.undo",
+      "descriptionKey": "description.undo"
+    },
+    {
+      "id": "markdown.editor.redo",
+      "textKey": "action.redo",
+      "descriptionKey": "description.redo"
+    },
+    {
+      "id": "markdown.editor.cut",
+      "textKey": "action.cut",
+      "descriptionKey": "description.cut"
+    },
+    {
+      "id": "markdown.editor.copy",
+      "textKey": "action.copy",
+      "descriptionKey": "description.copy"
+    },
+    {
+      "id": "markdown.editor.paste",
+      "textKey": "action.paste",
+      "descriptionKey": "description.paste"
+    },
+    {
+      "id": "markdown.editor.selectAll",
+      "textKey": "action.selectAll",
+      "descriptionKey": "description.selectAll"
+    },
+    {
+      "id": "markdown.editor.deleteBlock",
+      "textKey": "action.deleteBlock",
+      "descriptionKey": "description.deleteBlock"
+    },
+    {
+      "id": "markdown.editor.toggleCase",
+      "textKey": "action.toggleCase",
+      "descriptionKey": "description.toggleCase",
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.duplicateLine",
+      "textKey": "action.duplicateLine",
+      "descriptionKey": "description.duplicateLine",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.deleteLine",
+      "textKey": "action.deleteLine",
+      "descriptionKey": "description.deleteLine",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.extendSelection",
+      "textKey": "action.extendSelection",
+      "descriptionKey": "description.extendSelection",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.paragraph",
+      "textKey": "action.paragraph",
+      "descriptionKey": "description.paragraph",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.heading1",
+      "textKey": "action.heading1",
+      "descriptionKey": "description.heading1",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.heading2",
+      "textKey": "action.heading2",
+      "descriptionKey": "description.heading2",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.heading3",
+      "textKey": "action.heading3",
+      "descriptionKey": "description.heading3",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.heading4",
+      "textKey": "action.heading4",
+      "descriptionKey": "description.heading4",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.heading5",
+      "textKey": "action.heading5",
+      "descriptionKey": "description.heading5",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.heading6",
+      "textKey": "action.heading6",
+      "descriptionKey": "description.heading6",
+      "parents": [
+        "MarkdownEditor.ParagraphMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.bold",
+      "textKey": "action.bold",
+      "descriptionKey": "description.bold",
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.italic",
+      "textKey": "action.italic",
+      "descriptionKey": "description.italic",
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.underline",
+      "textKey": "action.underline",
+      "descriptionKey": "description.underline",
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.strikethrough",
+      "textKey": "action.strikethrough",
+      "descriptionKey": "description.strikethrough",
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.inlineCode",
+      "textKey": "action.inlineCode",
+      "descriptionKey": "description.inlineCode",
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.link",
+      "textKey": "action.link",
+      "descriptionKey": "description.link",
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.clearFormatting",
+      "textKey": "action.clearFormatting",
+      "descriptionKey": "description.clearFormatting",
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.blockQuote",
+      "textKey": "action.blockQuote",
+      "descriptionKey": "description.blockQuote",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.bulletList",
+      "textKey": "action.bulletList",
+      "descriptionKey": "description.bulletList",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.orderedList",
+      "textKey": "action.orderedList",
+      "descriptionKey": "description.orderedList",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.taskList",
+      "textKey": "action.taskList",
+      "descriptionKey": "description.taskList",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.codeBlock",
+      "textKey": "action.codeBlock",
+      "descriptionKey": "description.codeBlock",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.table",
+      "textKey": "action.table",
+      "descriptionKey": "description.table",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.mathBlock",
+      "textKey": "action.mathBlock",
+      "descriptionKey": "description.mathBlock",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.horizontalRule",
+      "textKey": "action.horizontalRule",
+      "descriptionKey": "description.horizontalRule",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.image",
+      "textKey": "action.image",
+      "descriptionKey": "description.image",
+      "parents": [
+        "MarkdownEditor.InsertMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableAddRow",
+      "textKey": "action.tableAddRow",
+      "descriptionKey": "description.tableAddRow",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableRemoveRow",
+      "textKey": "action.tableRemoveRow",
+      "descriptionKey": "description.tableRemoveRow",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableAddColumn",
+      "textKey": "action.tableAddColumn",
+      "descriptionKey": "description.tableAddColumn",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableRemoveColumn",
+      "textKey": "action.tableRemoveColumn",
+      "descriptionKey": "description.tableRemoveColumn",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableAlignLeft",
+      "textKey": "action.tableAlignLeft",
+      "descriptionKey": "description.tableAlignLeft",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableAlignCenter",
+      "textKey": "action.tableAlignCenter",
+      "descriptionKey": "description.tableAlignCenter",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableAlignRight",
+      "textKey": "action.tableAlignRight",
+      "descriptionKey": "description.tableAlignRight",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableCopyCell",
+      "textKey": "action.tableCopyCell",
+      "descriptionKey": "description.tableCopyCell",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "markdown.editor.tableClearCell",
+      "textKey": "action.tableClearCell",
+      "descriptionKey": "description.tableClearCell",
+      "parents": [
+        "MarkdownEditor.TableMenu"
+      ]
+    },
+    {
+      "id": "notes.copyWikiLink",
+      "textKey": "notes.action.copy",
+      "descriptionKey": "notes.action.copy.description",
+      "parents": [
+        "MainMenu.Tools",
+        "MainToolbar",
+        "EditorTabPopup"
+      ]
+    },
+    {
+      "id": "toolwindow.toggle.properties.panel"
+    },
+    {
+      "id": "toolwindow.toggle.notes.panel"
+    }
+  ],
+  "menus": [
+    {
+      "id": "MarkdownEditor.ParagraphMenu",
+      "textKey": "menu.paragraph",
+      "popup": true,
+      "parents": [
+        "MainMenu"
+      ]
+    },
+    {
+      "id": "MarkdownEditor.FormatMenu",
+      "textKey": "menu.format",
+      "popup": true,
+      "parents": [
+        "MainMenu"
+      ]
+    },
+    {
+      "id": "MarkdownEditor.InsertMenu",
+      "textKey": "menu.insert",
+      "popup": true,
+      "parents": [
+        "MainMenu"
+      ]
+    },
+    {
+      "id": "MarkdownEditor.TableMenu",
+      "textKey": "menu.table",
+      "popup": true,
+      "parents": [
+        "MarkdownEditor.FormatMenu"
+      ]
+    }
+  ],
+  "settingsPages": [
+    {
+      "id": "markdown.editor.settings",
+      "titleKey": "settings.title",
+      "targets": [
+        "desktop"
+      ],
+      "fields": []
+    }
+  ],
+  "panels": [
+    {
+      "id": "properties.panel",
+      "titleKey": "toolwindow.properties",
+      "command": "toolwindow.toggle.properties.panel",
+      "anchor": "right"
+    },
+    {
+      "id": "notes.panel",
+      "titleKey": "toolwindow.notes",
+      "command": "toolwindow.toggle.notes.panel",
+      "anchor": "left"
+    }
+  ]
+}

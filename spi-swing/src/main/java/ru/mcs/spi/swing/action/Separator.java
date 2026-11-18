@@ -4,7 +4,8 @@ public final class Separator extends AnAction {
 
     public static final Separator INSTANCE = new Separator();
 
-    private Separator() {
+    /** Metadata может регистрировать несколько независимо адресуемых separators. */
+    public Separator() {
         super("");
     }
 

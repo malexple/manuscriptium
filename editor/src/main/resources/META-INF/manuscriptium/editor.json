@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "actions": [
+    {"id": "editor.text.cut", "targets": ["desktop"]},
+    {"id": "editor.text.copy", "targets": ["desktop"]},
+    {"id": "editor.text.paste", "targets": ["desktop"]},
+    {"id": "editor.text.undo", "targets": ["desktop"]},
+    {"id": "editor.text.redo", "targets": ["desktop"]}
+  ],
+  "keymap": [
+    {"command": "editor.text.cut", "keystroke": "shortcut X", "targets": ["desktop"]},
+    {"command": "editor.text.copy", "keystroke": "shortcut C", "targets": ["desktop"]},
+    {"command": "editor.text.paste", "keystroke": "shortcut V", "targets": ["desktop"]},
+    {"command": "editor.text.undo", "keystroke": "shortcut Z", "targets": ["desktop"]},
+    {"command": "editor.text.redo", "keystroke": "shift shortcut Z", "targets": ["desktop"]},
+    {"command": "editor.text.redo", "keystroke": "shortcut Y", "targets": ["desktop"]}
+  ]
+}

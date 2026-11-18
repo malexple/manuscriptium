@@ -29,6 +29,23 @@ file editors, rendering/style API, settings, status bar и tool windows. Мод�
 `spi → spi-swing`. `SpiPurityTest` проверяет скомпилированные classfiles, а `SpiSwingModuleTest` — публичные контракты
 и JPMS exports.
 
+## Декларативные метаданные
+
+`metadata` (`ru.mcs.metadata`) — JDK-only модуль версионированных описаний приложения без Swing/AWT и прикладной логики.
+Строгий JSON-parser и typed model поддерживают `formatVersion=1`, actions, menus, toolbars, status bar, settings pages,
+keymap и panels. Валидация проверяет уникальность и перекрёстные ссылки идентификаторов, позиции и anchors, типы полей,
+targets и capabilities. Правила `common`/`desktop`/`android`/`ios` и required/excluded capabilities выбирают применимость
+описания, но не создают мобильные клиенты.
+
+`editor`, `core` и `markdown` поставляют собственные JSON в `META-INF/manuscriptium/` через `MetadataProvider`. Провайдеры
+объявлены одновременно в JPMS (`provides`/`uses`) и `META-INF/services`, поэтому каталог одинаково загружается в named
+runtime image и classpath-тестах. Реализации команд остаются в Java; описания определяют тексты, группы, родителей,
+порядок, shortcuts и формы настроек.
+
+`DesktopMetadata` в `core` — единственный desktop renderer этого среза. Он объединяет вклады модулей и постепенно связывает
+menus/toolbars повторными проходами до неподвижной точки: entry с `before`/`after` ждёт появления anchor и не деградирует
+в `last`. Android/iOS-рендереры не создаются.
+
 ## Универсальный Project и языковые вклады
 
 `ProjectAccess`, `ViewDefinition`/`ViewEntry`, `IndexedDocument`, `IndexContributorRegistry`, `ProjectFileFactory` и
@@ -44,8 +61,9 @@ MarkdownParser, EditorStyleService, Obsidian-навигация и fallback edit
 ## Универсальный редактор
 
 `editor` (`ru.mcs.editor`) содержит языконезависимые DocumentModel/Piece Table, undo/redo и save-point, Canvas, layout,
-caret/selection, viewport, IME, clipboard и keyboard/mouse input. Он зависит только от `spi-swing` и не знает о `core`,
-Markdown, Obsidian или Front Matter; это проверяется `EditorPurityTest` по production classfiles и JPMS descriptor.
+caret/selection, viewport, IME, clipboard и keyboard/mouse input. Он зависит от `spi-swing` и `metadata`, но не знает о `core`,
+Markdown, Obsidian или Front Matter; это проверяется `EditorPurityTest` по production classfiles и JPMS descriptor. Собственное
+`editor.json` описывает Undo/Redo и clipboard shortcuts, а movement/navigation остаются в Java.
 
 Обычные файлы до 5 МиБ открывает `editor.text` через `ServiceLoader<FileEditorProvider>`: `core` объявляет только `uses`,
 а `app` включает модуль в runtime image. Загрузка и Save выполняются вне EDT; strict UTF-8, BOM, LF/CRLF/CR, атомарная

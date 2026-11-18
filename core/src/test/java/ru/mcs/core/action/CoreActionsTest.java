@@ -10,9 +10,11 @@ class CoreActionsTest {
     @Test
     void macOsKeepsActionsRegisteredButRemovesMenuDuplicates() {
         ActionManagerImpl actions = new ActionManagerImpl();
-        CoreActions.registerStandardGroups(actions);
+        DesktopMetadata metadata = new DesktopMetadata(actions, true);
+        metadata.bind();
 
         CoreActions.registerShellActions(actions, null, true);
+        metadata.bind();
 
         assertThat(actions.getAction("core.exit")).isNotNull();
         assertThat(actions.getAction("core.about")).isNotNull();
@@ -23,9 +25,11 @@ class CoreActionsTest {
     @Test
     void otherPlatformsKeepExitAndAboutInSwingMenus() {
         ActionManagerImpl actions = new ActionManagerImpl();
-        CoreActions.registerStandardGroups(actions);
+        DesktopMetadata metadata = new DesktopMetadata(actions, false);
+        metadata.bind();
 
         CoreActions.registerShellActions(actions, null, false);
+        metadata.bind();
 
         assertThat(actions.childIds(ActionIds.FILE_MENU)).contains("core.exit");
         assertThat(actions.childIds(ActionIds.HELP_MENU)).contains("core.about");

@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 /** Запрещает протекание конкретного языка в production-код и ресурсы платформы. */
 class PlatformLanguagePurityTest {
 
-    private static final List<String> PLATFORM_MODULES = List.of("spi", "spi-swing", "editor", "core");
+    private static final List<String> PLATFORM_MODULES = List.of("spi", "spi-swing", "editor", "metadata", "core");
     private static final List<String> FORBIDDEN = List.of("markdown", "obsidian", "frontmatter", "front_matter");
 
     @Test

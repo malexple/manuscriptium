@@ -1,6 +1,6 @@
 # Manuscriptium — план архитектурного рефакторинга
 
-Дата: 2026-11-17. Статус: шаги 1–6 завершены; следующий шаг — удаление Markdown и Obsidian из `core` и `spi`.
+Дата: 2026-11-18. Статус: шаги 1–8 завершены и проверены; следующий шаг — сборка `app` как продукта и `minimalSmoke` без Markdown.
 
 ## 1. Цель и границы
 
@@ -31,7 +31,7 @@
 | `spi` | Только JDK, без `java.desktop`. |
 | `spi-swing` | `spi`, `java.desktop`. |
 | `metadata` | Только JDK; идентификаторы команд и компонентов являются данными. |
-| `editor` | `spi`, `spi-swing`, `java.desktop`; без `core` и `markdown`. |
+| `editor` | `spi`, `spi-swing`, `metadata`, `java.desktop`; без `core` и `markdown`. |
 | `core` | `spi`, `spi-swing`, `metadata`; без `editor` и `markdown` в production-зависимостях. |
 | `markdown` | `spi`, `spi-swing`, `editor`, `metadata`; без `core`. |
 | `app` | Собирает `core`, `editor`, `markdown` и запускает продукт. |
@@ -389,6 +389,32 @@
 **Готово, когда:** платформа не знает Markdown/Obsidian, но весь прежний Markdown-сценарий работает через расширения.
 
 ### Шаг 8. Создать `metadata` как описание, а не реализацию
+
+**Статус: завершён и проверен 2026-11-18.**
+
+- Создан JDK-only JPMS-модуль `ru.mcs.metadata`: собственный строгий JSON-parser, версионированный формат
+  `formatVersion=1`, typed model и глобальная валидация actions, menus, toolbars, status bar, settings pages, keymap
+  и panels. Проверяются уникальность ID, field IDs и option values, ссылки на commands/anchors, positions, field types,
+  targets и capability syntax. `TargetRule` поддерживает `common`, `desktop`, `android`, `ios` и required/excluded
+  capabilities без создания мобильных рендереров.
+- `editor`, `core` и `markdown` поставляют собственные `META-INF/manuscriptium/*.json` через `MetadataProvider`.
+  JPMS `provides`/`uses` и `META-INF/services` обеспечивают одинаковую загрузку в named runtime image и classpath-тестах.
+  Реализации `AnAction` остаются в Java; Markdown добавляет вклады в core-группы через `parents`, не создавая зависимость
+  `markdown → core`. Именованные separators адресуются независимо.
+- `DesktopMetadata` в `core` отображает menus, toolbars, keymap и metadata-driven General settings. Incremental binder
+  повторяет проходы до неподвижной точки внутри одного `bind()`: `before`/`after` ждут anchor и не деградируют в `last`;
+  повторные вызовы не создают дубликатов. Общая страница настроек создаёт прежнюю Swing-форму и сохраняет состояние
+  в `AppSettings`; `editor.json` описывает Undo/Redo и clipboard shortcuts. Для packaged `ResourceBundle` открыт только
+  `ru.mcs.core.i18n`.
+- Полный `clean build :app:devHome :app:jlink`: 552 теста, 0 failures/errors, 1 прежний перенесённый `@Disabled`;
+  `ru.mcs.metadata` присутствует в runtime image. Девять Linux golden PNG побайтово не изменились и прошли в общем
+  прогоне. Standalone `plugin-template clean build`, `:app:run --args="--smoke"`, bundled/external packaged smoke
+  успешны: `failures={}`, `builtInFailures={}`, прежние editor providers и Markdown tool windows сохранены.
+- Packaged UI-приёмка подтвердила File/View, separators, EditorTabPopup, Paragraph/Format/Insert, Command Palette,
+  Notes/Properties, Markdown Source, Undo `Ctrl+Z`, Redo `Ctrl+Shift+Z`, Cut/Copy/Paste, General Reset/Apply,
+  Light/Dark и два реальных restart с сохранением ru/en. `Ctrl+Y` в Typora-профиле по-прежнему удаляет строку.
+- Patch независимо применён к принятому шагу 7 через Git и GNU patch; создание текстовых файлов и отсутствие вложенных
+  корней проверены. Source tree применённой копии совпал с рабочим, полная сборка и smoke повторены. Коммит не создавался.
 
 **Изменения**
 
