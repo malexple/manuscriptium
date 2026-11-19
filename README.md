@@ -1,15 +1,36 @@
 # Manuscriptium
 
-Java 21, Gradle/JPMS, Swing + FlatLaf. Реализованы расширяемая оболочка, внешние JAR-плагины и Project: Markdown-файлы, рекурсивный watcher, пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья с DnD-клонированием ссылок. Из коробки JPMS-модуль `markdown` включает Canvas Editor, Flexmark AST Parser, девять Typora-подобных тем, JLaTeXMath Renderer, «Заметки» и «Свойства».
+Кроссплатформенное desktop-приложение для заметок и публикации блогов: Java 21, Gradle/JPMS, Swing + FlatLaf.
+Реализованы расширяемая оболочка, внешние JAR-плагины и Project: Markdown-файлы, рекурсивный watcher,
+пересобираемые SQLite/Lucene-индексы, полнотекстовый поиск, ленивое физическое дерево и виртуальные YAML-деревья
+с DnD-клонированием ссылок. Из коробки JPMS-модуль `markdown` включает Canvas Editor, Flexmark AST Parser,
+девять Typora-подобных тем, JLaTeXMath Renderer, «Заметки» и «Свойства».
 
-## Первый запуск 
-```
-gradle wrapper --gradle-version 8.14.4   # нужен Gradle >= 8.14.4 для плагина jlink 4.x
-./gradlew build
-./gradlew :app:run                       # окно с явно подключённым встроенным Markdown
-./gradlew :app:devHome :app:jlink          # core, editor, markdown и их зависимости попадают в runtime image
+## Структура модулей
+
+| Gradle-модуль | JPMS | Ответственность |
+|---|---|---|
+| `spi` | `ru.mcs.spi` | Платформенно-нейтральные контракты без Swing/AWT и Markdown. |
+| `spi-swing` | `ru.mcs.spi.swing` | Публичные desktop/Swing-контракты и `PluginContext`. |
+| `editor` | `ru.mcs.editor` | Универсальный текстовый документ, Canvas, ввод, Undo/Redo и Save. |
+| `metadata` | `ru.mcs.metadata` | Версионированные декларативные описания и их валидация. |
+| `markdown` | `ru.mcs.markdown` | Вся встроенная Markdown-функциональность и публичный API формата. |
+| `core` | `ru.mcs.core` | Оболочка, Project, сервисы, поиск, индекс и внешние плагины. |
+| `app` | `ru.mcs.app` | Сборка продукта, запуск, `jlink` и smoke-компоновки. |
+
+`plugin-template` — отдельный standalone Gradle-проект, а не восьмой модуль продукта. Каталог `plugins/`
+не содержит обязательных встроенных Markdown-плагинов.
+
+## Первый запуск
+
+Требуется JDK 21; Gradle Wrapper уже находится в репозитории. На Windows используйте `gradlew.bat` вместо `./gradlew`.
+
+```bash
+./gradlew clean build
+./gradlew :app:run                       # полный продукт со встроенным Markdown
+./gradlew :app:devHome :app:jlink        # кроссплатформенный runtime image
 app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
-./gradlew :app:minimalSmoke             # независимый named-module запуск core + editor без markdown
+./gradlew :app:minimalSmoke             # core + editor без markdown
 ```
 
 При пустом состоянии центральная панель предлагает **New File**, **New Project**, **Open Project** и **Open File**. Эти кнопки
@@ -22,7 +43,7 @@ app/build/image/bin/manuscriptium --smoke --home=app/build/dev-home
 `app`, ни `markdown`. Его JPMS dependency assertions подтверждают, что платформенные модули не требуют `ru.mcs.markdown`,
 а единственный зарегистрированный editor provider — `editor.text`. Smoke открывает `plain.txt`, выполняет insert,
 undo/redo и дожидается завершения Save. Задача `:app:check` зависит от `minimalSmoke`, поэтому минимальная компоновка
-проверяется обычной сборкой; отдельный модуль `product-minimal` не создаётся.
+проверяется обычной сборкой; отдельный Gradle-модуль для минимальной компоновки не создаётся.
 
 Встроенные возможности продукта не являются внешними плагинами: `app` явно передаёт `MarkdownModule` в `CoreBootstrap`.
 Модуль `markdown` не имеет `plugin.yml`, не создаёт отдельный `ModuleLayer`, не отображается в **Settings → Plugins** и не
@@ -86,14 +107,14 @@ Obsidian-навигацией для компоновки продукта бе�
 в обычном desktop UI, но `DropTarget` не создаётся при `GraphicsEnvironment.isHeadless()`, поэтому текстовая модель и Save
 можно проверять в headless `minimalSmoke` без изменения обычного XDND-поведения.
 
-## Markdown Canvas Editor — E0–E8
+## Markdown Canvas Editor
 
 `.md` открывается в той же вкладке редактора через встроенный JPMS-модуль `markdown` с приоритетом выше встроенного
 текстового провайдера. Кнопки **Canvas** и **Source** внутри вкладки переключают представление без создания второй вкладки
 или окна предпросмотра; действие также доступно в View, toolbar и popup вкладки. Режим для новых вкладок настраивается в
 **Settings → Markdown Editor** и сохраняется между запусками.
 
-Собственный `EditorCanvas` и общий session store дополнены текстовым ядром E1: `TextBuffer` на Piece Table, команды
+Собственный `EditorCanvas` и общий session store дополнены текстовым ядром: `TextBuffer` на Piece Table, команды
 insert/delete/replace/composite, вложенные транзакции и undo/redo с группировкой соседних однотипных правок по паузе 500 мс.
 Save-point учитывает undo/redo и правки во время фонового сохранения. Модель использует UTF-16 offsets и внутренние LF;
 при загрузке строго проверяются UTF-8, сохраняются BOM и однородные LF/CRLF/CR. Смешанные EOL отклоняются при сохранении,
@@ -104,21 +125,20 @@ Save-point учитывает undo/redo и правки во время фоно
 а symlink сохраняется и ведёт запись в его target. Чтение и запись выполняются вне EDT; Save, Save All, закрытие вкладки, выход,
 перезапуск и смена Project ждут завершения фонового сохранения.
 
-В E2 оба режима используют редактируемый собственный lightweight canvas и общую `DocumentModel`; основной Markdown и
+Оба режима используют редактируемый собственный lightweight canvas и общую `DocumentModel`; основной Markdown и
 обычный текст не используют `JTextArea` (он остаётся только в Markdown fallback и внутри transclusion editor). Поддержаны клавиатурный ввод, каретка и selection, drag/double/triple click, word wrap, Home/End/PageUp/PageDown,
 текстовый clipboard, undo/redo с системным menu shortcut (`Cmd` на macOS), IME и скролл с инерцией. Построчная раскладка
 изменяет только затронутые физические строки, а рисование ограничено viewport. Source сохраняет эту исходную раскладку;
-Canvas начиная с E5 использует отдельный WYSIWYG layout над той же моделью документа.
+Canvas использует отдельный WYSIWYG layout над той же моделью документа.
 
-В E3 модуль `markdown` предоставляет Flexmark AST через JDK-only SPI. `BlockSpan` сохраняет нулевые
+Модуль `markdown` предоставляет Flexmark AST через JDK-only SPI. `BlockSpan` сохраняет нулевые
 полуоткрытые UTF-16 offsets и depth каждого узла; поддержаны Front Matter, wikilinks/embeds, callouts, footnotes, inline/block
 math, task lists, tables и strikethrough. `AstIndex` выполняет поиск блока по offset. Обычная правка перепарсивает только
 затронутые top-level блоки и переиспользует остальные; результаты вычисляются в общем daemon executor и применяются на EDT
-только при совпадении `DocumentModel.version()`. В E5 актуальный AST управляет блочной раскладкой Canvas; устаревший AST после
-ввода не применяется к новой версии документа. Следующие фазы и критерии приёмки определены в `EDITOR_CANVAS_PLAN.md`, каталог
-поведения — в `TYPORA_FEATURES.md`.
+только при совпадении `DocumentModel.version()`. Актуальный AST управляет блочной раскладкой Canvas; устаревший AST после
+ввода не применяется к новой версии документа.
 
-### Темы редактора E4
+### Темы редактора
 
 Модуль `markdown` загружает девять Typora-подобных CSS-тем: `github`, `newsprint`, `night`, `pixyll`,
 `whitey`, `vue`, `lapis`, `onedark` и `notion`. В автоматическом режиме светлая тема оболочки выбирает `github`, тёмная — `night`;
@@ -140,7 +160,7 @@ font URL не загружаются, а локальные файлы разр�
 state. Отдельного UI выбора editor theme и журнала диагностик пока нет; переключение Light/Dark оболочки обновляет Canvas через
 change listeners `EditorStyleService`.
 
-### WYSIWYG-раскладка E5
+### WYSIWYG-раскладка
 
 Canvas отображает заголовки, абзацы, цитаты, вложенные и нумерованные списки, task list, `hr`, inline-стили, ссылки, inline-код
 и блоки кода с простой подсветкой. Markdown-маркеры скрываются в неактивных блоках; блок под кареткой показывается как исходник.
@@ -160,7 +180,7 @@ hit test и selection используют отображение видимых
   -Dmanuscriptium.golden.update=markdown/src/test/resources/golden/linux
 ```
 
-### Режимы и действия E6
+### Режимы и действия
 
 **F8** включает Focus Mode, приглушая неактивные блоки без потери контраста selection и каретки. **F9** включает Typewriter
 Mode и удерживает строку каретки по вертикальному центру viewport, включая первую и последнюю строки документа. Оба режима
@@ -182,11 +202,11 @@ selection от слова до соседних слов и всей строк�
 слова, Unicode-символы, строки и оценку времени чтения для selection или всего документа. **Ctrl+Shift+D** удаляет текущий
 блок. Formatting, Undo/Redo, selection и сохранение работают над общей `DocumentModel` независимо от активного представления.
 
-### Виджеты и изображения E7
+### Виджеты и изображения
 
 `WidgetRegistry` создаёт lightweight-виджеты для неактивных блоков: изображения, inline/block math, таблицы, callouts,
 front matter и код. Виджет занимает обычную высоту в `LayoutResult` и рисуется через `DrawSink`, не становясь тяжёлым Swing
-child component. Активный блок остаётся исходником, поэтому каретка, Enter, selection и IME сохраняют поведение E6.
+child component. Активный блок остаётся исходником, поэтому каретка, Enter, selection и IME сохраняют поведение редактора.
 
 Блочные Markdown-изображения и Obsidian `![[image]]` загружаются вне EDT через `ImageCache` с LRU-лимитом фактических
 RGBA-байтов. Разрешены только относительные пути, которые после `normalize()` остаются внутри каталога заметки. Resize за
@@ -214,7 +234,7 @@ JDK-only `BlockRendererExtension` принимает `BlockRenderRequest` и а�
 или JLaTeXMath в SPI. Необязательный mermaid demo-плагин не создавался. Delayed decoder/renderer-тесты подтверждают отзывчивость
 EDT, а packaged UI-приёмка покрывает resize, таблицы, clipboard file/image, настоящий межпроцессный XDND-drop и Enter до/после AST.
 
-### Obsidian, трансклюзии и рукописи E8
+### Obsidian, трансклюзии и рукописи
 
 Canvas отображает `[[Note|Alias]]` без Markdown-скобок вне активного блока; Ctrl+Click (Cmd+Click на macOS) использует общий
 `ObsidianLinkNavigator` и Project-safe resolver из `core` через JDK-only SPI. Комментарии `%%…%%` скрываются вне каретки. Вкладка
@@ -335,7 +355,7 @@ entries:
 ### Obsidian-разметка
 
 Fallback source-редактор `markdown.fallback` подсвечивает `[[wikilinks]]`, `![[embed]]` и callouts вида `> [!note]`, `> [!warning]`.
-Он используется в компоновке без модуля `markdown`. С E8 Canvas также поддерживает wikilinks, embeds, callouts,
+Он используется в компоновке без модуля `markdown`. Canvas также поддерживает wikilinks, embeds, callouts,
 комментарии и навигацию через SPI-сервисы без production-зависимости `markdown` от `core`.
 Поддержаны alias (`[[Note|alias]]`), заголовки (`[[Note#Heading]]`, `[[#Local heading]]`) и block-id
 (`[[Note#^block-id]]`). Ctrl+Click (Cmd+Click на macOS) открывает заметку и выбирает адресованный заголовок или блок.
@@ -346,7 +366,7 @@ Fallback source-редактор `markdown.fallback` подсвечивает `[
 с масштабированием под окно; остальные вложения открываются ассоциированным приложением ОС. Путь не может выйти за Project,
 а symlink в целевом файле или родительском каталоге не используется для перехода. Разрешение ссылок и декодирование изображений выполняются
 вне EDT. Callouts получают цветовую подсветку по типу; маркеры `+`/`-` сохраняются, а сворачивание блоков пока не реализовано.
-Редактируемые WYSIWYG-трансклюзии доступны в Canvas с E8. Front matter, inline code и fenced code не создают
+Редактируемые WYSIWYG-трансклюзии доступны в Canvas. Front matter, inline code и fenced code не создают
 ложных ссылок или callouts. Сам Markdown при навигации и предпросмотре не изменяется.
 
 Язык выбирается через `File → Settings… → General`. После подтверждения изменения приложение предлагает перезапуск;
@@ -364,3 +384,8 @@ Fallback source-редактор `markdown.fallback` подсвечивает `[
   устанавливаемыми JAR-плагинами. Публичный API формата ограничен пакетом `ru.mcs.markdown.api`.
 - Java-плагин имеет полный доступ к JVM; песочницы нет. Установка требует явного подтверждения предупреждения.
   Обновление проходит staging/pending и применяется при следующем запуске с rollback прежней установки при ошибке.
+
+## Лицензии
+
+Проект распространяется по [MIT License](LICENSE). Лицензии иконок, тестового шрифта и происхождение встроенных
+CSS-тем перечислены в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

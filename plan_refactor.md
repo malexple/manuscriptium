@@ -1,6 +1,6 @@
 # Manuscriptium — план архитектурного рефакторинга
 
-Дата: 2026-11-19. Статус: шаги 1–10 завершены и проверены; следующий шаг — упрощение документации и репозитория.
+Дата: 2026-11-19. Статус: шаги 1–11 завершены и проверены; следующий шаг — финальная приёмка без потери функциональности.
 
 ## 1. Цель и границы
 
@@ -549,6 +549,24 @@
 **Готово, когда:** пользовательские расширения работают на новой структуре, хотя старые JAR требуют пересборки.
 
 ### Шаг 11. Упростить документацию и репозиторий
+
+**Статус: завершён и проверен 2026-11-19.**
+
+- Удалены прежние `plan.md`, `REQUIREMENTS.md`, `TYPORA_FEATURES.md`, `EDITOR_CANVAS_PLAN.md`, оба варианта
+  `Manuscriptum.md`, устаревший `prompt.md` и три промежуточных root patch-файла. Актуальным маршрутом остаётся
+  `plan_refactor.md`; сетевые и пользовательские данные не затрагивались.
+- README теперь начинается с таблицы семи модулей и самодостаточных команд сборки/запуска. Исторические E0–E8-метки
+  и ссылки на удалённые планы убраны; Project, SDK 0.10, внешние JAR, отсутствие Markdown в платформе и лицензии
+  описаны в действующих руководствах. Отдельный architecture document не потребовался: ограничения уже находятся
+  в README и `docs/plugin-sdk.md`.
+- Добавлены MIT `LICENSE` и `THIRD_PARTY_NOTICES.md`. Проверены локальные Lucide ISC/Feather MIT notices и
+  test-only Liberation Sans GPL v2 с font exception. Standalone template получил Lucide LICENSE рядом с SVG.
+  Девять встроенных CSS-тем являются собственными ресурсами проекта; их содержимое и golden PNG не изменялись.
+- `RepositoryDocumentationTest` автоматически проверяет актуальный набор документов, отсутствие прежних планов и
+  root patches, локальные Markdown-ссылки и отсутствие ссылок на старую модульную структуру в действующих руководствах.
+- Полный `clean build :app:devHome :app:jlink :app:minimalSmoke`: 566 тестов, 0 failures/errors, 1 прежний
+  `MarkdownFileEditorTest.loadsOutsideEdtAndSwitchesModesInsideSameComponent` остаётся `@Disabled`. Standalone build,
+  Gradle-run smoke и packaged external smoke с обоими действиями успешны; девять Linux golden PNG не изменились.
 
 **Изменения**
 
