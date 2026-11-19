@@ -18,10 +18,20 @@ public final class PluginOrdering {
     }
 
     public static OrderResult sort(Collection<PluginDescriptor> all) {
+        return sort(all, Set.of());
+    }
+
+    /**
+     * Сортирует внешние плагины. {@code providedDependencies} содержит ID уже запущенных встроенных модулей:
+     * они удовлетворяют depends-on, но не добавляются в ordered и не получают отдельный plugin layer.
+     */
+    public static OrderResult sort(Collection<PluginDescriptor> all, Set<String> providedDependencies) {
         Map<String, PluginDescriptor> byId = new LinkedHashMap<>();
         Map<String, String> errors = new LinkedHashMap<>();
         for (PluginDescriptor d : all) {
-            if (byId.putIfAbsent(d.id(), d) != null) {
+            if (providedDependencies.contains(d.id())) {
+                errors.put(d.id(), "plugin id conflicts with built-in module: " + d.id());
+            } else if (byId.putIfAbsent(d.id(), d) != null) {
                 errors.put(d.id(), "duplicate plugin id");
             }
         }
@@ -29,12 +39,13 @@ public final class PluginOrdering {
         Set<String> done = new HashSet<>();
         Set<String> stack = new HashSet<>();
         for (PluginDescriptor d : byId.values()) {
-            visit(d, byId, done, stack, ordered, errors);
+            visit(d, byId, providedDependencies, done, stack, ordered, errors);
         }
         return new OrderResult(ordered, errors);
     }
 
-    private static boolean visit(PluginDescriptor d, Map<String, PluginDescriptor> byId, Set<String> done,
+    private static boolean visit(PluginDescriptor d, Map<String, PluginDescriptor> byId,
+                                 Set<String> providedDependencies, Set<String> done,
                                  Set<String> stack, List<PluginDescriptor> ordered, Map<String, String> errors) {
         if (errors.containsKey(d.id())) {
             return false;
@@ -48,13 +59,16 @@ public final class PluginOrdering {
         }
         boolean ok = true;
         for (String dep : d.dependsOn()) {
+            if (providedDependencies.contains(dep)) {
+                continue;
+            }
             PluginDescriptor dd = byId.get(dep);
             if (dd == null) {
                 errors.putIfAbsent(d.id(), "missing dependency (absent, disabled or incompatible): " + dep);
                 ok = false;
                 break;
             }
-            if (!visit(dd, byId, done, stack, ordered, errors)) {
+            if (!visit(dd, byId, providedDependencies, done, stack, ordered, errors)) {
                 errors.putIfAbsent(d.id(), "dependency failed: " + dep);
                 ok = false;
                 break;

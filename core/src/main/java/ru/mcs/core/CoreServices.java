@@ -112,7 +112,7 @@ final class CoreServices {
 
     PluginManager newPluginManager(Path home) {
         return new PluginManager(List.of(HomeDirs.systemPluginsDir(), HomeDirs.pluginsDir(home)),
-                this::contextFor, this::release, plugins::isEnabled);
+                this::contextFor, this::release, plugins::isEnabled, builtInIds());
     }
 
     /** Запускает явно скомпонованные модули продукта; внешние JAR этот список не пополняют. */

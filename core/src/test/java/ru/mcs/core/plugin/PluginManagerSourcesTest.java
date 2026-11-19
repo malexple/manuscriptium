@@ -81,7 +81,7 @@ class PluginManagerSourcesTest {
         Files.writeString(plugin.resolve("plugin.yml"), """
                 id: %s
                 version: 1.0
-                sdk-version: "0.9"
+                sdk-version: "0.10"
                 module: %s
                 depends-on: [%s]
                 activation: onDemand

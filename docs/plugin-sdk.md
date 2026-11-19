@@ -1,8 +1,9 @@
-# Manuscriptium Plugin SDK 0.9
+# Manuscriptium Plugin SDK 0.10
 
-Руководство по созданию внешнего плагина на Java 21. Готовый проект из этого руководства находится в
-[`plugin-template/`](../plugin-template/). Встроенные реализации Notes и Properties находятся в `markdown/`; они полезны
-как примеры tool windows и фоновой работы, но не являются отдельными JAR-плагинами или публичным SDK.
+Руководство по созданию внешнего плагина на Java 21. Готовый standalone-проект находится в
+[`plugin-template/`](../plugin-template/) и собирает два независимых примера: универсальное расширение платформы через
+`spi-swing` и расширение формата через публичный API `markdown`. Встроенные реализации Notes и Properties находятся в
+`markdown/`; они полезны как примеры tool windows и фоновой работы, но не являются отдельными JAR-плагинами.
 
 ## 1. Быстрый старт
 
@@ -24,14 +25,16 @@
 .\gradlew.bat -p plugin-template clean build
 ```
 
-Результат:
+Результат — два независимых артефакта:
 
 ```text
 plugin-template/build/libs/manuscriptium-plugin-template-0.1.0.jar
+plugin-template/build/libs/manuscriptium-markdown-extension-0.1.0.jar
 ```
 
-Установите его через **Settings → Plugins → Install from disk**, подтвердите предупреждение о правах и перезапустите
-приложение. Шаблон добавляет действие в **Tools → Template** и на главную панель, а также tool window **Template**.
+Установите их через **Settings → Plugins → Install from disk**, подтвердите предупреждение о правах и перезапустите
+приложение. Универсальный шаблон добавляет действие в **Tools → Template** и на главную панель, а также tool window
+**Template**. Markdown-шаблон добавляет **Tools → Inspect sample Markdown** и использует встроенный `MarkdownParser`.
 
 После копирования `plugin-template` в другое место измените в `settings.gradle` путь к исходникам Manuscriptium:
 
@@ -39,8 +42,9 @@ plugin-template/build/libs/manuscriptium-plugin-template-0.1.0.jar
 includeBuild('/path/to/manuscriptium')
 ```
 
-Composite build подставляет модуль `ru.mcs:spi-swing:0.1.0-SNAPSHOT` напрямую из `spi-swing/`; базовый `spi/`
-подключается транзитивно, поэтому предварительная публикация SDK в Maven-репозиторий не нужна.
+Composite build подставляет `ru.mcs:spi-swing:0.1.0-SNAPSHOT` и `ru.mcs:markdown:0.1.0-SNAPSHOT` напрямую из
+исходников; базовый `spi/` подключается транзитивно, поэтому предварительная публикация SDK в Maven-репозиторий не нужна.
+Сборка шаблона выполняется отдельной Gradle-инвокацией и не входит в `settings.gradle` основного продукта.
 
 ## 2. Структура проекта и артефакта
 
@@ -108,7 +112,29 @@ tasks.withType(JavaCompile).configureEach {
 транзитивно предоставляет платформенно-нейтральный `ru.mcs.spi`, а не от `core` или `app` — это сохраняет границу API
 и позволяет загружать плагин в отдельный `ModuleLayer`.
 
-`module-info.java`:
+Для расширения конкретного формата добавляется публичный языковой модуль. В шаблоне это отдельный source set и отдельный
+JAR, а не вторая точка входа основного плагина:
+
+```groovy
+sourceSets {
+    markdownExtension {}
+}
+
+dependencies {
+    markdownExtensionCompileOnly 'ru.mcs:spi-swing:0.1.0-SNAPSHOT'
+    markdownExtensionCompileOnly 'ru.mcs:markdown:0.1.0-SNAPSHOT'
+}
+
+tasks.register('markdownExtensionJar', Jar) {
+    from sourceSets.markdownExtension.output
+    archiveBaseName = 'manuscriptium-markdown-extension'
+}
+```
+
+`ru.mcs.markdown` экспортирует только `ru.mcs.markdown.api`. Реализация парсера, Flexmark, редактор и внутренние пакеты
+не являются SDK расширения. Аналогично будущий языковой модуль должен предоставлять свой публичный API и стабильный ID.
+
+`module-info.java` универсального плагина:
 
 ```java
 module ru.example.myplugin {
@@ -125,6 +151,19 @@ module ru.example.myplugin {
 `ru.mcs.spi.swing.Plugin`, который и является точкой входа плагина. Пакет ресурсов пометьте `opens`; чтобы javac считал его
 непустым, можно добавить package-private класс-маркер, как в шаблоне.
 
+`module-info.java` Markdown-расширения:
+
+```java
+module ru.example.markdown.extension {
+    requires ru.mcs.markdown;
+
+    provides ru.mcs.spi.swing.Plugin with ru.example.markdown.extension.MyMarkdownPlugin;
+}
+```
+
+Здесь `ru.mcs.spi.swing` доступен транзитивно из публичного модуля формата. Имя модуля и пакет точки входа должны быть
+собственными, а не повторять `ru.mcs.markdown`.
+
 ## 4. `plugin.yml`
 
 Обязательные поля: `id`, `version`, `sdk-version`, `module`. Полный пример:
@@ -133,7 +172,7 @@ module ru.example.myplugin {
 id: ru.example.myplugin
 name: My Plugin
 version: 0.1.0
-sdk-version: "0.9"
+sdk-version: "0.10"
 module: ru.example.myplugin
 depends-on: []
 permissions: []
@@ -179,22 +218,22 @@ contributions:
 | `id` | Уникальный ID плагина. Используйте латинские буквы, цифры, точку, `_` и `-`; первый символ — буква или цифра |
 | `name` | Отображаемое имя; по умолчанию равно `id` |
 | `version` | Версия самого плагина |
-| `sdk-version` | Требуемая версия SDK; сейчас используйте `"0.9"` |
+| `sdk-version` | Требуемая версия SDK; сейчас используйте `"0.10"` |
 | `module` | Имя JPMS-модуля из `module-info.java` |
-| `depends-on` | Список ID обязательных плагинов; по умолчанию `[]` |
+| `depends-on` | Список ID обязательных внешних плагинов или запущенных built-in модулей; по умолчанию `[]` |
 | `permissions` | Декларация прав для диалога установки; это не механизм изоляции |
 | `activation` | `onStartup` по умолчанию или `onDemand` |
 | `i18n` | Базовый путь ResourceBundle без `messages.properties`; необязательное поле |
 | `contributions` | Декларативные действия, панели, редакторы и страницы настроек; необязательное поле |
 
-Для SDK `0.x` должны совпасть major и minor: плагин с `sdk-version: "0.9"` совместим с SDK `0.9.0`, а с `0.8` — нет.
+Для SDK `0.x` должны совпасть major и minor: плагин с `sdk-version: "0.10"` совместим с SDK `0.10.0`, а с `0.9` — нет.
 Для стабильных major-версий minor плагина не должен быть новее minor SDK. Проверка выполняется до регистрации вкладов
-и до загрузки байткода. Внутри совместимой линии 0.9 допускаются только бинарно совместимые добавления: новые сервисные
+и до загрузки байткода. Внутри совместимой линии 0.10 допускаются только бинарно совместимые добавления: новые сервисные
 интерфейсы и default-методы; сигнатуры существующих контрактов не изменяются.
 
-Архитектурный шаг 4 — согласованное исключение до публикации приложения: Swing-контракты перенесены из пакетов
-`ru.mcs.spi.*` в `ru.mcs.spi.swing.*` без compatibility aliases. Существующие исходники плагинов нужно обновить и
-пересобрать; старые бинарные JAR не сохраняют совместимость с новой модульной границей.
+Переход `0.9` → `0.10` отражает фактическое изменение модульных контрактов: платформа разделена на `spi`, `spi-swing`,
+`editor`, `metadata`, `core` и языковой `markdown`. Искусственная бинарная совместимость со старыми JAR не сохраняется;
+их исходники нужно обновить и пересобрать против SDK 0.10.
 
 ## 5. Жизненный цикл
 
@@ -364,9 +403,28 @@ MyService service = context.services().get(MyService.class);
 depends-on: [ru.example.service-api]
 ```
 
-Зависимости топологически сортируются, слой зависимости становится родителем слоя потребителя. Отсутствующая,
+Зависимости топологически сортируются, слой внешней зависимости становится родителем слоя потребителя. Отсутствующая,
 отключённая, несовместимая или циклическая зависимость блокирует и сам dependent. Duplicate ID между bundled и
 внешним источником отклоняется, а не вызывает молчаливую подмену плагина.
+
+### Зависимость от встроенного формата
+
+ID фактически запущенных built-in модулей также разрешены в `depends-on`. Для Manuscriptium с Markdown:
+
+```yaml
+depends-on: [markdown]
+```
+
+```java
+MarkdownParser parser = context.services().get(MarkdownParser.class);
+MarkdownParser.ParseResult result = parser.parse("# Heading\n\nText\n", 1);
+```
+
+Built-in модуль стартует до загрузки внешних JAR и уже находится в boot `ModuleLayer`. Поэтому для него не требуется
+external descriptor, отдельный JAR или дополнительный plugin layer. JPMS-зависимость `requires ru.mcs.markdown`
+разрешается из boot layer, а сервис доступен через `PluginContext`. Если built-in отсутствует в компоновке или завершил
+запуск с ошибкой, dependent получает `missing dependency (absent, disabled or incompatible): markdown`. Внешний плагин
+с ID запущенного built-in отклоняется как конфликт. Сам `markdown` не становится отключаемым JAR-плагином.
 
 Встроенный JDK-only сервис `ru.mcs.spi.service.AtomicFileStore` доступен через `context.services()`:
 
@@ -444,8 +502,10 @@ try {
 - Java-плагин имеет **полный доступ к JVM и правам пользователя ОС**. Песочницы нет.
 - `permissions` — декларация для предупреждения пользователя, а не enforced capability list.
 - Включение, отключение, установка и обновление тяжёлых Java-плагинов применяются через перезапуск.
-- Обновление существующего внешнего плагина сохраняется в pending и применяется при следующем запуске до открытия
-  старого JAR — это необходимо для Windows.
+- Обновление существующего внешнего плагина копируется через staging в скрытый `.<id>.pending` и применяется при
+  следующем запуске до открытия старого JAR — это необходимо для Windows. До перезапуска прежняя установка не меняется.
+- Применение обновления сначала перемещает прежний каталог в backup. При неудачной замене backup возвращается на место;
+  staging, pending и backup не участвуют в обнаружении плагинов.
 - Сетевой каталог и сервис загрузки пока не реализованы; установка выполняется с локального JAR/ZIP/каталога.
 - Ошибки манифеста, SDK, графа и активации видны в **Settings → Plugins** вместе с исходной причиной.
 
@@ -453,7 +513,7 @@ try {
 
 1. `./gradlew clean build` в проекте плагина завершается без ошибок.
 2. JAR содержит `plugin.yml` и `module-info.class` в корне.
-3. JAR не содержит `ru/mcs/spi/` и классы самого Manuscriptium.
+3. JAR не содержит `ru/mcs/spi/`, `ru/mcs/markdown/` и другие классы самого Manuscriptium или его зависимостей.
 4. `id` и `module` уникальны и совпадают с манифестом; `sdk-version` совместима с приложением.
 5. Все ID из `contributions` обрабатываются соответствующим `create*`-методом.
 6. Все `%ключи` существуют в `messages.properties` и `messages_ru.properties`.
@@ -462,5 +522,15 @@ try {
 9. Для `onDemand` код действительно не активируется до первого использования вклада.
 10. Отключение плагина снимает его действия, панели, редакторы, сервисы и состояние корректно.
 
-Для smoke-проверки приложения с внешним плагином можно использовать каталог `--home` и режим `--smoke`: он активирует
-все объявленные плагины, печатает `MCS_SMOKE ...` и возвращает ненулевой код при любой ошибке загрузки.
+Для smoke-проверки приложения с внешним плагином используйте отдельный каталог `--home` и режим `--smoke`: он активирует
+все объявленные плагины, печатает `MCS_SMOKE ...` и возвращает ненулевой код при любой ошибке загрузки. Чтобы проверить
+не только активацию, но и выполнение конкретных действий, передайте их IDs через запятую:
+
+```bash
+app/build/image/bin/manuscriptium \
+  --smoke --home=app/build/external-home \
+  --smoke-actions=template.hello,markdown.template.inspect
+```
+
+Успешный вывод содержит `smokeActions=[template.hello, markdown.template.inspect]`, `failures={}` и
+`builtInFailures={}`. Отсутствующее или disabled действие также делает smoke неуспешным.

@@ -21,7 +21,11 @@ import ru.mcs.core.plugin.PluginsConfigurableProvider;
 import ru.mcs.core.settings.SettingsActions;
 import ru.mcs.core.shell.ShellFrame;
 import ru.mcs.spi.action.ActionIds;
+import ru.mcs.spi.action.ActionPlaces;
+import ru.mcs.spi.action.DataContext;
 import ru.mcs.spi.swing.BuiltInModule;
+import ru.mcs.spi.swing.action.AnAction;
+import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.ui.NotificationType;
 import ru.mcs.spi.ui.ToolWindowAnchor;
 import ru.mcs.spi.swing.ui.ToolWindowSpec;
@@ -34,7 +38,8 @@ import ru.mcs.spi.swing.editor.FileEditorProvider;
 
 /**
  * Запуск ядра. Аргументы: {@code --home=PATH} (каталог данных), {@code --smoke} (без UI и без записи на диск:
- * загрузить и активировать все плагины, напечатать итог, выйти с кодом 0/1 — для CI).
+ * загрузить и активировать все плагины, напечатать итог, выйти с кодом 0/1 — для CI). Необязательный
+ * {@code --smoke-actions=id1,id2} дополнительно выполняет указанные действия и проверяет их доступность.
  */
 public final class CoreBootstrap {
 
@@ -53,7 +58,7 @@ public final class CoreBootstrap {
             LOG.log(System.Logger.Level.ERROR, "Cannot apply pending plugin update", e);
         }
         if (Arrays.asList(args).contains("--smoke")) {
-            runSmoke(home, builtIns);
+            runSmoke(home, args, builtIns);
         } else {
             SwingUtilities.invokeLater(() -> startUi(home, args, builtIns));
         }
@@ -139,7 +144,7 @@ public final class CoreBootstrap {
         }));
     }
 
-    private static void runSmoke(Path home, BuiltInModule... builtIns) {
+    private static void runSmoke(Path home, String[] args, BuiltInModule... builtIns) {
         CoreServices s = new CoreServices(home, false);
         s.startBuiltIns(List.of(builtIns));
         s.bindMetadata();
@@ -150,9 +155,11 @@ public final class CoreBootstrap {
             List<String> lazy = new ArrayList<>(pm.declaredIds());
             lazy.removeAll(pm.loadedIds());
             pm.activateAll();
+            List<String> smokeActions = runSmokeActions(s, argValue(args, "--smoke-actions="));
             System.out.println("MCS_SMOKE builtIns=" + s.builtInIds()
                     + " plugins=" + pm.loadedIds()
                     + " lazy=" + lazy
+                    + " smokeActions=" + smokeActions
                     + " locale=" + Messages.locale()
                     + " actions=" + s.actions.pluginActionIds()
                     + " tools=" + s.actions.childIds(ActionIds.TOOLS_MENU)
@@ -173,6 +180,27 @@ public final class CoreBootstrap {
         pm.stopAll();
         s.stopBuiltIns();
         System.exit(code);
+    }
+
+    private static List<String> runSmokeActions(CoreServices services, String argument) {
+        if (argument == null || argument.isBlank()) {
+            return List.of();
+        }
+        List<String> ids = Arrays.stream(argument.split(",")).map(String::trim).filter(id -> !id.isEmpty()).toList();
+        for (String id : ids) {
+            AnAction action = services.actions.getAction(id);
+            if (action == null) {
+                throw new IllegalStateException("Smoke action is not registered: " + id);
+            }
+            AnActionEvent event = new AnActionEvent(action.getTemplatePresentation().copy(),
+                    ActionPlaces.MAIN_MENU, DataContext.EMPTY);
+            action.update(event);
+            if (!event.getPresentation().isEnabled()) {
+                throw new IllegalStateException("Smoke action is disabled: " + id);
+            }
+            action.actionPerformed(event);
+        }
+        return ids;
     }
 
     private static String argValue(String[] args, String prefix) {

@@ -41,7 +41,7 @@ class ContributionIconsTest {
         PluginDescriptor descriptor = PluginDescriptorParser.parse(new StringReader("""
                 id: p
                 version: 1
-                sdk-version: "0.9"
+                sdk-version: "0.10"
                 module: p.mod
                 activation: onDemand
                 contributions:

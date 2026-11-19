@@ -79,6 +79,24 @@ class PluginInstallerTest {
     }
 
     @Test
+    void failedReplacementRestoresPreviousInstallation() throws Exception {
+        Path plugins = Files.createDirectories(temp.resolve("plugins"));
+        Path installed = Files.createDirectories(plugins.resolve("demo"));
+        Files.writeString(installed.resolve("plugin.yml"), manifest("1.0"));
+        Files.writeString(installed.resolve("demo.jar"), "original");
+        Path missingUpdate = plugins.resolve(".demo.pending");
+
+        assertThatThrownBy(() -> PluginInstaller.replaceDirectory(missingUpdate, installed))
+                .isInstanceOf(IOException.class);
+
+        assertThat(PluginDescriptorParser.parse(installed.resolve("plugin.yml")).version()).isEqualTo("1.0");
+        assertThat(installed.resolve("demo.jar")).hasContent("original");
+        try (var paths = Files.list(plugins)) {
+            assertThat(paths.map(p -> p.getFileName().toString()).toList()).containsExactly("demo");
+        }
+    }
+
+    @Test
     void installsZipWithSingleTopLevelDirectory() throws Exception {
         Path source = temp.resolve("demo.zip");
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(source))) {
@@ -153,7 +171,7 @@ class PluginInstallerTest {
                 id: demo
                 name: Demo plugin
                 version: %s
-                sdk-version: "0.9"
+                sdk-version: "0.10"
                 module: demo
                 permissions: [filesystem, network]
                 """.formatted(version);

@@ -52,7 +52,7 @@ class PluginIconsTest {
     }
 
     private PluginDescriptor descriptor() {
-        return new PluginDescriptor("ru.mcs.plugin.hello", "Hello", "1", "0.9", "hello",
+        return new PluginDescriptor("ru.mcs.plugin.hello", "Hello", "1", "0.10", "hello",
                 List.of(), List.of(), directory);
     }
 

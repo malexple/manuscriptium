@@ -67,18 +67,25 @@ jobs:
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.editor$'
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.metadata$'
           app/build/image/bin/java --list-modules | grep -q '^ru.mcs.markdown$'
-      - name: Smoke test of the runtime image (built-in modules + external template JAR)
+      - name: Smoke test of the runtime image (built-in modules + two external JARs)
         shell: bash
         run: |
           TEMPLATE_DIR=app/build/external-home/plugins/template
+          MARKDOWN_DIR=app/build/external-home/plugins/markdown-extension
           TEMPLATE_JAR=plugin-template/build/libs/manuscriptium-plugin-template-0.1.0.jar
-          mkdir -p "$TEMPLATE_DIR"
+          MARKDOWN_JAR=plugin-template/build/libs/manuscriptium-markdown-extension-0.1.0.jar
+          mkdir -p "$TEMPLATE_DIR" "$MARKDOWN_DIR"
           cp "$TEMPLATE_JAR" "$TEMPLATE_DIR/template.jar"
+          cp "$MARKDOWN_JAR" "$MARKDOWN_DIR/markdown-extension.jar"
           (cd "$TEMPLATE_DIR" && jar xf "$OLDPWD/$TEMPLATE_JAR" plugin.yml)
+          (cd "$MARKDOWN_DIR" && jar xf "$OLDPWD/$MARKDOWN_JAR" plugin.yml)
           EXE=app/build/image/bin/manuscriptium
           if [ "$RUNNER_OS" = "Windows" ]; then EXE=$EXE.bat; fi
-          "$EXE" --smoke --home=app/build/external-home | tee external-smoke.log
-          grep -q "MCS_SMOKE builtIns=\[markdown\] plugins=\[ru.mcs.plugin.template\]" external-smoke.log
+          "$EXE" --smoke --home=app/build/external-home \
+            --smoke-actions=template.hello,markdown.template.inspect | tee external-smoke.log
+          grep -q "plugins=\[ru.mcs.plugin.markdown.template, ru.mcs.plugin.template\]" external-smoke.log
+          grep -q "smokeActions=\[template.hello, markdown.template.inspect\]" external-smoke.log
+          grep -q "Markdown extension action: spans=10, headings=1, version=1" external-smoke.log
           grep -q "template.hello" external-smoke.log
           grep -q "toolwindow.toggle.template.panel" external-smoke.log
-          grep -q "builtInFailures={}" external-smoke.log
+          grep -q "failures={} builtInFailures={}" external-smoke.log

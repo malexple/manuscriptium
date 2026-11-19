@@ -1,6 +1,6 @@
 # Manuscriptium — план архитектурного рефакторинга
 
-Дата: 2026-11-18. Статус: шаги 1–9 завершены и проверены; следующий шаг — обновление SDK и проверка пользовательских расширений.
+Дата: 2026-11-19. Статус: шаги 1–10 завершены и проверены; следующий шаг — упрощение документации и репозитория.
 
 ## 1. Цель и границы
 
@@ -496,6 +496,30 @@
 **Готово, когда:** платформа стартует без Markdown, а Manuscriptium с Markdown сохраняет прежний простой пользовательский сценарий.
 
 ### Шаг 10. Обновить SDK и проверить пользовательские расширения
+
+**Статус: завершён и проверен 2026-11-19.**
+
+- `McsSdk.VERSION` обновлён до `0.10.0`, внешние манифесты используют `sdk-version: "0.10"`. Прежняя линия `0.9`
+  несовместима и требует пересборки JAR; искусственная бинарная совместимость не сохранялась.
+- `plugin-template` остаётся отдельным standalone Gradle-проектом и теперь собирает два независимых JAR: универсальный
+  `manuscriptium-plugin-template-0.1.0.jar` через `spi-swing` и `manuscriptium-markdown-extension-0.1.0.jar` через
+  публичный API `markdown`. Оба JAR содержат собственные JPMS descriptors и манифесты, но не классы SDK или продукта.
+  Сборка повторена из физически отдельного каталога с `includeBuild` на исходное дерево.
+- `PluginOrdering` и `PluginManager` получают IDs фактически запущенных built-in модулей. Такой модуль удовлетворяет
+  `depends-on`, не активируется как внешний JAR и не получает отдельный parent layer. Внешний descriptor не может занять
+  ID запущенного built-in. `markdown` остаётся встроенным модулем, а `MarkdownParser` предоставляется через `ServiceRegistry`.
+- В packaged smoke добавлен `--smoke-actions=id1,id2`, реально выполняющий указанные действия после активации плагинов.
+  Оба внешних JAR загружены и выполнили `template.hello` и `markdown.template.inspect`; Markdown action получил
+  `FlexmarkMarkdownParser`, разобрал образец в 10 spans с одним heading, `failures={}` и `builtInFailures={}`.
+- Invalid packaged smoke подтвердил `old.plugin=incompatible SDK: required 0.9, application 0.10.0` и
+  `broken.consumer=missing dependency (absent, disabled or incompatible): absent.provider`; процесс ожидаемо завершился
+  с ненулевым кодом. Тест `PluginInstallerTest` подтвердил восстановление прежней установки после неудачной замены.
+- Полный `build :app:devHome :app:jlink :app:minimalSmoke`: 563 теста, 0 failures/errors, 1 прежний
+  `MarkdownFileEditorTest.loadsOutsideEdtAndSwitchesModesInsideSameComponent` остаётся `@Disabled`. Девять Linux golden PNG
+  побайтово совпадают с шагом 9. Standalone build, packaged external smoke и обязательные negative smoke проверки зелёные.
+- Ручная packaged UI-приёмка подтвердила установку обоих JAR с явным предупреждением полного JVM access и отдельным
+  согласием, действия и tool window, disable/enable с restart, pending update `0.1.0` → `0.2.0` только после restart,
+  отображение несовместимого JAR без остановки остальных расширений. Сетевой репозиторий плагинов не создавался.
 
 **Изменения**
 

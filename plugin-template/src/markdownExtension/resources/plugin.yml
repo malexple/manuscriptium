@@ -1,0 +1,15 @@
+id: ru.mcs.plugin.markdown.template
+name: Manuscriptium Markdown Extension Template
+version: 0.1.0
+sdk-version: "0.10"
+module: ru.mcs.plugin.markdown.template
+depends-on: [markdown]
+permissions: []
+activation: onDemand
+i18n: ru/mcs/plugin/markdown/template/messages
+
+contributions:
+  actions:
+    - id: markdown.template.inspect
+      text: "%action.inspect"
+      groups: [MainMenu.Tools]

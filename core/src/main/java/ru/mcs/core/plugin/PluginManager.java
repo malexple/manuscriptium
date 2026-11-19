@@ -6,11 +6,13 @@ import java.lang.module.ModuleFinder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -26,8 +28,9 @@ import ru.mcs.spi.swing.PluginContext;
  * объединяет их в один реестр, объявляет вклады и загружает (активирует).
  * Активация: плагин с {@code activation: onStartup} (по умолчанию) загружается в {@link #loadAll()}; плагин с
  * {@code onDemand} — при первом использовании своего вклада (или явно через {@link #activate}).
- * Каждый плагин получает собственный {@link ModuleLayer}; родитель — boot-слой (spi, core) и слои плагинов
- * из depends-on. {@code afterStop} вызывается после остановки, неудачного объявления или неудачного старта
+ * Каждый плагин получает собственный {@link ModuleLayer}; родители — boot-слой (SDK и запущенные built-in
+ * dependencies) и слои внешних плагинов из depends-on. {@code afterStop} вызывается после остановки,
+ * неудачного объявления или неудачного старта
  * плагина — там снимаются все его регистрации (включая заглушки вкладов).
  */
 public final class PluginManager {
@@ -52,6 +55,7 @@ public final class PluginManager {
     private final Function<PluginDescriptor, PluginContext> contextFactory;
     private final Consumer<PluginDescriptor> afterStop;
     private final Predicate<String> enabled;
+    private final Set<String> providedDependencies;
     private final Map<String, Declared> declared = new LinkedHashMap<>();
     private final Map<String, Declared> started = new LinkedHashMap<>();
     private final Map<String, String> failures = new LinkedHashMap<>();
@@ -73,10 +77,17 @@ public final class PluginManager {
 
     public PluginManager(List<Path> pluginsDirs, Function<PluginDescriptor, PluginContext> contextFactory,
                          Consumer<PluginDescriptor> afterStop, Predicate<String> enabled) {
+        this(pluginsDirs, contextFactory, afterStop, enabled, Set.of());
+    }
+
+    public PluginManager(List<Path> pluginsDirs, Function<PluginDescriptor, PluginContext> contextFactory,
+                         Consumer<PluginDescriptor> afterStop, Predicate<String> enabled,
+                         Collection<String> providedDependencies) {
         this.pluginsDirs = List.copyOf(pluginsDirs);
         this.contextFactory = contextFactory;
         this.afterStop = afterStop;
         this.enabled = enabled;
+        this.providedDependencies = Set.copyOf(providedDependencies);
     }
 
     /** Вызывается при любой ошибке плагина (манифест, объявление вкладов, загрузка): (pluginId, причина). */
@@ -126,7 +137,7 @@ public final class PluginManager {
                 .filter(d -> !failures.containsKey(d.id()))
                 .filter(this::validateSdk)
                 .toList();
-        PluginOrdering.OrderResult order = PluginOrdering.sort(enabledPlugins);
+        PluginOrdering.OrderResult order = PluginOrdering.sort(enabledPlugins, providedDependencies);
         order.errors().forEach(this::fail);
         for (PluginDescriptor d : order.ordered()) {
             declare(d);
@@ -187,7 +198,9 @@ public final class PluginManager {
         }
         try {
             for (String dep : dc.descriptor.dependsOn()) {
-                activate(dep);
+                if (!providedDependencies.contains(dep)) {
+                    activate(dep);
+                }
             }
             start(dc);
             LOG.log(System.Logger.Level.INFO, "Plugin started: " + id + " " + dc.descriptor.version());
@@ -233,6 +246,10 @@ public final class PluginManager {
         List<ModuleLayer> parents = new ArrayList<>();
         parents.add(ModuleLayer.boot());
         for (String depId : d.dependsOn()) {
+            if (providedDependencies.contains(depId)) {
+                // Модуль и его сервисы уже доступны из boot layer; внешняя активация не требуется.
+                continue;
+            }
             Declared dep = declared.get(depId);
             if (dep == null || dep.layer == null) {
                 throw new IllegalStateException("Dependency not loaded: " + depId);

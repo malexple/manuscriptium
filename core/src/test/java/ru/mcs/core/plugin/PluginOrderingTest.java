@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class PluginOrderingTest {
@@ -17,6 +18,30 @@ class PluginOrderingTest {
         var r = PluginOrdering.sort(List.of(p("c", "b"), p("b", "a"), p("a")));
         assertThat(r.ordered()).extracting(PluginDescriptor::id).containsExactly("a", "b", "c");
         assertThat(r.errors()).isEmpty();
+    }
+
+    @Test
+    void builtInDependencyIsSatisfiedWithoutAnExternalDescriptor() {
+        var r = PluginOrdering.sort(List.of(p("consumer", "markdown")), Set.of("markdown"));
+
+        assertThat(r.ordered()).extracting(PluginDescriptor::id).containsExactly("consumer");
+        assertThat(r.errors()).isEmpty();
+    }
+
+    @Test
+    void sameBuiltInIdIsNotSatisfiedWhenItWasNotProvided() {
+        var r = PluginOrdering.sort(List.of(p("consumer", "markdown")), Set.of());
+
+        assertThat(r.ordered()).isEmpty();
+        assertThat(r.errors().get("consumer")).contains("missing dependency").contains("markdown");
+    }
+
+    @Test
+    void externalPluginCannotReplaceBuiltInId() {
+        var r = PluginOrdering.sort(List.of(p("markdown"), p("ok")), Set.of("markdown"));
+
+        assertThat(r.ordered()).extracting(PluginDescriptor::id).containsExactly("ok");
+        assertThat(r.errors().get("markdown")).contains("conflicts with built-in module");
     }
 
     @Test

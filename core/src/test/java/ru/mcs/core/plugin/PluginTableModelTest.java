@@ -13,7 +13,7 @@ class PluginTableModelTest {
     void checkboxChangesAreStagedThenAppliedOrReset() {
         PluginState state = new PluginState();
         PluginTableModel model = new PluginTableModel(state);
-        PluginDescriptor descriptor = new PluginDescriptor("demo", "Demo", "1.0", "0.9", "demo",
+        PluginDescriptor descriptor = new PluginDescriptor("demo", "Demo", "1.0", "0.10", "demo",
                 List.of(), List.of(), Path.of("/demo"));
         model.refresh(List.of(descriptor), Set.of("demo"), java.util.Map.of());
 
@@ -54,7 +54,7 @@ class PluginTableModelTest {
         PluginTableModel model = new PluginTableModel(new PluginState());
         PluginDescriptor descriptor = new PluginDescriptor("old", "Old", "1.0", "0.8", "old",
                 List.of(), List.of(), Path.of("/old"));
-        String failure = "incompatible SDK: required 0.8, application 0.9";
+        String failure = "incompatible SDK: required 0.8, application 0.10";
         model.refresh(List.of(descriptor), Set.of(), java.util.Map.of("old", failure));
 
         assertThat(model.getValueAt(0, 5)).isEqualTo("Incompatible SDK");

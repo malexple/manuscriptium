@@ -1,7 +1,7 @@
 id: ru.mcs.plugin.template
 name: Manuscriptium Plugin Template
 version: 0.1.0
-sdk-version: "0.9"
+sdk-version: "0.10"
 module: ru.mcs.plugin.template
 depends-on: []
 permissions: []

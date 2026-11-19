@@ -119,7 +119,7 @@ public final class PluginInstaller {
         return pluginsDir.resolve("." + pluginId + ".pending");
     }
 
-    private static void replaceDirectory(Path source, Path target) throws IOException {
+    static void replaceDirectory(Path source, Path target) throws IOException {
         Path backup = target.getParent().resolve("." + target.getFileName() + ".backup-" + UUID.randomUUID());
         boolean backedUp = false;
         try {

@@ -5,6 +5,11 @@ plugins {
 group = 'ru.mcs.plugin'
 version = '0.1.0'
 
+sourceSets {
+    // Стандартные src/markdownExtension/{java,resources}; отдельный JPMS-модуль и plugin.yml.
+    markdownExtension {}
+}
+
 repositories {
     mavenCentral()
 }
@@ -18,6 +23,10 @@ java {
 dependencies {
     // SDK предоставляется Manuscriptium во время выполнения и не упаковывается в плагин.
     compileOnly 'ru.mcs:spi-swing:0.1.0-SNAPSHOT'
+
+    // Второй, независимый JAR: расширение формата использует только публичный API языкового модуля.
+    markdownExtensionCompileOnly 'ru.mcs:spi-swing:0.1.0-SNAPSHOT'
+    markdownExtensionCompileOnly 'ru.mcs:markdown:0.1.0-SNAPSHOT'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -27,4 +36,15 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named('jar') {
     archiveBaseName = 'manuscriptium-plugin-template'
+}
+
+tasks.register('markdownExtensionJar', Jar) {
+    group = 'build'
+    description = 'Builds the standalone Markdown API extension example.'
+    from sourceSets.markdownExtension.output
+    archiveBaseName = 'manuscriptium-markdown-extension'
+}
+
+tasks.named('build') {
+    dependsOn 'markdownExtensionJar'
 }
