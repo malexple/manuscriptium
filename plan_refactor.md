@@ -1,6 +1,6 @@
 # Manuscriptium — план архитектурного рефакторинга
 
-Дата: 2026-11-19. Статус: шаги 1–11 завершены и проверены; следующий шаг — финальная приёмка без потери функциональности.
+Дата: 2026-11-19. Статус: шаги 1–12 завершены; полная автоматическая и ручная приёмка на Linux пройдена. Удалённый CI Ubuntu/Windows/macOS в этом срезе не запускался.
 
 ## 1. Цель и границы
 
@@ -72,6 +72,19 @@
 - девять editor themes, светлая/тёмная темы приложения и ru/en;
 - атомарная запись, сохранение Markdown symlink target, Vault/Project path checks, `CREATE_NEW` и защита неизвестного YAML;
 - fresh-merge трансклюзий, защита от устаревших фоновых результатов и отсутствие тяжёлого дискового I/O на EDT.
+
+Обязательные security-инструкции:
+
+- Для Java-плагинов песочницы нет: плагин имеет полный доступ к JVM, установка требует предупреждения пользователя.
+- токены и SSH-ключи должны храниться в защищённом хранилище ОС и никогда не попадать в репозиторий
+- Markdown-операции не должны перезаписывать существующие файлы при создании или выходить за пределы Vault.
+- Obsidian-навигация отклоняет выход за Vault и symlink в target/родителях.
+- Properties отклоняет symlink, использует NOFOLLOW_LINKS, temp-файл и атомарную замену только по Apply.
+- Новый YAML view создаётся без перезаписи существующего файла.
+- Lucene и SQLite — пересобираемые кэши внутри .manuscriptium; они не сканируются как содержимое Vault.
+- Для Markdown editor symlink разрешён и должен вести запись в target без замены самой ссылки.
+
+После переименования Vault в Project правила безопасности не ослабляются.
 
 ### Команда полной автоматической проверки после каждого среза
 
@@ -592,6 +605,119 @@
 **Готово, когда:** в репозитории остаётся один непротиворечивый актуальный маршрут и актуальные руководства.
 
 ### Шаг 12. Выполнить финальную приёмку без потери функциональности
+
+**Статус: завершён и проверен локально 2026-11-19; удалённый CI на трёх ОС не запускался.**
+
+#### Реестр переноса тестов
+
+Сверено сохранённое дерево перед переносами: 136 suites, включая четыре архитектурных suite, добавленных на шагах 2–3 после исходной базы шага 1 (132 suites / 502 теста). Из них 69 перенесены или переименованы, 65 остались на прежних путях, удалены только два согласованных suite Hello. Каждый перенос перечислен ниже; имена методов у двух переименованных suites сохранены.
+
+| Исходный suite | Итоговое расположение |
+|---|---|
+| `core/src/test/java/ru/mcs/core/editor/CoreObsidianLinkServiceTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/DefaultObsidianLinkServiceTest.java` |
+| `core/src/test/java/ru/mcs/core/editor/ObsidianEditorSupportTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/ObsidianEditorSupportTest.java` |
+| `core/src/test/java/ru/mcs/core/editor/ObsidianImagePreviewTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/ObsidianImagePreviewTest.java` |
+| `core/src/test/java/ru/mcs/core/editor/ObsidianLinkNavigatorTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/ObsidianLinkNavigatorTest.java` |
+| `core/src/test/java/ru/mcs/core/editor/ObsidianLinkResolverTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/ObsidianLinkResolverTest.java` |
+| `core/src/test/java/ru/mcs/core/editor/ObsidianSyntaxTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/ObsidianSyntaxTest.java` |
+| `core/src/test/java/ru/mcs/core/editor/TextFileEditorProviderTest.java` | `editor/src/test/java/ru/mcs/editor/text/TextFileEditorProviderTest.java` |
+| `core/src/test/java/ru/mcs/core/project/BookViewDocumentTest.java` | `markdown/src/test/java/ru/mcs/markdown/project/BookViewDocumentTest.java` |
+| `core/src/test/java/ru/mcs/core/project/BookViewEditorTest.java` | `markdown/src/test/java/ru/mcs/markdown/project/BookViewEditorTest.java` |
+| `core/src/test/java/ru/mcs/core/project/BranchStatisticsTest.java` | `markdown/src/test/java/ru/mcs/markdown/project/BranchStatisticsTest.java` |
+| `core/src/test/java/ru/mcs/core/project/MarkdownNoteCreatorTest.java` | `markdown/src/test/java/ru/mcs/markdown/project/MarkdownNoteCreatorTest.java` |
+| `plugins/editor-styles/src/test/java/ru/mcs/plugin/editorstyle/CssValuesTest.java` | `markdown/src/test/java/ru/mcs/markdown/style/CssValuesTest.java` |
+| `plugins/editor-styles/src/test/java/ru/mcs/plugin/editorstyle/EditorStyleServiceTest.java` | `markdown/src/test/java/ru/mcs/markdown/style/EditorStyleServiceTest.java` |
+| `plugins/editor-styles/src/test/java/ru/mcs/plugin/editorstyle/FontRegistryTest.java` | `markdown/src/test/java/ru/mcs/markdown/style/FontRegistryTest.java` |
+| `plugins/editor-styles/src/test/java/ru/mcs/plugin/editorstyle/MarkdownGoldenTest.java` | `markdown/src/test/java/ru/mcs/markdown/style/MarkdownGoldenTest.java` |
+| `plugins/editor-styles/src/test/java/ru/mcs/plugin/editorstyle/StyleResolverTest.java` | `markdown/src/test/java/ru/mcs/markdown/style/StyleResolverTest.java` |
+| `plugins/editor-styles/src/test/java/ru/mcs/plugin/editorstyle/TyporaThemesTest.java` | `markdown/src/test/java/ru/mcs/markdown/style/TyporaThemesTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/BlockRendererTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/BlockRendererTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/CitationLayoutTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/CitationLayoutTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/EditorActionFactoryTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/EditorActionFactoryTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/EditorCanvasTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/EditorCanvasTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/EditorCommandsTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/EditorCommandsTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/MarkdownEditorConfigurableTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/MarkdownEditorConfigurableTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/MarkdownEditorStateTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/MarkdownEditorStateTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/MarkdownFileEditorProviderTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/MarkdownFileEditorProviderTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/MarkdownFileEditorTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/MarkdownFileEditorTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/MarkdownLayoutEngineTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/MarkdownLayoutEngineTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/MarkdownParseCoordinatorTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/MarkdownParseCoordinatorTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/MessagesResourcesTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/MessagesResourcesTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/action/EditorContextMenuBuilderTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/action/EditorContextMenuBuilderTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/action/SelectionExpanderTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/action/SelectionExpanderTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/action/TyporaKeymapTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/action/TyporaKeymapTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/action/WordCountTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/action/WordCountTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/architecture/EditorPackageDependenciesTest.java` | `markdown/src/test/java/ru/mcs/markdown/architecture/EditorPackageDependenciesTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/layout/CrossReferenceWidgetLayoutTest.java` | `markdown/src/test/java/ru/mcs/markdown/layout/CrossReferenceWidgetLayoutTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/layout/MarkdownWidgetLayoutTest.java` | `markdown/src/test/java/ru/mcs/markdown/layout/MarkdownWidgetLayoutTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/mode/FocusModeTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/mode/FocusModeTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/mode/TypewriterModeTest.java` | `editor/src/test/java/ru/mcs/editor/mode/TypewriterModeTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/model/DocumentModelImplTest.java` | `editor/src/test/java/ru/mcs/editor/model/DocumentModelImplTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/model/MarkdownDocumentCodecTest.java` | `editor/src/test/java/ru/mcs/editor/model/TextDocumentCodecTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/model/TextBufferPerformanceTest.java` | `editor/src/test/java/ru/mcs/editor/model/TextBufferPerformanceTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/model/TextBufferTest.java` | `editor/src/test/java/ru/mcs/editor/model/TextBufferTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/reference/CitationIndexTest.java` | `markdown/src/test/java/ru/mcs/markdown/reference/CitationIndexTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/reference/CrossReferenceIndexTest.java` | `markdown/src/test/java/ru/mcs/markdown/reference/CrossReferenceIndexTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/AutoPairTest.java` | `editor/src/test/java/ru/mcs/editor/view/AutoPairTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/DocumentLineIndexTest.java` | `editor/src/test/java/ru/mcs/editor/view/DocumentLineIndexTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/EditorCanvasCitationTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/view/EditorCanvasCitationTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/EditorCanvasInteractionTest.java` | `editor/src/test/java/ru/mcs/editor/view/EditorCanvasInteractionTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/EditorCanvasMarkdownTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/view/EditorCanvasMarkdownTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/EditorCanvasTableTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/view/EditorCanvasTableTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/ImageInputServiceTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/view/ImageInputServiceTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/ObsidianCommentsTest.java` | `markdown/src/test/java/ru/mcs/markdown/editor/view/ObsidianCommentsTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/view/TextLayoutEngineTest.java` | `editor/src/test/java/ru/mcs/editor/view/TextLayoutEngineTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/widget/ImageCacheTest.java` | `markdown/src/test/java/ru/mcs/markdown/widget/ImageCacheTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/widget/ImageSourceTest.java` | `markdown/src/test/java/ru/mcs/markdown/widget/ImageSourceTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/widget/TableModelTest.java` | `markdown/src/test/java/ru/mcs/markdown/widget/TableModelTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/widget/TransclusionConcurrencyTest.java` | `markdown/src/test/java/ru/mcs/markdown/widget/TransclusionConcurrencyTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/widget/TransclusionDocumentTest.java` | `markdown/src/test/java/ru/mcs/markdown/widget/TransclusionDocumentTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/widget/TransclusionSessionTest.java` | `markdown/src/test/java/ru/mcs/markdown/widget/TransclusionSessionTest.java` |
+| `plugins/markdown-editor/src/test/java/ru/mcs/plugin/mdeditor/widget/WidgetRegistryTest.java` | `markdown/src/test/java/ru/mcs/markdown/widget/WidgetRegistryTest.java` |
+| `plugins/markdown-parser/src/test/java/ru/mcs/plugin/mdparser/FlexmarkMarkdownParserTest.java` | `markdown/src/test/java/ru/mcs/markdown/parser/FlexmarkMarkdownParserTest.java` |
+| `plugins/markdown-parser/src/test/java/ru/mcs/plugin/mdparser/MarkdownCorpusTest.java` | `markdown/src/test/java/ru/mcs/markdown/parser/MarkdownCorpusTest.java` |
+| `plugins/math-renderer/src/test/java/ru/mcs/plugin/math/JLaTeXMathRenderingServiceTest.java` | `markdown/src/test/java/ru/mcs/markdown/math/JLaTeXMathRenderingServiceTest.java` |
+| `plugins/notes/src/test/java/ru/mcs/plugin/notes/MarkdownFilesTest.java` | `markdown/src/test/java/ru/mcs/markdown/notes/MarkdownFilesTest.java` |
+| `plugins/notes/src/test/java/ru/mcs/plugin/notes/NoteStatisticsTest.java` | `markdown/src/test/java/ru/mcs/markdown/notes/NoteStatisticsTest.java` |
+| `plugins/notes/src/test/java/ru/mcs/plugin/notes/OpenNotesPanelTest.java` | `markdown/src/test/java/ru/mcs/markdown/notes/OpenNotesPanelTest.java` |
+| `plugins/properties/src/test/java/ru/mcs/plugin/properties/FrontMatterTest.java` | `markdown/src/test/java/ru/mcs/markdown/frontmatter/FrontMatterTest.java` |
+| `plugins/properties/src/test/java/ru/mcs/plugin/properties/MarkdownFileStoreTest.java` | `markdown/src/test/java/ru/mcs/markdown/frontmatter/MarkdownFileStoreTest.java` |
+| `plugins/properties/src/test/java/ru/mcs/plugin/properties/PropertiesPanelTest.java` | `markdown/src/test/java/ru/mcs/markdown/properties/PropertiesPanelTest.java` |
+
+| Согласованно удалённый suite | Замена / основание |
+|---|---|
+| `plugins/hello/src/test/java/ru/mcs/plugin/hello/HelloConfigurableTest.java` | Замена не требуется: удалён учебный Hello configurable вместе с согласованным `plugins:hello`. |
+| `plugins/hello/src/test/java/ru/mcs/plugin/hello/HelloStateTest.java` | Замена не требуется: удалено учебное состояние Hello; функции продукта этот suite не проверял. |
+
+`CoreObsidianLinkServiceTest` переименован в `DefaultObsidianLinkServiceTest`, а `MarkdownDocumentCodecTest` — в `TextDocumentCodecTest`; наборы их тестовых методов совпадают. Оба исходных `MessagesResourcesTest` учтены раздельно: core-версия осталась в `core`, версия Markdown-редактора перенесена в `markdown`. Текущее дерево содержит 154 suites; добавленные после базы проверки не заменяют собой исходные переносы.
+
+#### Фактические результаты приёмки
+
+- Чистый прогон `clean test :app:devHome :app:jlink :app:minimalSmoke` дал 569 тестов в 154 XML suites,
+  0 failures/errors и 1 skipped. Единственный пропущенный тест — прежний
+  `MarkdownFileEditorTest.loadsOutsideEdtAndSwitchesModesInsideSameComponent`, который остаётся `@Disabled`.
+  После внешнего тайм-аута на packaging успешно повторены `:app:jlink :app:minimalSmoke`; minimal image содержит
+  только `ru.mcs.core` и `ru.mcs.editor`, не содержит Markdown и подтверждает `editor.text`, undo/redo и Save.
+- Все девять Linux golden PNG побайтово совпадают с шагом 11. Standalone `plugin-template clean build` успешен;
+  оба JAR собраны с `sdk-version: "0.10"`. Packaged built-in и external smoke завершились с пустыми
+  `failures`/`builtInFailures`; `template.hello` и `markdown.template.inspect` реально выполнены.
+  Несовместимый SDK `0.9` и отсутствующая зависимость `absent.plugin` ожидаемо дали ненулевой выход и точные ошибки.
+- В packaged UI повторены Project и восстановление вкладок, поиск, Classification, Clone/Move Link,
+  Branch Statistics, Properties Apply, Book Save Chapters и Export без перезаписи; Markdown Canvas/Source,
+  Front Matter, comments, heading, bold, Wikilink, citation, callout, table, math, image и bibliography;
+  Notes, Undo/Redo, Save, Focus/Typewriter, Light/Dark, editor theme `github → night`, ru/en, Settings и restart
+  с восстановлением Project/вкладки. Внешний JAR установлен через Settings → Plugins после явного предупреждения
+  о полном доступе к JVM; без подтверждения установка запрещена, после restart доступны toolbar, tool window
+  и реально выполненное действие `template.hello`.
+- Приёмка выявила и закрыла три дефекта переноса: повторные одинаковые embed теперь имеют независимые Swing
+  components благодаря occurrence offset в `TransclusionKey`, а rebuild того же offset переиспользует component;
+  Margin Note при caret в Front Matter вставляется после closing delimiter без потери пользовательских полей;
+  `core.file.save` и `core.file.saveAll` получили declarative OS shortcuts и общий action update-контракт.
+  Section Save трансклюзии по-прежнему перечитывает latest target и заменяет текущую секцию, а не выполняет
+  трёхстороннее слияние двух разных вариантов одной секции.
+- Исчезли только согласованные элементы: отдельные built-in Markdown-плагины, Hello вместе с двумя его suites,
+  старая бинарная совместимость JAR и прежние документы. `HelloStateTest` не восстанавливался. Удалённый CI
+  Ubuntu/Windows/macOS не запускался, поэтому локальная Linux-приёмка не выдаётся за результаты трёх ОС.
 
 **Изменения**
 

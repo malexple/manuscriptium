@@ -87,7 +87,9 @@
     }
   ],
   "keymap": [
-    {"command": "core.findAction", "keystroke": "shift shortcut A", "targets": ["desktop"]}
+    {"command": "core.findAction", "keystroke": "shift shortcut A", "targets": ["desktop"]},
+    {"command": "core.file.save", "keystroke": "shortcut S", "targets": ["desktop"]},
+    {"command": "core.file.saveAll", "keystroke": "shift shortcut S", "targets": ["desktop"]}
   ],
   "panels": [
     {"id": "core.project", "titleKey": "project.title", "command": "toolwindow.toggle.core.project", "anchor": "left", "icon": "folder-open"},

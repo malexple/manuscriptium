@@ -296,6 +296,36 @@ class MarkdownFileEditorTest {
     }
 
     @Test
+    void marginNoteAtFrontMatterStartIsInsertedAfterMetadata() throws Exception {
+        Path file = temp.resolve("front-matter-note.md");
+        String original = "---\ntitle: \"Note\"\ncustom: keep\n---\n\nBody\n";
+        Files.writeString(file, original, StandardCharsets.UTF_8);
+        MarkdownFileEditor editor = create(file, EditorMode.WYSIWYG, new MarkdownEditorRegistry());
+        try {
+            awaitLoaded(editor);
+            long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+            while ((editor.astIndex() == null || editor.astIndex().version() != editor.document().version())
+                    && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertThat(editor.astIndex()).isNotNull();
+            String inserted = "---\ntitle: \"Note\"\ncustom: keep\n---\n%%first%%\n\nBody\n";
+            SwingUtilities.invokeAndWait(() -> {
+                editor.canvas().setCaretSelection(0, 0);
+                editor.addMarginNote("first");
+            });
+
+            assertThat(sourceText(editor)).isEqualTo(inserted);
+            SwingUtilities.invokeAndWait(() -> editor.document().undo().undo());
+            assertThat(sourceText(editor)).isEqualTo(original);
+            SwingUtilities.invokeAndWait(() -> editor.document().undo().redo());
+            assertThat(sourceText(editor)).isEqualTo(inserted);
+        } finally {
+            SwingUtilities.invokeAndWait(editor::dispose);
+        }
+    }
+
+    @Test
     void disposeIsIdempotentAndRemovesRegistryEntry() throws Exception {
         Path file = temp.resolve("dispose.md");
         Files.writeString(file, "text");

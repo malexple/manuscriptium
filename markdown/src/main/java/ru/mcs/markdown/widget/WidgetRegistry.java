@@ -101,7 +101,7 @@ public final class WidgetRegistry implements BlockRendererExtensionRegistry {
                 if (image != null && image.wiki() && !imageExtension(image.path())) {
                     String target = transclusionTarget(source);
                     yield target == null || noteFile == null ? null : new TransclusionWidget(span.start(), end,
-                            transclusions.computeIfAbsent(new TransclusionKey(noteFile, target),
+                            transclusions.computeIfAbsent(new TransclusionKey(noteFile, target, span.start()),
                                     key -> new TransclusionSession(noteFile, target, this)));
                 }
                 yield image == null ? null : new ImageWidget(span.start(), end, image,
@@ -315,7 +315,7 @@ public final class WidgetRegistry implements BlockRendererExtensionRegistry {
         }
     }
 
-    private record TransclusionKey(Path source, String target) {
+    private record TransclusionKey(Path source, String target, int start) {
         private TransclusionKey {
             source = source.toAbsolutePath().normalize();
         }

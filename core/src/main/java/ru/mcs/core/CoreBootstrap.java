@@ -9,6 +9,7 @@ import java.util.ServiceLoader;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import ru.mcs.core.action.CoreActions;
+import ru.mcs.core.action.MetadataKeyBindings;
 import ru.mcs.core.editor.EditorActions;
 import ru.mcs.core.i18n.Messages;
 import ru.mcs.core.icon.Icons;
@@ -91,6 +92,8 @@ public final class CoreBootstrap {
         NotificationLayer.install(frame, s.notifications);
         EditorActions.register(s.actions, s.editors, frame);
         s.bindMetadata();
+        MetadataKeyBindings.install(frame.getRootPane(), s.actions, () -> new ShellDataContext(s.editors), s.metadata,
+                "core.file.save", "core.file.saveAll");
         CoreActions.registerShellActions(s.actions, frame);
         s.bindMetadata();
         CommandPalette.install(

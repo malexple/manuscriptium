@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.swing.JComponent;
+import javax.swing.JRootPane;
 import javax.swing.KeyStroke;
 import org.junit.jupiter.api.Test;
 import ru.mcs.metadata.MetadataCatalog;
 import ru.mcs.metadata.MetadataDocument;
 import ru.mcs.spi.action.ActionIds;
+import ru.mcs.spi.action.DataContext;
 import ru.mcs.spi.swing.action.AnAction;
 import ru.mcs.spi.swing.action.AnActionEvent;
 import ru.mcs.spi.swing.action.Separator;
@@ -34,7 +38,42 @@ class DesktopMetadataTest {
                 ActionIds.FILE_MENU, ActionIds.VIEW_MENU, ActionIds.TOOLS_MENU, ActionIds.HELP_MENU);
         assertThat(metadata.keyStroke(CommandPalette.ACTION_ID)).isEqualTo(KeyStroke.getKeyStroke(
                 KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
+        assertThat(metadata.keyStroke("core.file.save")).isEqualTo(KeyStroke.getKeyStroke(
+                KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
+        assertThat(metadata.keyStroke("core.file.saveAll")).isEqualTo(KeyStroke.getKeyStroke(
+                KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
         assertThat(metadata.settingsPage("core.settings.general").fields()).hasSize(1);
+    }
+
+    @Test
+    void saveShortcutUsesGlobalActionUpdateContract() {
+        ActionManagerImpl actions = new ActionManagerImpl();
+        DesktopMetadata metadata = new DesktopMetadata(actions,
+                MetadataCatalog.from(new CoreMetadataProvider()), false);
+        AtomicInteger calls = new AtomicInteger();
+        boolean[] enabled = {true};
+        actions.registerAction("core.file.save", new AnAction() {
+            @Override
+            public void update(AnActionEvent event) {
+                event.getPresentation().setEnabled(enabled[0]);
+            }
+
+            @Override
+            public void actionPerformed(AnActionEvent event) {
+                calls.incrementAndGet();
+            }
+        });
+        JRootPane root = new JRootPane();
+        MetadataKeyBindings.install(root, actions, () -> DataContext.EMPTY, metadata, "core.file.save");
+        KeyStroke shortcut = metadata.keyStroke("core.file.save");
+        Object binding = root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).get(shortcut);
+
+        assertThat(binding).isNotNull();
+        root.getActionMap().get(binding).actionPerformed(null);
+        assertThat(calls).hasValue(1);
+        enabled[0] = false;
+        root.getActionMap().get(binding).actionPerformed(null);
+        assertThat(calls).hasValue(1);
     }
 
     @Test

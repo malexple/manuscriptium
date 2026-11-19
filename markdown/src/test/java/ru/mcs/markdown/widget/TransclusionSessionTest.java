@@ -84,6 +84,35 @@ class TransclusionSessionTest {
         assertThat(rebuilt.get().component()).isSameAs(widget.component());
     }
 
+    @Test
+    void duplicateEmbedsAtDifferentOffsetsHaveIndependentComponents() throws Exception {
+        String embed = "![[Chapter#Part]]";
+        String markdown = embed + "\n\n" + embed;
+        Path parent = temp.resolve("book.md");
+        WidgetRegistry registry = new WidgetRegistry(Runnable::run, null);
+        AtomicReference<TransclusionWidget> first = new AtomicReference<>();
+        AtomicReference<TransclusionWidget> second = new AtomicReference<>();
+        AtomicReference<TransclusionWidget> rebuiltFirst = new AtomicReference<>();
+        int secondStart = embed.length() + 2;
+
+        SwingUtilities.invokeAndWait(() -> {
+            first.set((TransclusionWidget) registry.create(markdown,
+                    new BlockSpan(BlockKind.EMBED, 0, embed.length(), 1), embed.length(), 500, false,
+                    ComputedStyle.defaults(), new Font(Font.SANS_SERIF, Font.PLAIN, 14), temp, parent));
+            second.set((TransclusionWidget) registry.create(markdown,
+                    new BlockSpan(BlockKind.EMBED, secondStart, markdown.length(), 3), markdown.length(), 500, false,
+                    ComputedStyle.defaults(), new Font(Font.SANS_SERIF, Font.PLAIN, 14), temp, parent));
+            rebuiltFirst.set((TransclusionWidget) registry.create(markdown,
+                    new BlockSpan(BlockKind.EMBED, 0, embed.length(), 1), embed.length(), 500, false,
+                    ComputedStyle.defaults(), new Font(Font.SANS_SERIF, Font.PLAIN, 14), temp, parent));
+        });
+
+        assertThat(first.get()).isNotNull();
+        assertThat(second.get()).isNotNull();
+        assertThat(first.get().component()).isNotSameAs(second.get().component());
+        assertThat(rebuiltFirst.get().component()).isSameAs(first.get().component());
+    }
+
     private static JButton findButton(Container root, String text) {
         return buttons(root).stream().filter(button -> text.equals(button.getText())).findFirst().orElseThrow();
     }

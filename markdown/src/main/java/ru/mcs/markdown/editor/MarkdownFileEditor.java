@@ -319,9 +319,41 @@ final class MarkdownFileEditor implements FileEditor {
             return;
         }
         int offset = activeCanvas().caretOffset();
-        document.apply(new Insert(offset, "%%" + text + "%%"));
-        int caret = offset + text.length() + 4;
+        String sourceText = document.text().toString();
+        String note = "%%" + text + "%%";
+        AstIndex index = astIndex();
+        if (index != null && index.version() == document.version()) {
+            for (BlockSpan span : index.topLevelBlocks()) {
+                if (span.kind() == BlockKind.FRONT_MATTER && offset <= span.end()) {
+                    offset = span.end();
+                    String eol = lineSeparator(sourceText);
+                    String before = offset > 0 && !isLineBreak(sourceText.charAt(offset - 1)) ? eol : "";
+                    String after = offset < sourceText.length() && !isLineBreak(sourceText.charAt(offset)) ? eol : "";
+                    note = before + note + after;
+                    break;
+                }
+            }
+        }
+        document.apply(new Insert(offset, note));
+        int caret = offset + note.length();
         activeCanvas().setCaretSelection(caret, caret);
+    }
+
+    private static boolean isLineBreak(char value) {
+        return value == '\n' || value == '\r';
+    }
+
+    private static String lineSeparator(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            char value = text.charAt(i);
+            if (value == '\r') {
+                return i + 1 < text.length() && text.charAt(i + 1) == '\n' ? "\r\n" : "\r";
+            }
+            if (value == '\n') {
+                return "\n";
+            }
+        }
+        return "\n";
     }
 
     void editMarginNote(ru.mcs.markdown.editor.view.ObsidianComments.Comment comment, String text) {
