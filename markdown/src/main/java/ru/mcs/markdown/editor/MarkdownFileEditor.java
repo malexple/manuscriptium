@@ -302,7 +302,10 @@ final class MarkdownFileEditor implements FileEditor {
             return new EditorBlockContext(BlockKind.PARAGRAPH, active.selectionRange().length() > 0, false, false);
         }
         int offset = active.caretOffset();
-        BlockKind kind = index.blockAt(offset).map(BlockSpan::kind).orElse(BlockKind.PARAGRAPH);
+        // Каретка в конце строки заголовка находится на span.end(): ищем блок и по предыдущему символу.
+        BlockSpan block = index.blockAt(offset)
+                .or(() -> offset > 0 ? index.blockAt(offset - 1) : java.util.Optional.empty()).orElse(null);
+        BlockKind kind = block == null ? BlockKind.PARAGRAPH : block.kind();
         boolean link = false;
         boolean image = false;
         for (BlockSpan span : index.spansAt(offset)) {
@@ -311,8 +314,34 @@ final class MarkdownFileEditor implements FileEditor {
             image |= span.kind() == BlockKind.IMAGE || span.kind() == BlockKind.IMAGE_REFERENCE
                     || span.kind() == BlockKind.WIKI_IMAGE || span.kind() == BlockKind.EMBED;
         }
-        return new EditorBlockContext(kind, active.selectionRange().length() > 0, link, image);
+        return new EditorBlockContext(kind, active.selectionRange().length() > 0, link, image,
+                headingLevel(document.text(), block));
     }
+
+    private static int headingLevel(CharSequence text, BlockSpan block) {
+        if (block == null || block.kind() != BlockKind.HEADING) {
+            return 0;
+        }
+        String attribute = block.attributes().get("level");
+        if (attribute != null) {
+            try {
+                return Integer.parseInt(attribute);
+            } catch (NumberFormatException ignored) {
+                // Некорректный атрибут parser-плагина: считаем решётки в исходном тексте.
+            }
+        }
+        int level = 0;
+        int p = block.start();
+        while (p < block.end() && p < text.length() && text.charAt(p) == ' ') {
+            p++;
+        }
+        while (p < block.end() && p < text.length() && text.charAt(p) == '#' && level < 6) {
+            level++;
+            p++;
+        }
+        return Math.max(1, level);
+    }
+
 
     void addMarginNote(String text) {
         if (document == null) {

@@ -37,6 +37,7 @@ public final class TyporaKeymap {
         bind(canvas, KeyEvent.VK_X, shortcut(), EditorActionIds.CUT);
         bind(canvas, KeyEvent.VK_C, shortcut(), EditorActionIds.COPY);
         bind(canvas, KeyEvent.VK_V, shortcut(), EditorActionIds.PASTE);
+        bind(canvas, KeyEvent.VK_V, shortcutShift(), EditorActionIds.PASTE_PLAIN);
         bind(canvas, KeyEvent.VK_A, shortcut(), EditorActionIds.SELECT_ALL);
         bind(canvas, KeyEvent.VK_D, shortcutShift(), EditorActionIds.DELETE_BLOCK);
         bind(canvas, KeyEvent.VK_U, shortcut(), EditorActionIds.TOGGLE_CASE);

@@ -43,6 +43,7 @@ final class EditorActionFactory {
             case EditorActionIds.CUT -> selectionCommand(id, editor -> editor.activeCanvas().input().cut());
             case EditorActionIds.COPY -> selectionCommand(id, editor -> editor.activeCanvas().input().copy());
             case EditorActionIds.PASTE -> command(id, editor -> editor.activeCanvas().input().paste());
+            case EditorActionIds.PASTE_PLAIN -> command(id, editor -> editor.activeCanvas().input().pasteText());
             case EditorActionIds.SELECT_ALL -> command(id, editor -> editor.activeCanvas().input().selectAll());
             case EditorActionIds.DELETE_BLOCK -> command(id, EditorCommands::deleteBlock);
             case EditorActionIds.TOGGLE_CASE -> command(id, EditorCommands::toggleCase);

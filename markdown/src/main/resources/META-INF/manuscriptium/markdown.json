@@ -375,6 +375,10 @@
     },
     {
       "id": "toolwindow.toggle.notes.panel"
+    },
+    {
+      "id": "markdown.editor.pastePlain",
+      "textKey": "action.pastePlain"
     }
   ],
   "menus": [

@@ -273,6 +273,12 @@ public final class InputController {
         clipboard.paste().ifPresent(this::insertText);
     }
 
+    /** Вставляет только текст из буфера: изображения и файлы игнорируются. */
+    public void pasteText() {
+        clipboard.paste().ifPresent(this::insertText);
+    }
+
+
     public void undo() {
         if (document() != null && document().undo().canUndo()) {
             canvas.clearComposition();
