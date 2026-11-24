@@ -100,8 +100,9 @@ class EditorCommandsTest {
         try {
             SwingUtilities.invokeAndWait(() -> {
                 editor.source().setCaretOffset(0);
-                EditorCommands.insertTable(editor);
-                assertThat(editor.sourceText()).startsWith("| Left | Right |\n|:-----|------:|");
+                EditorCommands.insertTable(editor, 2, 3);
+                assertThat(editor.sourceText()).startsWith("|  |  |\n| :--- | :--- |\n|  |  |\n|  |  |\n\nBody");
+                assertThat(editor.source().caretOffset()).isEqualTo(2);
                 editor.document().undo().undo();
                 EditorCommands.insertMathBlock(editor);
                 assertThat(editor.sourceText()).startsWith("$$\n\n$$");

@@ -159,8 +159,22 @@ final class EditorCommands {
         replaceAndSelect(document, canvas, range, replacement, contentOffset, contentLength);
     }
 
+    /** Ctrl+T / «Вставить → Таблица»: спрашивает размер и вставляет пустую таблицу. */
     static void insertTable(MarkdownFileEditor editor) {
-        insertSnippet(editor, "| Left | Right |\n|:-----|------:|\n|      |       |", 2, 6);
+        TableDialog.show(editor.activeCanvas(), 2, 3)
+                .ifPresent(size -> insertTable(editor, size.columns(), size.rows()));
+    }
+
+    /** Одна команда документа: undo убирает таблицу целиком; каретка встаёт в первую ячейку заголовка. */
+    static void insertTable(MarkdownFileEditor editor, int columns, int rows) {
+        MarkdownCanvas canvas = editor.activeCanvas();
+        DocumentModel document = editor.document();
+        Range selection = canvas.selectionRange();
+        TableInsertion insertion = TableInsertion.plan(document.text().toString(), selection.start(),
+                selection.end(), ru.mcs.markdown.widget.TableModel.blank(columns, rows).source());
+        document.apply(Replace.of(selection.start(), selection.end(), insertion.replacement()));
+        int caret = selection.start() + insertion.caretOffset();
+        canvas.setCaretSelection(caret, caret);
     }
 
     static void insertMathBlock(MarkdownFileEditor editor) {

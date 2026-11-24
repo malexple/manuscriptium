@@ -49,6 +49,28 @@ public final class TableModel {
         return new TableModel(rows, alignments);
     }
 
+    public static final int MAX_COLUMNS = 20;
+    public static final int MAX_ROWS = 100;
+
+    /** Пустая таблица: первая строка — заголовок, все колонки выровнены по левому краю. */
+    public static TableModel blank(int columns, int rows) {
+        int columnCount = Math.max(1, Math.min(MAX_COLUMNS, columns));
+        int rowCount = Math.max(1, Math.min(MAX_ROWS, rows));
+        List<Row> list = new ArrayList<>();
+        for (int row = 0; row < rowCount; row++) {
+            List<Cell> cells = new ArrayList<>();
+            for (int column = 0; column < columnCount; column++) {
+                cells.add(new Cell("", 0));
+            }
+            list.add(new Row(cells));
+        }
+        List<Alignment> alignments = new ArrayList<>();
+        for (int column = 0; column < columnCount; column++) {
+            alignments.add(Alignment.LEFT);
+        }
+        return new TableModel(list, alignments);
+    }
+
     public int rowCount() {
         return rows.size();
     }
