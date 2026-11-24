@@ -16,6 +16,7 @@ import javax.swing.JComponent;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
+import ru.mcs.editor.model.Delete;
 import ru.mcs.editor.model.DocumentModel;
 import ru.mcs.editor.model.Insert;
 import ru.mcs.editor.model.Replace;
@@ -29,6 +30,8 @@ import ru.mcs.markdown.render.MarkdownRenderer;
 import ru.mcs.markdown.widget.ImageWidget;
 import ru.mcs.markdown.widget.WidgetRegistry;
 import ru.mcs.markdown.api.AstIndex;
+import ru.mcs.markdown.api.BlockKind;
+import ru.mcs.markdown.api.BlockSpan;
 import ru.mcs.markdown.api.EditorStyleService;
 
 /** Markdown-расширение универсального Canvas: styled layout, widgets, links, tables и citations. */
@@ -259,6 +262,49 @@ public final class MarkdownCanvas extends EditorCanvas {
         int caret = Math.min(document.length(), resize.widget.sourceStart() + replacement.length());
         setCaretState(caret, caret);
         repaint();
+    }
+
+    /** Backspace в начале текста ATX-заголовка убирает маркер {@code #…}: заголовок становится абзацем. */
+    @Override
+    protected boolean beforeDeleteBackward() {
+        DocumentModel document = document();
+        if (document == null || ast == null || ast.version() != document.version()) {
+            return false;
+        }
+        int caret = caretOffset();
+        BlockSpan heading = headingAt(caret);
+        if (heading == null && caret > 0) {
+            heading = headingAt(caret - 1);
+        }
+        if (heading == null) {
+            return false;
+        }
+        CharSequence text = document.text();
+        int length = text.length();
+        int marker = heading.start();
+        while (marker < length && text.charAt(marker) == ' ') {
+            marker++;
+        }
+        if (marker >= length || text.charAt(marker) != '#') {
+            return false;
+        }
+        int contentStart = marker;
+        while (contentStart < length && contentStart - marker < 6 && text.charAt(contentStart) == '#') {
+            contentStart++;
+        }
+        if (contentStart < length && text.charAt(contentStart) == ' ') {
+            contentStart++;
+        }
+        if (caret < heading.start() || caret > contentStart) {
+            return false;
+        }
+        document.apply(Delete.of(marker, contentStart));
+        setCaretOffset(marker);
+        return true;
+    }
+
+    private BlockSpan headingAt(int offset) {
+        return ast.blockAt(offset).filter(span -> span.kind() == BlockKind.HEADING).orElse(null);
     }
 
     public void setAstIndex(AstIndex ast) {

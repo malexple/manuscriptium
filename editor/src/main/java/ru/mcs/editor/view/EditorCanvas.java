@@ -190,6 +190,14 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
     protected void afterTextInserted() {
     }
 
+    /**
+     * Backspace без выделения: вызывается до обычного удаления символа.
+     * {@code true} означает, что языковое расширение само обработало клавишу.
+     */
+    protected boolean beforeDeleteBackward() {
+        return false;
+    }
+
     /** Активирует native DnD только для видимой карточки редактора. */
     public void setNativeImageDropEnabled(boolean enabled) {
         if (nativeImageDropEnabled == enabled) {

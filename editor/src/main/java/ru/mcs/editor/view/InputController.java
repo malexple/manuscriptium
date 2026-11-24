@@ -97,6 +97,9 @@ public final class InputController {
             replaceSelection("");
             return;
         }
+        if (canvas.beforeDeleteBackward()) {
+            return;
+        }
         int caret = canvas.caretOffset();
         if (caret == 0) {
             return;
