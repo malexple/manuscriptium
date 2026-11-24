@@ -14,6 +14,7 @@ public final class BlockBox {
     private final boolean source;
     private final String info;
     private final BlockWidget widget;
+    private boolean markersHidden;
     private int x;
     private int y;
     private int width;
@@ -64,6 +65,15 @@ public final class BlockBox {
 
     public boolean source() {
         return source;
+    }
+
+    /** Активный ATX-заголовок рисуется стилем блока: маркеры {@code #} остаются только в исходном тексте. */
+    public boolean markersHidden() {
+        return markersHidden;
+    }
+
+    void hideMarkers() {
+        markersHidden = true;
     }
 
     public String info() {

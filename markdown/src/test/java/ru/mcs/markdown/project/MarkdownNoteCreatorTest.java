@@ -25,7 +25,7 @@ class MarkdownNoteCreatorTest {
         Path created = MarkdownNoteCreator.create(tmp, "Идеи/Новая заметка.md");
 
         assertThat(created).isEqualTo(tmp.resolve("Идеи/Новая заметка.md"));
-        assertThat(Files.readString(created)).isEqualTo("# Новая заметка\n\n");
+        assertThat(Files.readString(created)).isEmpty();
         assertThat(Files.isRegularFile(created, LinkOption.NOFOLLOW_LINKS)).isTrue();
         assertThat(Files.isSymbolicLink(created.getParent())).isFalse();
     }

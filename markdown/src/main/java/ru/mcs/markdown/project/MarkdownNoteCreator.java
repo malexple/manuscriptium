@@ -1,7 +1,6 @@
 package ru.mcs.markdown.project;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -39,10 +38,7 @@ final class MarkdownNoteCreator {
         if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
             throw new java.nio.file.FileAlreadyExistsException(target.toString());
         }
-        String filename = target.getFileName().toString();
-        String title = filename.substring(0, filename.length() - ".md".length());
-        Files.writeString(target, "# " + title + "\n\n", StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        Files.write(target, new byte[0], StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         return target;
     }
 

@@ -41,7 +41,7 @@ public final class MarkdownRenderer {
                 .toList();
         ComputedStyle root = layout.rootStyle();
         for (BlockBox block : visible) {
-            if (!block.source()) {
+            if (!block.source() || block.markersHidden()) {
                 Graphics2D target = dimmed(graphics, block, root);
                 try {
                     blockRenderer.paintBackground(new Graphics2DDrawSink(target), block);
@@ -62,7 +62,7 @@ public final class MarkdownRenderer {
             Graphics2D target = dimmed(graphics, block, root);
             try {
                 DrawSink sink = new Graphics2DDrawSink(target);
-                if (block.source()) {
+                if (block.source() && !block.markersHidden()) {
                     sourceRenderer.paint(sink, block);
                 } else {
                     blockRenderer.paintContent(sink, block);

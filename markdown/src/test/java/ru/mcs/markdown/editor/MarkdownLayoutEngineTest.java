@@ -74,6 +74,8 @@ class MarkdownLayoutEngineTest {
 
         LayoutResult result = engine.layout();
         assertThat(result.blocks().get(0).source()).isTrue();
+        assertThat(result.blocks().get(0).markersHidden()).isTrue();
+        assertThat(visibleText(result.blocks().get(0))).isEqualTo("ATX");
         assertThat(visibleText(result.blocks().get(1))).isEqualTo("Setext");
         assertThat(result.blocks().get(0).style().fontSizePx()).isEqualTo(32);
         assertThat(result.blocks().get(1).style().fontSizePx()).isEqualTo(28);
@@ -234,6 +236,50 @@ class MarkdownLayoutEngineTest {
         } finally {
             graphics.dispose();
         }
+    }
+
+    @Test
+    void activeAtxHeadingKeepsHeadingStyleAndHidesMarkers() {
+        String markdown = "# Title";
+        List<BlockSpan> blocks = List.of(span(BlockKind.HEADING, 0, 7, Map.of("level", "1")));
+        MarkdownLayoutEngine engine = engine(markdown, blocks, 7, 800);
+
+        BlockBox heading = engine.layout().blocks().getFirst();
+        assertThat(heading.source()).isTrue();
+        assertThat(heading.markersHidden()).isTrue();
+        assertThat(visibleText(heading)).isEqualTo("Title");
+        assertThat(heading.style().fontSizePx()).isEqualTo(32);
+        assertThat(heading.lines().getFirst().runs().getFirst().font().getFamily()).isNotEqualTo("Monospaced");
+        assertThat(engine.caretRect(7).x).isGreaterThan(engine.caretRect(0).x);
+        assertThat(engine.caretRect(7).y).isEqualTo(engine.caretRect(0).y);
+    }
+
+    @Test
+    void activeAtxHeadingKeepsFollowingBlankLinesAsEditableSource() {
+        String markdown = "# Title\n\n";
+        List<BlockSpan> blocks = List.of(span(BlockKind.HEADING, 0, 7, Map.of("level", "1")));
+        MarkdownLayoutEngine engine = engine(markdown, blocks, markdown.length(), 800);
+
+        BlockBox heading = engine.layout().blocks().getFirst();
+        assertThat(heading.markersHidden()).isTrue();
+        assertThat(visibleText(heading)).isEqualTo("Title");
+        assertThat(heading.lines()).hasSize(3);
+        assertThat(engine.caretRect(markdown.length()).y).isGreaterThan(engine.caretRect(2).y);
+    }
+
+    @Test
+    void activeEmptyAtxHeadingStillHasCaretLineAndClosingHashesStayHidden() {
+        MarkdownLayoutEngine emptyEngine = engine("# ",
+                List.of(span(BlockKind.HEADING, 0, 2, Map.of("level", "1"))), 2, 800);
+        BlockBox emptyHeading = emptyEngine.layout().blocks().getFirst();
+        assertThat(emptyHeading.markersHidden()).isTrue();
+        assertThat(visibleText(emptyHeading)).isEmpty();
+        assertThat(emptyEngine.caretRect(2).height).isPositive();
+
+        String closed = "## Title ##";
+        MarkdownLayoutEngine closedEngine = engine(closed,
+                List.of(span(BlockKind.HEADING, 0, closed.length(), Map.of("level", "2"))), 5, 800);
+        assertThat(visibleText(closedEngine.layout().blocks().getFirst())).isEqualTo("Title");
     }
 
     private static MarkdownLayoutEngine engine(String markdown, List<BlockSpan> blocks, int caret, int width) {

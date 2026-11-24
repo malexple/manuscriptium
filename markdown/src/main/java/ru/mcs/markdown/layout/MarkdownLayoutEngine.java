@@ -277,7 +277,8 @@ public final class MarkdownLayoutEngine {
             // Flexmark не создаёт top-level блоки для пустых строк. Во время редактирования
             // эти physical lines принадлежат активному source-блоку, включая строку каретки.
             BlockSpan span = source ? editingSpan(raw, spans, index) : astSpan;
-            int level = span.kind() == BlockKind.HEADING ? headingLevel(raw, span) : 0;
+            boolean activeAtx = source && astSpan.kind() == BlockKind.HEADING && isAtxHeading(raw, astSpan);
+            int level = span.kind() == BlockKind.HEADING ? headingLevel(raw, activeAtx ? astSpan : span) : 0;
             ElementState state = new ElementState(level > 0 ? "h" + level : null, "", false, 0, WRITE_ANCESTORS);
             ComputedStyle style = styles.resolve(span.kind(), List.of(), state);
             int marginTop = px(style.margin().top(), style.fontSizePx(), root.fontSizePx());
@@ -311,7 +312,9 @@ public final class MarkdownLayoutEngine {
                 lines = List.of();
                 linesHeight = widget.height(innerWidth);
             } else {
-                InlineContent content = content(raw, span, contentEnd, style, base, source, level, references, citations);
+                InlineContent content = activeAtx
+                        ? activeHeadingContent(raw, astSpan, span, contentEnd, base, level, references, citations)
+                        : content(raw, span, contentEnd, style, base, source, level, references, citations);
                 lines = new TextMeasurer(innerWidth, base).layout(content, innerX, innerY, source);
                 linesHeight = lines.stream().mapToInt(LineBox::height).sum();
             }
@@ -321,6 +324,9 @@ public final class MarkdownLayoutEngine {
             int height = borderTop + borderBottom + vertical(style.padding(), style.fontSizePx()) + linesHeight;
             BlockBox box = new BlockBox(span, style, lines, source,
                     span.attributes().getOrDefault("info", ""), widget);
+            if (activeAtx) {
+                box.hideMarkers();
+            }
             box.place(blockX, y + marginTop, blockWidth, Math.max(1, height), innerX, innerY, innerWidth);
             boxes.add(box);
             y += marginTop + height + marginBottom;
@@ -366,6 +372,53 @@ public final class MarkdownLayoutEngine {
         }
         String anchor = raw.substring(next.start(), Math.min(next.end(), raw.length())).strip();
         return anchor.matches("\\{#" + kind + ":[A-Za-z0-9_.-]+}") ? next.end() : contentEnd;
+    }
+
+    private static boolean isAtxHeading(String raw, BlockSpan heading) {
+        int p = heading.start();
+        while (p < heading.end() && raw.charAt(p) == ' ') {
+            p++;
+        }
+        return p < heading.end() && raw.charAt(p) == '#';
+    }
+
+    /**
+     * Активный ATX-заголовок: текст и стиль как у неактивного, маркеры скрыты, а строки после него
+     * (пустые строки редактирования) остаются исходным текстом с видимой кареткой.
+     */
+    private InlineContent activeHeadingContent(String raw, BlockSpan heading, BlockSpan editing, int end,
+                                               InlineContent.Style base, int level,
+                                               CrossReferenceIndex references, CitationIndex citations) {
+        int start = heading.start();
+        int contentStart = start;
+        while (contentStart < end && raw.charAt(contentStart) == ' ') {
+            contentStart++;
+        }
+        contentStart = Math.min(end, contentStart + level);
+        if (contentStart < end && raw.charAt(contentStart) == ' ') {
+            contentStart++;
+        }
+        int lineEnd = raw.indexOf('\n', contentStart);
+        if (lineEnd < 0 || lineEnd > end) {
+            lineEnd = end;
+        }
+        int contentEnd = closingHeadingEnd(raw, contentStart, lineEnd);
+        Font mono = new Font(Font.MONOSPACED, Font.PLAIN, Math.max(12, base.font().getSize()));
+        InlineContent.Style sourceStyle = new InlineContent.Style(base.computed(), mono, null, -1, false);
+        InlineContent result = new InlineContent();
+        if (editing.start() < start) {
+            result.appendRaw(raw.substring(editing.start(), start), editing.start(), sourceStyle);
+        }
+        String number = references.labelAt(start);
+        if (number != null) {
+            result.appendRaw(number + " ", start, base);
+        }
+        result.append(InlineMarkdown.render(raw, contentStart, contentEnd, base, styles, widgets, references, citations),
+                start, contentEnd);
+        if (lineEnd < end) {
+            result.appendRaw(raw.substring(lineEnd, end), lineEnd, sourceStyle);
+        }
+        return result;
     }
 
     private InlineContent content(String raw, BlockSpan span, int end, ComputedStyle style,
