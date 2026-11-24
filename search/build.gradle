@@ -1,0 +1,12 @@
+dependencies {
+    api project(':spi-swing')
+    implementation project(':metadata')
+    implementation "com.formdev:flatlaf:${flatlafVersion}"
+    implementation "com.formdev:flatlaf-extras:${flatlafVersion}"
+    implementation "org.apache.lucene:lucene-core:${luceneVersion}"
+
+    testImplementation platform("org.junit:junit-bom:${junitVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+}

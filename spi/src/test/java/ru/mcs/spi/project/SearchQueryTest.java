@@ -1,4 +1,4 @@
-package ru.mcs.core.project;
+package ru.mcs.spi.project;
 
 import java.util.Map;
 
@@ -7,17 +7,17 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import org.junit.jupiter.api.Test;
 
-class ProjectSearchQueryTest {
+class SearchQueryTest {
 
     @Test
     void normalizesPortableSubtreeAndTrimsText() {
-        ProjectSearchQuery query = new ProjectSearchQuery("  Java 21  ", null, "notes\\java/", Map.of(), 100);
+        SearchQuery query = new SearchQuery("  Java 21  ", null, "notes\\java/", Map.of(), 100);
         assertThat(query.text()).isEqualTo("Java 21");
-        assertThat(query.scope()).isEqualTo(ProjectSearchScope.ALL);
+        assertThat(query.scope()).isEqualTo(SearchScope.ALL);
         assertThat(query.subtree()).isEqualTo("notes/java");
         assertThat(query.attributeFilters()).isEmpty();
         assertThat(query.isEmpty()).isFalse();
-        assertThat(new ProjectSearchQuery(" ", ProjectSearchScope.ALL, null, Map.of(), 100).isEmpty()).isTrue();
+        assertThat(new SearchQuery(" ", SearchScope.ALL, null, Map.of(), 100).isEmpty()).isTrue();
     }
 
     @Test
@@ -29,14 +29,14 @@ class ProjectSearchQueryTest {
         assertThatIllegalArgumentException().isThrownBy(() -> query(".manuscriptium/lucene"));
         assertThatIllegalArgumentException().isThrownBy(() -> query(".git"));
         assertThatIllegalArgumentException().isThrownBy(
-                () -> new ProjectSearchQuery("x".repeat(1001), ProjectSearchScope.ALL, "", Map.of(), 100));
+                () -> new SearchQuery("x".repeat(1001), SearchScope.ALL, "", Map.of(), 100));
         assertThatIllegalArgumentException().isThrownBy(
-                () -> new ProjectSearchQuery("", ProjectSearchScope.ALL, "", null, 0));
+                () -> new SearchQuery("", SearchScope.ALL, "", null, 0));
         assertThatIllegalArgumentException().isThrownBy(
-                () -> new ProjectSearchQuery("", ProjectSearchScope.ALL, "", null, 1001));
+                () -> new SearchQuery("", SearchScope.ALL, "", null, 1001));
     }
 
-    private static ProjectSearchQuery query(String subtree) {
-        return new ProjectSearchQuery("", ProjectSearchScope.ALL, subtree, Map.of(), 100);
+    private static SearchQuery query(String subtree) {
+        return new SearchQuery("", SearchScope.ALL, subtree, Map.of(), 100);
     }
 }

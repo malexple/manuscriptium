@@ -93,6 +93,7 @@ final class CoreServices {
         services.register(ShellThemeService.class, themes);
         services.register(ProjectAccess.class, projectAccess);
         services.register(IndexContributorRegistry.class, indexContributors);
+        services.register(ru.mcs.spi.project.ProjectSearch.class, new ru.mcs.core.project.CoreProjectSearch());
 
         LayoutStore layout = new LayoutStore();
         state.register("core", "core.layout", Scope.APPLICATION, layout);

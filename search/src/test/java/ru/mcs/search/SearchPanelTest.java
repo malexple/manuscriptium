@@ -1,4 +1,4 @@
-package ru.mcs.core.project;
+package ru.mcs.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,16 +15,24 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import ru.mcs.spi.project.SearchHit;
+import ru.mcs.spi.project.SearchQuery;
 
-class ProjectSearchPanelTest {
+class SearchPanelTest {
+
+    @BeforeAll
+    static void installEnglishMessages() {
+        SearchMessages.install(new TestI18n());
+    }
 
     @Test
     void rendersAsynchronousResultsAndOpensSelectedNote() throws Exception {
-        List<ProjectSearchResult> opened = new ArrayList<>();
-        ProjectSearchResult result = new ProjectSearchResult(Path.of("project/note.md"), "note.md", "Note",
+        List<SearchHit> opened = new ArrayList<>();
+        SearchHit result = new SearchHit(Path.of("project/note.md"), "note.md", "Note",
                 "matching snippet", 1.0f);
-        ProjectSearchPanel panel = panel(opened::add);
+        SearchPanel panel = panel(opened::add);
         SwingUtilities.invokeAndWait(() -> {
             panel.setBackend(query -> CompletableFuture.completedFuture(List.of(result)));
             text(panel, "project.search.query").setText("needle");
@@ -43,8 +51,8 @@ class ProjectSearchPanelTest {
 
     @Test
     void ignoresResultFromPreviousProject() throws Exception {
-        ProjectSearchPanel panel = panel(ignored -> { });
-        CompletableFuture<List<ProjectSearchResult>> oldSearch = new CompletableFuture<>();
+        SearchPanel panel = panel(ignored -> { });
+        CompletableFuture<List<SearchHit>> oldSearch = new CompletableFuture<>();
         SwingUtilities.invokeAndWait(() -> {
             panel.setBackend(query -> oldSearch);
             text(panel, "project.search.query").setText("old");
@@ -61,9 +69,9 @@ class ProjectSearchPanelTest {
 
     @Test
     void ignoresOlderQueryCompletedAfterNewerQuery() throws Exception {
-        ProjectSearchPanel panel = panel(ignored -> { });
-        CompletableFuture<List<ProjectSearchResult>> first = new CompletableFuture<>();
-        CompletableFuture<List<ProjectSearchResult>> second = new CompletableFuture<>();
+        SearchPanel panel = panel(ignored -> { });
+        CompletableFuture<List<SearchHit>> first = new CompletableFuture<>();
+        CompletableFuture<List<SearchHit>> second = new CompletableFuture<>();
         AtomicInteger calls = new AtomicInteger();
         SwingUtilities.invokeAndWait(() -> {
             panel.setBackend(query -> calls.getAndIncrement() == 0 ? first : second);
@@ -84,8 +92,8 @@ class ProjectSearchPanelTest {
 
     @Test
     void invalidNewQueryReenablesButtonAndStillIgnoresRunningSearch() throws Exception {
-        ProjectSearchPanel panel = panel(ignored -> { });
-        CompletableFuture<List<ProjectSearchResult>> running = new CompletableFuture<>();
+        SearchPanel panel = panel(ignored -> { });
+        CompletableFuture<List<SearchHit>> running = new CompletableFuture<>();
         SwingUtilities.invokeAndWait(() -> {
             panel.setBackend(query -> running);
             text(panel, "project.search.query").setText("first");
@@ -103,7 +111,7 @@ class ProjectSearchPanelTest {
 
     @Test
     void rejectsUnsafeSubtreeWithoutCallingBackend() throws Exception {
-        ProjectSearchPanel panel = panel(ignored -> { });
+        SearchPanel panel = panel(ignored -> { });
         AtomicInteger calls = new AtomicInteger();
         SwingUtilities.invokeAndWait(() -> {
             panel.setBackend(query -> {
@@ -119,8 +127,8 @@ class ProjectSearchPanelTest {
 
     @Test
     void supportsFilterOnlySearchAndReportsFailures() throws Exception {
-        ProjectSearchPanel panel = panel(ignored -> { });
-        AtomicReference<ProjectSearchQuery> captured = new AtomicReference<>();
+        SearchPanel panel = panel(ignored -> { });
+        AtomicReference<SearchQuery> captured = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             panel.setBackend(query -> {
                 captured.set(query);
@@ -138,22 +146,22 @@ class ProjectSearchPanelTest {
                 .contains("index unavailable");
     }
 
-    private static ProjectSearchPanel panel(java.util.function.Consumer<ProjectSearchResult> opener) throws Exception {
-        AtomicReference<ProjectSearchPanel> reference = new AtomicReference<>();
-        SwingUtilities.invokeAndWait(() -> reference.set(new ProjectSearchPanel(opener)));
+    private static SearchPanel panel(java.util.function.Consumer<SearchHit> opener) throws Exception {
+        AtomicReference<SearchPanel> reference = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> reference.set(new SearchPanel(opener)));
         return reference.get();
     }
 
-    private static ProjectSearchResult result(String path) {
-        return new ProjectSearchResult(Path.of("project").resolve(path), path, path, "snippet", 1.0f);
+    private static SearchHit result(String path) {
+        return new SearchHit(Path.of("project").resolve(path), path, path, "snippet", 1.0f);
     }
 
-    private static JTextField text(ProjectSearchPanel panel, String name) {
+    private static JTextField text(SearchPanel panel, String name) {
         return component(panel, JTextField.class, name);
     }
 
     @SuppressWarnings("unchecked")
-    private static JComboBox<Object> combo(ProjectSearchPanel panel, String name) {
+    private static JComboBox<Object> combo(SearchPanel panel, String name) {
         return (JComboBox<Object>) component(panel, JComboBox.class, name);
     }
 

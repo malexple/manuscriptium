@@ -10,7 +10,6 @@ module ru.mcs.core {
     requires com.github.weisj.jsvg;
     requires org.yaml.snakeyaml;
     requires org.xerial.sqlitejdbc;
-    requires org.apache.lucene.core;
 
     exports ru.mcs.core;
     exports ru.mcs.core.platform;

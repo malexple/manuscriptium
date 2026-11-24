@@ -14,6 +14,7 @@ dependencies {
     implementation project(':core')
     implementation project(':editor')
     implementation project(':markdown')
+    implementation project(':search')
 
     // Независимый тестовый состав внутри app: основной output и markdown сюда не попадают.
     minimalSmokeImplementation project(':core')

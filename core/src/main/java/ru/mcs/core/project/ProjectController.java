@@ -1,5 +1,8 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.FullTextIndexFactory;
+import ru.mcs.spi.project.ProjectSearch;
+
 import ru.mcs.spi.project.ViewEntry;
 import ru.mcs.spi.project.ViewDefinition;
 import java.nio.file.Files;
@@ -49,7 +52,6 @@ public final class ProjectController implements AutoCloseable {
     private final ProjectIndexContributors indexContributors;
     private final ServiceRegistry services;
     private final ProjectTreePanel treePanel;
-    private final ProjectSearchPanel searchPanel;
 
     private ProjectService current;
     private boolean busy;
@@ -84,19 +86,14 @@ public final class ProjectController implements AutoCloseable {
                 showViewStatistics(viewId, nodePath);
             }
         });
-        this.searchPanel = new ProjectSearchPanel(this::openSearchResult);
 
         toolWindows.register("core", ToolWindowSpec.of("core.project", Messages.get("project.title"),
                         ToolWindowAnchor.LEFT, () -> treePanel)
                 .withIcon(Icons.lucide("folder-open"))
                 .withShowByDefault(true));
-        toolWindows.register("core", ToolWindowSpec.of("core.search", Messages.get("project.search.title"),
-                        ToolWindowAnchor.BOTTOM, () -> searchPanel)
-                .withIcon(Icons.lucide("search")));
         registerOpenAction(actions);
         registerNewProjectAction(actions);
         registerNewNoteAction(actions);
-        registerSearchAction(actions, toolWindows);
     }
 
     /** Восстанавливает последний Project после загрузки провайдеров редакторов всеми плагинами. */
@@ -135,7 +132,8 @@ public final class ProjectController implements AutoCloseable {
         new SwingWorker<ProjectService, Void>() {
             @Override
             protected ProjectService doInBackground() throws Exception {
-                return ProjectService.open(normalized, snapshot -> snapshotChanged(normalized, snapshot), indexContributors);
+                return ProjectService.open(normalized, snapshot -> snapshotChanged(normalized, snapshot), indexContributors,
+                        services.find(FullTextIndexFactory.class).orElse(null));
             }
 
             @Override
@@ -200,7 +198,7 @@ public final class ProjectController implements AutoCloseable {
         projectAccess.setRoot(opened.root());
         projectAccess.update(opened.snapshot());
         treePanel.setProject(opened.root(), opened.snapshot());
-        searchPanel.setProject(opened);
+        projectSearch().setCurrent(opened);
         frame.setTitle(Messages.get("project.window.title", displayName(opened.root())));
         restoreSession();
         state.saveChanged();
@@ -509,28 +507,8 @@ public final class ProjectController implements AutoCloseable {
         });
     }
 
-    private void registerSearchAction(ActionManagerImpl actions, ToolWindowManagerImpl toolWindows) {
-        actions.registerAction("core.search.open", new AnAction(Messages.get("project.search.action"), null,
-                Icons.lucide("search")) {
-            @Override
-            public void actionPerformed(AnActionEvent e) {
-                toolWindows.get("core.search").show();
-                javax.swing.SwingUtilities.invokeLater(searchPanel::focusQuery);
-            }
-        });
-    }
-
-    private void openSearchResult(ProjectSearchResult result) {
-        ProjectService service = current;
-        if (service == null) {
-            return;
-        }
-        Path file = result.file().toAbsolutePath().normalize();
-        if (!file.startsWith(service.root())) {
-            return;
-        }
-        editors.openFile(file);
-        statusBar.setMessage(Messages.get("project.search.opened", result.path()));
+    private CoreProjectSearch projectSearch() {
+        return (CoreProjectSearch) services.get(ProjectSearch.class);
     }
 
     private static String displayName(Path root) {
@@ -543,7 +521,7 @@ public final class ProjectController implements AutoCloseable {
         if (current != null) {
             current.close();
             current = null;
-            searchPanel.setProject(null);
+            projectSearch().setCurrent(null);
             projectAccess.clear();
             actions.updateActions();
         }

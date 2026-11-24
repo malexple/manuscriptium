@@ -1,5 +1,10 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.FullTextIndex;
+import ru.mcs.spi.project.FullTextIndexFactory;
+import ru.mcs.spi.project.SearchHit;
+import ru.mcs.spi.project.SearchQuery;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -30,7 +35,7 @@ final class ProjectIndex implements AutoCloseable {
 
     private final Path root;
     private final Connection connection;
-    private final LuceneProjectIndex lucene;
+    private final FullTextIndex lucene;
     private final IndexContributorRegistry contributors;
 
     ProjectIndex(Path root) throws IOException, SQLException {
@@ -38,6 +43,11 @@ final class ProjectIndex implements AutoCloseable {
     }
 
     ProjectIndex(Path root, IndexContributorRegistry contributors) throws IOException, SQLException {
+        this(root, contributors, null);
+    }
+
+    ProjectIndex(Path root, IndexContributorRegistry contributors, FullTextIndexFactory fullText)
+            throws IOException, SQLException {
         this.root = ProjectPaths.normalize(root);
         this.contributors = java.util.Objects.requireNonNull(contributors);
         Path database = ProjectPaths.databaseFile(root);
@@ -76,7 +86,7 @@ final class ProjectIndex implements AutoCloseable {
             throw e;
         }
         try {
-            lucene = new LuceneProjectIndex(ProjectPaths.luceneDir(root));
+            lucene = fullText == null ? null : fullText.open(ProjectPaths.luceneDir(root));
         } catch (IOException | RuntimeException e) {
             connection.close();
             throw e;
@@ -111,7 +121,9 @@ final class ProjectIndex implements AutoCloseable {
         } finally {
             connection.setAutoCommit(autoCommit);
         }
-        lucene.replaceAll(documents);
+        if (lucene != null) {
+            lucene.replaceAll(documents);
+        }
     }
 
     synchronized void refresh(Path path) {
@@ -155,7 +167,9 @@ final class ProjectIndex implements AutoCloseable {
             bind(statement, document);
             statement.executeUpdate();
         }
-        lucene.update(document);
+        if (lucene != null) {
+            lucene.update(document);
+        }
     }
 
     private void removePath(Path path) throws IOException, SQLException {
@@ -167,7 +181,9 @@ final class ProjectIndex implements AutoCloseable {
             statement.setString(3, relative);
             statement.executeUpdate();
         }
-        lucene.removePath(relative);
+        if (lucene != null) {
+            lucene.removePath(relative);
+        }
     }
 
     private static void bind(PreparedStatement statement, IndexedDocument document) throws SQLException {
@@ -210,8 +226,8 @@ final class ProjectIndex implements AutoCloseable {
         }
     }
 
-    synchronized List<ProjectSearchResult> search(ProjectSearchQuery query) throws IOException {
-        return lucene.search(root, query);
+    synchronized List<SearchHit> search(SearchQuery query) throws IOException {
+        return lucene == null ? List.of() : lucene.search(root, query);
     }
 
     synchronized int count() throws SQLException {
@@ -248,7 +264,9 @@ final class ProjectIndex implements AutoCloseable {
     @Override
     public synchronized void close() {
         try {
-            lucene.close();
+            if (lucene != null) {
+                lucene.close();
+            }
         } catch (IOException | RuntimeException e) {
             LOG.log(System.Logger.Level.WARNING, "Cannot close Lucene index", e);
         }

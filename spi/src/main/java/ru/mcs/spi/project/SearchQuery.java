@@ -1,22 +1,23 @@
-package ru.mcs.core.project;
+package ru.mcs.spi.project;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
 /** Неизменяемый поисковый запрос. Attribute filters не привязаны к конкретному языковому формату. */
-record ProjectSearchQuery(String text, ProjectSearchScope scope, String subtree,
+public record SearchQuery(String text, SearchScope scope, String subtree,
                           Map<String, String> attributeFilters, int limit) {
 
-    static final int DEFAULT_LIMIT = 100;
-    static final int MAX_TEXT_LENGTH = 1_000;
+    public static final int DEFAULT_LIMIT = 100;
+    public static final int MAX_TEXT_LENGTH = 1_000;
+    private static final String METADATA_DIR = ".manuscriptium";
 
-    ProjectSearchQuery {
+    public SearchQuery {
         text = text == null ? "" : text.trim();
         if (text.length() > MAX_TEXT_LENGTH) {
             throw new IllegalArgumentException("Search text is too long");
         }
-        scope = Objects.requireNonNullElse(scope, ProjectSearchScope.ALL);
+        scope = Objects.requireNonNullElse(scope, SearchScope.ALL);
         subtree = normalizeSubtree(subtree);
         attributeFilters = attributeFilters == null ? Map.of() : Map.copyOf(new LinkedHashMap<>(attributeFilters));
         attributeFilters.forEach((key, value) -> {
@@ -30,7 +31,7 @@ record ProjectSearchQuery(String text, ProjectSearchScope scope, String subtree,
         }
     }
 
-    boolean isEmpty() {
+    public boolean isEmpty() {
         return text.isEmpty() && subtree.isEmpty() && attributeFilters.isEmpty();
     }
 
@@ -51,7 +52,7 @@ record ProjectSearchQuery(String text, ProjectSearchScope scope, String subtree,
                 throw new IllegalArgumentException("Search subtree contains an invalid path segment");
             }
         }
-        if (parts[0].equals(ProjectPaths.METADATA_DIR) || parts[0].equals(".git")) {
+        if (parts[0].equals(METADATA_DIR) || parts[0].equals(".git")) {
             throw new IllegalArgumentException("Search subtree is outside the document hierarchy");
         }
         return path;

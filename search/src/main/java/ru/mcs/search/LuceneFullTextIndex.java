@@ -1,4 +1,4 @@
-package ru.mcs.core.project;
+package ru.mcs.search;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -28,10 +28,14 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NIOFSDirectory;
+import ru.mcs.spi.project.FullTextIndex;
 import ru.mcs.spi.project.IndexedDocument;
+import ru.mcs.spi.project.SearchHit;
+import ru.mcs.spi.project.SearchQuery;
+import ru.mcs.spi.project.SearchScope;
 
-/** Локальный пересобираемый Lucene-кэш. Все вызовы сериализуются владельцем {@link ProjectIndex}. */
-final class LuceneProjectIndex implements AutoCloseable {
+/** Локальный пересобираемый Lucene-кэш. Все вызовы сериализуются владельцем индекса. */
+final class LuceneFullTextIndex implements FullTextIndex {
 
     private static final String ID = "id";
     private static final String PATH = "path";
@@ -47,7 +51,7 @@ final class LuceneProjectIndex implements AutoCloseable {
     private final Directory directory;
     private final IndexWriter writer;
 
-    LuceneProjectIndex(Path directoryPath) throws IOException {
+    LuceneFullTextIndex(Path directoryPath) throws IOException {
         analyzer = new StandardAnalyzer();
         Directory opened = null;
         IndexWriter indexWriter = null;
@@ -71,7 +75,8 @@ final class LuceneProjectIndex implements AutoCloseable {
         writer = indexWriter;
     }
 
-    void replaceAll(List<IndexedDocument> documents) throws IOException {
+    @Override
+    public void replaceAll(List<IndexedDocument> documents) throws IOException {
         writer.deleteAll();
         for (IndexedDocument document : documents) {
             writer.addDocument(toLucene(document));
@@ -79,12 +84,14 @@ final class LuceneProjectIndex implements AutoCloseable {
         writer.commit();
     }
 
-    void update(IndexedDocument document) throws IOException {
+    @Override
+    public void update(IndexedDocument document) throws IOException {
         writer.updateDocument(new Term(ID, document.path()), toLucene(document));
         writer.commit();
     }
 
-    void removePath(String relative) throws IOException {
+    @Override
+    public void removePath(String relative) throws IOException {
         Query exact = new TermQuery(new Term(ID, relative));
         Query children = new PrefixQuery(new Term(ID, relative + "/"));
         BooleanQuery query = new BooleanQuery.Builder()
@@ -95,7 +102,8 @@ final class LuceneProjectIndex implements AutoCloseable {
         writer.commit();
     }
 
-    List<ProjectSearchResult> search(Path root, ProjectSearchQuery request) throws IOException {
+    @Override
+    public List<SearchHit> search(Path root, SearchQuery request) throws IOException {
         if (request.isEmpty()) {
             return List.of();
         }
@@ -107,19 +115,19 @@ final class LuceneProjectIndex implements AutoCloseable {
         try (DirectoryReader reader = DirectoryReader.open(writer)) {
             IndexSearcher searcher = new IndexSearcher(reader);
             TopDocs top = searcher.search(query, request.limit());
-            List<ProjectSearchResult> results = new ArrayList<>(top.scoreDocs.length);
+            List<SearchHit> results = new ArrayList<>(top.scoreDocs.length);
             for (ScoreDoc scoreDoc : top.scoreDocs) {
                 Document document = searcher.storedFields().document(scoreDoc.doc);
                 String path = document.get(ID);
                 String title = document.get(TITLE);
                 String snippet = snippet(request.scope(), document, terms);
-                results.add(new ProjectSearchResult(root.resolve(path).normalize(), path, title, snippet, scoreDoc.score));
+                results.add(new SearchHit(root.resolve(path).normalize(), path, title, snippet, scoreDoc.score));
             }
             return List.copyOf(results);
         }
     }
 
-    private Query query(ProjectSearchQuery request, List<String> terms) {
+    private Query query(SearchQuery request, List<String> terms) {
         BooleanQuery.Builder query = new BooleanQuery.Builder();
         query.add(terms.isEmpty() ? MatchAllDocsQuery.INSTANCE : textQuery(request.scope(), terms),
                 BooleanClause.Occur.MUST);
@@ -131,13 +139,13 @@ final class LuceneProjectIndex implements AutoCloseable {
         return query.build();
     }
 
-    private static Query textQuery(ProjectSearchScope scope, List<String> terms) {
+    private static Query textQuery(SearchScope scope, List<String> terms) {
         BooleanQuery.Builder allTerms = new BooleanQuery.Builder();
         for (String term : terms) {
             BooleanQuery.Builder fields = new BooleanQuery.Builder();
             for (String field : fields(scope)) {
                 Query query = new TermQuery(new Term(field, term));
-                if (scope == ProjectSearchScope.ALL) {
+                if (scope == SearchScope.ALL) {
                     float boost = switch (field) {
                         case TITLE -> 4.0f;
                         case ATTRIBUTES -> 3.0f;
@@ -153,7 +161,7 @@ final class LuceneProjectIndex implements AutoCloseable {
         return allTerms.build();
     }
 
-    private static List<String> fields(ProjectSearchScope scope) {
+    private static List<String> fields(SearchScope scope) {
         return switch (scope) {
             case ALL -> List.of(TITLE, CONTENT, METADATA, PATH, ATTRIBUTES);
             case TITLE -> List.of(TITLE);
@@ -196,7 +204,7 @@ final class LuceneProjectIndex implements AutoCloseable {
         return document;
     }
 
-    private static String snippet(ProjectSearchScope scope, Document document, List<String> terms) {
+    private static String snippet(SearchScope scope, Document document, List<String> terms) {
         List<String> sources = switch (scope) {
             case TITLE -> List.of(document.get(TITLE));
             case PATH -> List.of(document.get(PATH));

@@ -32,8 +32,8 @@ class DesktopMetadataTest {
                 "core.file.open", "core.file.save", "core.file.saveAll", "core.file.tabs.separator",
                 "core.tab.close", "core.tab.pin", "core.file.settings.separator", "core.settings.open", "core.exit");
         assertThat(actions.childIds(ActionIds.MAIN_TOOLBAR)).containsExactly(
-                "core.project.open", "core.project.new", "core.project.newNote", "core.search.open",
-                "core.file.new", "core.file.open", "core.file.save", "core.file.saveAll");
+                "core.project.open", "core.project.new", "core.project.newNote", "core.file.new",
+                "core.file.open", "core.file.save", "core.file.saveAll");
         assertThat(actions.childIds(ActionIds.MAIN_MENU)).containsExactly(
                 ActionIds.FILE_MENU, ActionIds.VIEW_MENU, ActionIds.TOOLS_MENU, ActionIds.HELP_MENU);
         assertThat(metadata.keyStroke(CommandPalette.ACTION_ID)).isEqualTo(KeyStroke.getKeyStroke(

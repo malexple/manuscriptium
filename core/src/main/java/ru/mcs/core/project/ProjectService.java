@@ -1,5 +1,9 @@
 package ru.mcs.core.project;
 
+import ru.mcs.spi.project.FullTextIndexFactory;
+import ru.mcs.spi.project.SearchHit;
+import ru.mcs.spi.project.SearchQuery;
+
 import ru.mcs.spi.project.ViewEntry;
 import ru.mcs.spi.project.ViewDefinition;
 import java.io.IOException;
@@ -41,13 +45,14 @@ final class ProjectService implements AutoCloseable {
     private List<ViewDefinition> views = List.of();
     private List<String> viewErrors = List.of();
 
-    private ProjectService(Path root, Listener listener, IndexContributorRegistry contributors) throws IOException, SQLException {
+    private ProjectService(Path root, Listener listener, IndexContributorRegistry contributors,
+                           FullTextIndexFactory fullText) throws IOException, SQLException {
         if (!Files.isDirectory(root)) {
             throw new IOException("Project is not a directory: " + root);
         }
         this.root = ProjectPaths.normalize(root);
         this.listener = listener;
-        this.index = new ProjectIndex(this.root, contributors);
+        this.index = new ProjectIndex(this.root, contributors, fullText);
         this.viewStore = new ViewStore(this.root);
         this.executor = Executors.newSingleThreadExecutor(r -> {
             Thread thread = new Thread(r, "mcs-project-index");
@@ -84,12 +89,17 @@ final class ProjectService implements AutoCloseable {
 
     static ProjectService open(Path root, Listener listener, IndexContributorRegistry contributors)
             throws IOException, SQLException {
-        return retryOnceOnIo(() -> openOnce(root, listener, contributors));
+        return open(root, listener, contributors, null);
     }
 
-    private static ProjectService openOnce(Path root, Listener listener, IndexContributorRegistry contributors)
-            throws IOException, SQLException {
-        ProjectService service = new ProjectService(root, listener, contributors);
+    static ProjectService open(Path root, Listener listener, IndexContributorRegistry contributors,
+                               FullTextIndexFactory fullText) throws IOException, SQLException {
+        return retryOnceOnIo(() -> openOnce(root, listener, contributors, fullText));
+    }
+
+    private static ProjectService openOnce(Path root, Listener listener, IndexContributorRegistry contributors,
+                                           FullTextIndexFactory fullText) throws IOException, SQLException {
+        ProjectService service = new ProjectService(root, listener, contributors, fullText);
         try {
             Future<?> initial = service.executor.submit((Callable<Void>) () -> {
                 service.rebuild();
@@ -161,8 +171,8 @@ final class ProjectService implements AutoCloseable {
     }
 
     /** Поиск стоит в той же очереди, что rebuild/refresh, и никогда не выполняется на EDT. */
-    CompletableFuture<List<ProjectSearchResult>> search(ProjectSearchQuery query) {
-        CompletableFuture<List<ProjectSearchResult>> result = new CompletableFuture<>();
+    CompletableFuture<List<SearchHit>> search(SearchQuery query) {
+        CompletableFuture<List<SearchHit>> result = new CompletableFuture<>();
         if (closed.get()) {
             result.complete(List.of());
             return result;

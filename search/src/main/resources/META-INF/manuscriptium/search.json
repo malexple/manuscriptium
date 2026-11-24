@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "actions": [
+    {"id": "core.search.open", "textKey": "project.search.action", "parents": ["MainMenu.Tools", "MainToolbar"]},
+    {"id": "toolwindow.toggle.core.search"}
+  ],
+  "panels": [
+    {"id": "core.search", "titleKey": "project.search.title", "command": "toolwindow.toggle.core.search", "anchor": "bottom"}
+  ]
+}

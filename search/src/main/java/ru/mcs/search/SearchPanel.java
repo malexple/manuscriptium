@@ -1,4 +1,4 @@
-package ru.mcs.core.project;
+package ru.mcs.search;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 import javax.swing.AbstractAction;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -24,40 +25,44 @@ import javax.swing.ListCellRenderer;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
-import ru.mcs.core.i18n.Messages;
+import ru.mcs.spi.project.ProjectSearch;
+import ru.mcs.spi.project.SearchHit;
+import ru.mcs.spi.project.SearchQuery;
+import ru.mcs.spi.project.SearchScope;
 
 /** Панель поиска: запрос выполняется вне EDT, generation отбрасывает ответы старого Project и старых запросов. */
-final class ProjectSearchPanel extends JPanel {
+final class SearchPanel extends JPanel {
 
     @FunctionalInterface
     interface SearchBackend {
-        CompletableFuture<List<ProjectSearchResult>> search(ProjectSearchQuery query);
+        CompletableFuture<List<SearchHit>> search(SearchQuery query);
     }
 
     private final JTextField queryField = new JTextField();
-    private final JComboBox<ProjectSearchScope> scopeBox = new JComboBox<>(ProjectSearchScope.values());
+    private final JComboBox<SearchScope> scopeBox = new JComboBox<>(SearchScope.values());
     private final JComboBox<DraftFilter> draftBox = new JComboBox<>(DraftFilter.values());
     private final JTextField subtreeField = new JTextField(16);
-    private final JButton searchButton = new JButton(Messages.get("project.search.button"));
-    private final DefaultListModel<ProjectSearchResult> model = new DefaultListModel<>();
-    private final JList<ProjectSearchResult> results = new JList<>(model);
+    private final JButton searchButton = new JButton(SearchMessages.get("project.search.button"));
+    private final DefaultListModel<SearchHit> model = new DefaultListModel<>();
+    private final JList<SearchHit> results = new JList<>(model);
     private final JLabel status = new JLabel();
-    private final Consumer<ProjectSearchResult> opener;
+    private final Consumer<SearchHit> opener;
 
     private SearchBackend backend;
     private long generation;
 
-    ProjectSearchPanel(Consumer<ProjectSearchResult> opener) {
+    SearchPanel(Consumer<SearchHit> opener) {
         super(new BorderLayout(0, 8));
         this.opener = opener;
         setBorder(new EmptyBorder(8, 8, 8, 8));
 
         queryField.setName("project.search.query");
-        queryField.setToolTipText(Messages.get("project.search.query.tooltip"));
+        queryField.setToolTipText(SearchMessages.get("project.search.query.tooltip"));
         scopeBox.setName("project.search.scope");
+        scopeBox.setRenderer(new ScopeRenderer());
         draftBox.setName("project.search.draft");
         subtreeField.setName("project.search.subtree");
-        subtreeField.setToolTipText(Messages.get("project.search.subtree.tooltip"));
+        subtreeField.setToolTipText(SearchMessages.get("project.search.subtree.tooltip"));
         searchButton.setName("project.search.submit");
         results.setName("project.search.results");
         status.setName("project.search.status");
@@ -67,11 +72,11 @@ final class ProjectSearchPanel extends JPanel {
         queryRow.add(searchButton, BorderLayout.EAST);
 
         JPanel filters = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        filters.add(new JLabel(Messages.get("project.search.scope")));
+        filters.add(new JLabel(SearchMessages.get("project.search.scope")));
         filters.add(scopeBox);
-        filters.add(new JLabel(Messages.get("project.search.draft.label")));
+        filters.add(new JLabel(SearchMessages.get("project.search.draft.label")));
         filters.add(draftBox);
-        filters.add(new JLabel(Messages.get("project.search.subtree.label")));
+        filters.add(new JLabel(SearchMessages.get("project.search.subtree.label")));
         filters.add(subtreeField);
 
         JPanel controls = new JPanel(new BorderLayout(0, 6));
@@ -107,8 +112,14 @@ final class ProjectSearchPanel extends JPanel {
         setBackend(null);
     }
 
-    void setProject(ProjectService service) {
-        setBackend(service == null ? null : service::search);
+    SearchPanel(Consumer<SearchHit> opener, ProjectSearch search) {
+        this(opener);
+        projectChanged(search);
+        search.addChangeListener(() -> projectChanged(search));
+    }
+
+    private void projectChanged(ProjectSearch search) {
+        setBackend(search.available() ? search::search : null);
     }
 
     /** Отдельная точка нуждается только в headless-тестах асинхронной панели. */
@@ -117,7 +128,7 @@ final class ProjectSearchPanel extends JPanel {
         generation++;
         model.clear();
         searchButton.setEnabled(newBackend != null);
-        status.setText(Messages.get(newBackend == null ? "project.search.noProject" : "project.search.prompt"));
+        status.setText(SearchMessages.get(newBackend == null ? "project.search.noProject" : "project.search.prompt"));
     }
 
     void focusQuery() {
@@ -128,28 +139,28 @@ final class ProjectSearchPanel extends JPanel {
         long request = ++generation;
         SearchBackend current = backend;
         if (current == null) {
-            status.setText(Messages.get("project.search.noProject"));
+            status.setText(SearchMessages.get("project.search.noProject"));
             return;
         }
         searchButton.setEnabled(true);
-        ProjectSearchQuery query;
+        SearchQuery query;
         try {
-            query = new ProjectSearchQuery(queryField.getText(), (ProjectSearchScope) scopeBox.getSelectedItem(),
-                    subtreeField.getText(), selectedAttributeFilters(), ProjectSearchQuery.DEFAULT_LIMIT);
+            query = new SearchQuery(queryField.getText(), (SearchScope) scopeBox.getSelectedItem(),
+                    subtreeField.getText(), selectedAttributeFilters(), SearchQuery.DEFAULT_LIMIT);
         } catch (IllegalArgumentException e) {
             model.clear();
-            status.setText(Messages.get("project.search.invalid", e.getMessage()));
+            status.setText(SearchMessages.get("project.search.invalid", e.getMessage()));
             return;
         }
         if (query.isEmpty()) {
             model.clear();
-            status.setText(Messages.get("project.search.prompt"));
+            status.setText(SearchMessages.get("project.search.prompt"));
             return;
         }
         searchButton.setEnabled(false);
-        status.setText(Messages.get("project.search.searching"));
+        status.setText(SearchMessages.get("project.search.searching"));
         long started = System.nanoTime();
-        CompletableFuture<List<ProjectSearchResult>> future;
+        CompletableFuture<List<SearchHit>> future;
         try {
             future = current.search(query);
         } catch (RuntimeException e) {
@@ -161,7 +172,7 @@ final class ProjectSearchPanel extends JPanel {
     }
 
     private void complete(long request, SearchBackend current, long started,
-                          List<ProjectSearchResult> found, Throwable error) {
+                          List<SearchHit> found, Throwable error) {
         if (request != generation || current != backend) {
             return;
         }
@@ -171,18 +182,18 @@ final class ProjectSearchPanel extends JPanel {
                     ? error.getCause() : error;
             String detail = cause.getMessage() == null ? cause.toString() : cause.getMessage();
             model.clear();
-            status.setText(Messages.get("project.search.error", detail));
+            status.setText(SearchMessages.get("project.search.error", detail));
             return;
         }
         model.clear();
-        for (ProjectSearchResult result : found) {
+        for (SearchHit result : found) {
             model.addElement(result);
         }
         if (!found.isEmpty()) {
             results.setSelectedIndex(0);
         }
         long elapsedMs = (System.nanoTime() - started) / 1_000_000;
-        status.setText(Messages.get("project.search.results", found.size(), elapsedMs));
+        status.setText(SearchMessages.get("project.search.results", found.size(), elapsedMs));
     }
 
     private void searchIfConfigured() {
@@ -199,9 +210,20 @@ final class ProjectSearchPanel extends JPanel {
     }
 
     private void openSelected() {
-        ProjectSearchResult selected = results.getSelectedValue();
+        SearchHit selected = results.getSelectedValue();
         if (selected != null) {
             opener.accept(selected);
+        }
+    }
+
+    private static final class ScopeRenderer extends DefaultListCellRenderer {
+        @Override
+        public java.awt.Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                               boolean selected, boolean focused) {
+            Object shown = value instanceof SearchScope scope
+                    ? SearchMessages.get("project.search.scope." + scope.name().toLowerCase(java.util.Locale.ROOT))
+                    : value;
+            return super.getListCellRendererComponent(list, shown, index, selected, focused);
         }
     }
 
@@ -220,11 +242,11 @@ final class ProjectSearchPanel extends JPanel {
 
         @Override
         public String toString() {
-            return Messages.get(messageKey);
+            return SearchMessages.get(messageKey);
         }
     }
 
-    private static final class ResultRenderer implements ListCellRenderer<ProjectSearchResult> {
+    private static final class ResultRenderer implements ListCellRenderer<SearchHit> {
         private final JPanel panel = new JPanel(new BorderLayout(0, 2));
         private final JLabel title = new JLabel();
         private final JLabel path = new JLabel();
@@ -240,8 +262,8 @@ final class ProjectSearchPanel extends JPanel {
         }
 
         @Override
-        public java.awt.Component getListCellRendererComponent(JList<? extends ProjectSearchResult> list,
-                                                               ProjectSearchResult value, int index,
+        public java.awt.Component getListCellRendererComponent(JList<? extends SearchHit> list,
+                                                               SearchHit value, int index,
                                                                boolean selected, boolean focused) {
             title.setText(value.title());
             path.setText(value.path());
