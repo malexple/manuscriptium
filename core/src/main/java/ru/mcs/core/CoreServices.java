@@ -90,6 +90,10 @@ final class CoreServices {
         configurables.register(generalSettings);
         configurables.register(new AppearanceSettingsProvider(themes));
         ru.mcs.core.settings.EditorSettingsGroups.register(configurables);
+        ru.mcs.core.settings.ColorSchemeServiceImpl colorScheme = new ru.mcs.core.settings.ColorSchemeServiceImpl();
+        configurables.register(new ru.mcs.core.settings.ColorSchemeSettingsProvider(colorScheme));
+        services.register(ru.mcs.spi.swing.editor.style.ColorSchemeService.class, colorScheme);
+        state.register("core", "core.colors", Scope.APPLICATION, colorScheme);
         services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
         services.register(ShellThemeService.class, themes);
         services.register(ProjectAccess.class, projectAccess);

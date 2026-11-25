@@ -18,6 +18,7 @@ class EditorSettingsGroupsTest {
     void groupsFormEditorTreeAndAcceptPagesFromPlugins() {
         SettingsManagerImpl manager = new SettingsManagerImpl();
         EditorSettingsGroups.register(manager);
+        manager.register(new ColorSchemeSettingsProvider(new ColorSchemeServiceImpl()));
         manager.register(page("yaml.codestyle", SettingsGroups.CODE_STYLE));
         manager.register(page("yaml.smartkeys", SettingsGroups.SMART_KEYS));
 
@@ -37,6 +38,7 @@ class EditorSettingsGroupsTest {
     void groupPagesAreReadOnlyAndHaveTitles() {
         SettingsManagerImpl manager = new SettingsManagerImpl();
         EditorSettingsGroups.register(manager);
+        manager.register(new ColorSchemeSettingsProvider(new ColorSchemeServiceImpl()));
 
         for (ConfigurableProvider provider : manager.getProviders()) {
             assertThat(provider.getDisplayName()).isNotBlank();

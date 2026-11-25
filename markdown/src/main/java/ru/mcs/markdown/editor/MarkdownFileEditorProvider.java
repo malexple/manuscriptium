@@ -65,6 +65,13 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
         this.sourceView = sourceView;
     }
 
+    private ru.mcs.editor.view.TokenColors tokenColors = new ru.mcs.markdown.render.MarkdownTokenColors();
+
+    /** Цвета подсветки вкладки «Исходник» из общей цветовой схемы. */
+    void useColorScheme(ru.mcs.editor.view.TokenColors tokenColors) {
+        this.tokenColors = tokenColors;
+    }
+
     @Override
     public String getId() {
         return "markdown.editor";
@@ -87,6 +94,7 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
                 parser, parserExecutor, styles, actions, widgets);
         if (sourceView != null) {
             editor.setLineNumbersVisible(sourceView.showLineNumbers());
+            editor.setSyntaxHighlighting(sourceView.showSyntaxHighlighting(), tokenColors);
         }
         return editor;
     }

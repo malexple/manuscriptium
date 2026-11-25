@@ -17,7 +17,5 @@ public final class EditorSettingsGroups {
                 SettingsGroups.GENERAL));
         settings.register(new GroupSettingsProvider(SettingsGroups.CODE_STYLE, "settings.editor.codestyle",
                 SettingsGroups.EDITOR));
-        settings.register(new GroupSettingsProvider(SettingsGroups.COLOR_SCHEME, "settings.editor.colors",
-                SettingsGroups.EDITOR));
     }
 }

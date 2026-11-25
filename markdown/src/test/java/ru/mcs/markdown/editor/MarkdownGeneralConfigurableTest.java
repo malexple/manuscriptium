@@ -15,7 +15,8 @@ class MarkdownGeneralConfigurableTest {
     void appliesLineNumberChoiceAndNotifiesOpenEditors() throws Exception {
         MarkdownSourceViewState state = new MarkdownSourceViewState();
         List<Boolean> notified = new ArrayList<>();
-        MarkdownGeneralConfigurable configurable = new MarkdownGeneralConfigurable(state, notified::add, key -> key);
+        MarkdownGeneralConfigurable configurable = new MarkdownGeneralConfigurable(state,
+                current -> notified.add(current.showLineNumbers()), key -> key);
 
         SwingUtilities.invokeAndWait(() -> {
             assertThat(configurable.createComponent()).isNotNull();

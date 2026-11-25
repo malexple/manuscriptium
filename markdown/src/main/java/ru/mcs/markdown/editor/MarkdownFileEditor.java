@@ -179,6 +179,11 @@ final class MarkdownFileEditor implements FileEditor {
         loader.execute();
     }
 
+    /** Подсветка синтаксиса вкладки «Исходник»: включение и цвета из цветовой схемы. */
+    void setSyntaxHighlighting(boolean enabled, ru.mcs.editor.view.TokenColors colors) {
+        source.setSyntaxHighlighting(enabled ? new ru.mcs.markdown.render.MarkdownSyntaxHighlighter() : null, colors);
+    }
+
     /** Номера строк только на вкладке «Исходник»; Canvas остаётся чистым. */
     void setLineNumbersVisible(boolean visible) {
         sourceScroll.setRowHeaderView(visible ? lineNumbers : null);
