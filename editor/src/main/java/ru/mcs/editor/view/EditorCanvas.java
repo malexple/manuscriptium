@@ -34,6 +34,9 @@ import javax.swing.Scrollable;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.UIManager;
+import javax.swing.plaf.ColorUIResource;
+import javax.swing.plaf.FontUIResource;
+import javax.swing.plaf.UIResource;
 import ru.mcs.editor.action.EditorContext;
 import ru.mcs.editor.mode.TypewriterMode;
 import ru.mcs.editor.model.DocumentChange;
@@ -83,13 +86,7 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         setFocusable(true);
         setOpaque(true);
         setPreferredSize(new Dimension(800, 600));
-        Color background = UIManager.getColor("EditorPane.background");
-        setBackground(background == null ? Color.WHITE : background);
-        Color foreground = UIManager.getColor("EditorPane.foreground");
-        setForeground(foreground == null ? Color.DARK_GRAY : foreground);
-        Font font = UIManager.getFont("EditorPane.font");
-        setFont(font == null ? new Font(Font.MONOSPACED, Font.PLAIN, 13)
-                : new Font(Font.MONOSPACED, Font.PLAIN, Math.max(12, font.getSize())));
+        applyLookAndFeelDefaults();
 
         inputController = new InputController(this, clipboardService);
         caretPainter = new CaretPainter(this);
@@ -139,6 +136,32 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
                 repaint();
             }
         });
+    }
+
+    /** Цвета и шрифт по умолчанию берутся у текущей темы; явно заданные значения не затрагиваются. */
+    private void applyLookAndFeelDefaults() {
+        if (!isBackgroundSet() || getBackground() instanceof UIResource) {
+            Color background = UIManager.getColor("EditorPane.background");
+            setBackground(new ColorUIResource(background == null ? Color.WHITE : background));
+        }
+        if (!isForegroundSet() || getForeground() instanceof UIResource) {
+            Color foreground = UIManager.getColor("EditorPane.foreground");
+            setForeground(new ColorUIResource(foreground == null ? Color.DARK_GRAY : foreground));
+        }
+        if (!isFontSet() || getFont() instanceof UIResource) {
+            Font font = UIManager.getFont("EditorPane.font");
+            int size = font == null ? 13 : Math.max(12, font.getSize());
+            setFont(new FontUIResource(new Font(Font.MONOSPACED, Font.PLAIN, size)));
+        }
+    }
+
+    /** Вызывается при смене темы (FlatLaf.updateUI): открытые вкладки получают цвета новой темы сразу. */
+    @Override
+    public void updateUI() {
+        super.updateUI();
+        applyLookAndFeelDefaults();
+        revalidate();
+        repaint();
     }
 
     public void setDocument(DocumentModel document) {
