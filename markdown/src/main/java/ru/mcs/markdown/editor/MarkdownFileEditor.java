@@ -61,6 +61,8 @@ final class MarkdownFileEditor implements FileEditor {
     private final JPanel content = new JPanel(cards);
     private final MarkdownCanvas canvas = new MarkdownCanvas();
     private final MarkdownCanvas source = new MarkdownCanvas();
+    private final JScrollPane sourceScroll = new JScrollPane(source);
+    private final ru.mcs.editor.view.LineNumberGutter lineNumbers = new ru.mcs.editor.view.LineNumberGutter(source);
     private final JToggleButton canvasButton;
     private final JToggleButton sourceButton;
     private final JToggleButton notesButton;
@@ -123,7 +125,8 @@ final class MarkdownFileEditor implements FileEditor {
             source.installContextMenu(contextMenus, this::editorContext);
         }
         content.add(new JScrollPane(canvas), CANVAS_CARD);
-        content.add(new JScrollPane(source), SOURCE_CARD);
+        sourceScroll.setRowHeaderView(lineNumbers);
+        content.add(sourceScroll, SOURCE_CARD);
         // CardLayout делит одно native окно: активный drop-target должен быть только у видимой карточки.
         canvas.setNativeImageDropEnabled(false);
         source.setNativeImageDropEnabled(false);
@@ -172,6 +175,11 @@ final class MarkdownFileEditor implements FileEditor {
         setMode(initialMode);
         loader = createLoader();
         loader.execute();
+    }
+
+    /** Номера строк только на вкладке «Исходник»; Canvas остаётся чистым. */
+    void setLineNumbersVisible(boolean visible) {
+        sourceScroll.setRowHeaderView(visible ? lineNumbers : null);
     }
 
     private JToggleButton modeButton(String name, String text) {
@@ -542,6 +550,7 @@ final class MarkdownFileEditor implements FileEditor {
             document.removeListener(documentListener);
         }
         modifiedListeners.clear();
+        lineNumbers.dispose();
         source.dispose();
         canvas.dispose();
         registry.remove(this);

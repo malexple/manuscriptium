@@ -25,6 +25,10 @@ final class MarkdownEditorRegistry {
         return Optional.ofNullable(editors.get(file.toAbsolutePath().normalize()));
     }
 
+    void forEach(java.util.function.Consumer<MarkdownFileEditor> action) {
+        editors.values().forEach(action);
+    }
+
     int size() {
         return editors.size();
     }

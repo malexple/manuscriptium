@@ -27,6 +27,7 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
     private final EditorStyleService styles;
     private final ActionManager actions;
     private final WidgetRegistry widgets;
+    private MarkdownSourceViewState sourceView;
 
     MarkdownFileEditorProvider(MarkdownEditorState state, MarkdownEditorRegistry registry, I18n i18n,
                                AtomicFileStore fileStore, MarkdownParser parser, Executor parserExecutor) {
@@ -59,6 +60,11 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
         this.widgets = widgets;
     }
 
+    /** Настройки вкладки «Исходник» для новых редакторов (номера строк). */
+    void useSourceView(MarkdownSourceViewState sourceView) {
+        this.sourceView = sourceView;
+    }
+
     @Override
     public String getId() {
         return "markdown.editor";
@@ -77,7 +83,11 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
 
     @Override
     public FileEditor createEditor(Path file) {
-        return new MarkdownFileEditor(file, state.defaultMode(), registry, i18n, fileStore, parser, parserExecutor,
-                styles, actions, widgets);
+        MarkdownFileEditor editor = new MarkdownFileEditor(file, state.defaultMode(), registry, i18n, fileStore,
+                parser, parserExecutor, styles, actions, widgets);
+        if (sourceView != null) {
+            editor.setLineNumbersVisible(sourceView.showLineNumbers());
+        }
+        return editor;
     }
 }

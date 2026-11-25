@@ -133,6 +133,7 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
             public void componentResized(ComponentEvent event) {
                 textLayout.setWidth(getWidth());
                 onViewportWidthChanged(getWidth());
+                fireViewChanged();
                 revalidate();
                 typewriterMode.centerCaret(EditorCanvas.this);
                 repaint();
@@ -159,6 +160,7 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
             textLayout.clear();
         }
         onDocumentContextChanged();
+        fireViewChanged();
         revalidate();
         typewriterMode.centerCaret(this);
         repaint();
@@ -363,6 +365,7 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         selectionAnchor = anchor;
         onCaretChanged(offset);
         caretPainter.documentChanged();
+        fireViewChanged();
         revalidate();
         typewriterMode.centerCaret(this);
     }
@@ -395,6 +398,72 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
 
     public Color caretColor() {
         return getForeground();
+    }
+
+    /** Номер физической строки и положение её первой визуальной строки (координаты компонента). */
+    public record LineMark(int number, int y, int baseline) {
+    }
+
+    private final java.util.List<Runnable> viewListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** Слушатель вызывается при смене документа, каретки, ширины и шрифта: колонка номеров перерисовывается. */
+    public void addViewListener(Runnable listener) {
+        viewListeners.add(listener);
+    }
+
+    public void removeViewListener(Runnable listener) {
+        viewListeners.remove(listener);
+    }
+
+    private void fireViewChanged() {
+        for (Runnable listener : viewListeners) {
+            listener.run();
+        }
+    }
+
+    /** Номера строк в видимой области: у перенесённой строки номер ставится только у первой визуальной. */
+    public List<LineMark> visibleLineMarks(Rectangle clip) {
+        if (document == null) {
+            return List.of();
+        }
+        int top = typewriterMode.topPadding(this);
+        Rectangle content = new Rectangle(clip);
+        content.y -= top;
+        List<LineMark> marks = new java.util.ArrayList<>();
+        for (TextLayoutEngine.VisualLine line : textLayout.visibleLines(content)) {
+            int logical = textLayout.logicalLineAt(line.start());
+            if (line.start() == textLayout.logicalLineStart(logical)) {
+                marks.add(new LineMark(logical + 1, line.y() + top, line.y() + top + textLayout.ascent()));
+            }
+        }
+        return marks;
+    }
+
+    public int lineCount() {
+        return document == null ? 1 : textLayout.logicalLineAt(document.length()) + 1;
+    }
+
+    public int currentLineNumber() {
+        return document == null ? 1 : textLayout.logicalLineAt(caretOffset) + 1;
+    }
+
+    /** Выделяет строки целиком между двумя точками по вертикали (координаты компонента), как клик по номеру строки. */
+    public void selectLines(int fromY, int toY) {
+        if (document == null) {
+            return;
+        }
+        int first = textLayout.logicalLineAt(hitTest(new Point(0, fromY)));
+        int second = textLayout.logicalLineAt(hitTest(new Point(0, toY)));
+        int start = textLayout.logicalLineStart(Math.min(first, second));
+        int end = textLayout.nextLogicalLineStart(Math.max(first, second));
+        if (second >= first) {
+            setCaretState(end, start);
+        } else {
+            setCaretState(start, end);
+        }
+        clearComposition();
+        requestFocusInWindow();
+        repaint();
     }
 
     public int lineHeight() {
@@ -499,6 +568,7 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
     public void setFont(Font font) {
         super.setFont(font);
         textLayout.setFont(font);
+        fireViewChanged();
     }
 
     public void importImages(List<Path> files, BufferedImage image, int offset) {
@@ -714,6 +784,7 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         onDocumentContentChanged(changes);
         inputController.documentChanged(changes.getLast());
         caretPainter.documentChanged();
+        fireViewChanged();
         revalidate();
         typewriterMode.centerCaret(this);
         repaint();

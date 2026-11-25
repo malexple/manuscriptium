@@ -24,6 +24,7 @@ public final class MarkdownEditorModule {
 
     private final MarkdownEditorState state = new MarkdownEditorState();
     private final MarkdownEditorRegistry registry = new MarkdownEditorRegistry();
+    private final MarkdownSourceViewState sourceView = new MarkdownSourceViewState();
     private PluginContext ctx;
     private AtomicFileStore fileStore;
     private MarkdownParser parser;
@@ -53,6 +54,7 @@ public final class MarkdownEditorModule {
         context.services().register(WidgetRegistry.class, widgets);
         context.services().register(BlockRendererExtensionRegistry.class, widgets);
         ctx.state().register("editor", Scope.APPLICATION, state);
+        ctx.state().register("sourceView", Scope.APPLICATION, sourceView);
         actionFactory = new EditorActionFactory(ctx.i18n(), this::selectedEditor);
     }
 
@@ -70,12 +72,20 @@ public final class MarkdownEditorModule {
     }
 
     public FileEditorProvider createFileEditorProvider() {
-        return new MarkdownFileEditorProvider(state, registry, ctx.i18n(), fileStore, parser, parserExecutor,
-                styles, ctx.actions(), widgets);
+        MarkdownFileEditorProvider provider = new MarkdownFileEditorProvider(state, registry, ctx.i18n(), fileStore,
+                parser, parserExecutor, styles, ctx.actions(), widgets);
+        provider.useSourceView(sourceView);
+        return provider;
     }
 
     public Configurable createConfigurable() {
         return new MarkdownEditorConfigurable(state, ctx.i18n());
+    }
+
+    public Configurable createGeneralConfigurable() {
+        return new MarkdownGeneralConfigurable(sourceView,
+                visible -> registry.forEach(editor -> editor.setLineNumbersVisible(visible)),
+                key -> ctx.i18n().get(key));
     }
 
     private Optional<MarkdownFileEditor> selectedEditor() {
