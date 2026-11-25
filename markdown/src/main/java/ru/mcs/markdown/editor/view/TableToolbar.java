@@ -29,6 +29,8 @@ final class TableToolbar {
         ALIGN_LEFT(TableToolbarIcon.Kind.ALIGN_LEFT),
         ALIGN_CENTER(TableToolbarIcon.Kind.ALIGN_CENTER),
         ALIGN_RIGHT(TableToolbarIcon.Kind.ALIGN_RIGHT),
+        SORT_ASC(TableToolbarIcon.Kind.SORT_ASC),
+        SORT_DESC(TableToolbarIcon.Kind.SORT_DESC),
         MORE(TableToolbarIcon.Kind.MORE),
         DELETE(TableToolbarIcon.Kind.DELETE);
 
@@ -49,13 +51,18 @@ final class TableToolbar {
         this.canvas = canvas;
     }
 
-    /** Кнопки в области панели: слева размер и выравнивание, справа More Actions и корзина. */
+    /** Кнопки в области панели: слева размер, выравнивание и сортировка, справа More Actions и корзина. */
     static List<Slot> slots(Rectangle area) {
         List<Slot> result = new ArrayList<>();
         int x = area.x;
         result.add(slot(Action.RESIZE, x, area));
         x += BUTTON + GROUP_GAP;
         for (Action action : new Action[]{Action.ALIGN_LEFT, Action.ALIGN_CENTER, Action.ALIGN_RIGHT}) {
+            result.add(slot(action, x, area));
+            x += BUTTON;
+        }
+        x += GROUP_GAP;
+        for (Action action : new Action[]{Action.SORT_ASC, Action.SORT_DESC}) {
             result.add(slot(action, x, area));
             x += BUTTON;
         }
@@ -112,6 +119,8 @@ final class TableToolbar {
             case ALIGN_LEFT -> canvas.alignTableColumn(TableModel.Alignment.LEFT);
             case ALIGN_CENTER -> canvas.alignTableColumn(TableModel.Alignment.CENTER);
             case ALIGN_RIGHT -> canvas.alignTableColumn(TableModel.Alignment.RIGHT);
+            case SORT_ASC -> TableController.sort(canvas, true);
+            case SORT_DESC -> TableController.sort(canvas, false);
             case MORE -> showMenu(slot.bounds());
             case DELETE -> TableController.deleteTable(canvas);
         }

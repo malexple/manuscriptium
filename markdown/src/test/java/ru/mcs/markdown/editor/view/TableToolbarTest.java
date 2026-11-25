@@ -13,7 +13,10 @@ class TableToolbarTest {
         Rectangle area = new Rectangle(10, 5, 400, TableToolbar.HEIGHT);
         List<TableToolbar.Slot> slots = TableToolbar.slots(area);
 
-        assertThat(slots).hasSize(6);
+        assertThat(slots.stream().map(TableToolbar.Slot::action).toList()).containsExactly(
+                TableToolbar.Action.RESIZE, TableToolbar.Action.ALIGN_LEFT, TableToolbar.Action.ALIGN_CENTER,
+                TableToolbar.Action.ALIGN_RIGHT, TableToolbar.Action.SORT_ASC, TableToolbar.Action.SORT_DESC,
+                TableToolbar.Action.MORE, TableToolbar.Action.DELETE);
         for (TableToolbar.Slot slot : slots) {
             assertThat(area.contains(slot.bounds())).isTrue();
         }

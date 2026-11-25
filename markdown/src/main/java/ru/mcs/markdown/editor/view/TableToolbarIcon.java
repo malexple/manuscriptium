@@ -17,7 +17,7 @@ import javax.swing.Icon;
 final class TableToolbarIcon implements Icon {
 
     enum Kind {
-        GRID, ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT, MORE, DELETE
+        GRID, ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT, SORT_ASC, SORT_DESC, MORE, DELETE
     }
 
     private static final int SIZE = 14;
@@ -49,6 +49,8 @@ final class TableToolbarIcon implements Icon {
                 case ALIGN_LEFT -> lines(g, 0);
                 case ALIGN_CENTER -> lines(g, 1);
                 case ALIGN_RIGHT -> lines(g, 2);
+                case SORT_ASC -> arrow(g, true);
+                case SORT_DESC -> arrow(g, false);
                 case MORE -> {
                     for (double cy : new double[]{3, 7, 11}) {
                         g.fill(new Ellipse2D.Double(5.7, cy - 1.3, 2.6, 2.6));
@@ -75,6 +77,19 @@ final class TableToolbarIcon implements Icon {
         } finally {
             g.dispose();
         }
+    }
+
+    /** Стрелка вверх (по возрастанию) или вниз (по убыванию). */
+    private static void arrow(Graphics2D g, boolean up) {
+        double tip = up ? 1.5 : SIZE - 1.5;
+        double tail = up ? SIZE - 1.5 : 1.5;
+        double wing = up ? tip + 4 : tip - 4;
+        g.draw(new Line2D.Double(7, tail, 7, tip));
+        Path2D head = new Path2D.Double();
+        head.moveTo(3.5, wing);
+        head.lineTo(7, tip);
+        head.lineTo(10.5, wing);
+        g.draw(head);
     }
 
     private static void lines(Graphics2D g, int mode) {
