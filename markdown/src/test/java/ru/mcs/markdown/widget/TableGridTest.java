@@ -85,6 +85,26 @@ class TableGridTest {
     }
 
     @Test
+    void caretAfterTrailingSpaceMovesRightOfText() {
+        TableGrid grid = TableGrid.parse("| a  | b |\n|---|---|\n| 1 | 2 |", 0);
+        TableGrid.Cell cell = grid.cell(0, 0);
+
+        assertThat(cell.end() - cell.start()).isEqualTo(1);
+        assertThat(grid.caretRect(cell.end() + 1, LAYOUT).x).isEqualTo(8 + 2 * 7);
+        assertThat(grid.next(cell.end() + 1)).isEqualTo(grid.cell(0, 1).start());
+    }
+
+    @Test
+    void stepsTreatEscapedPipeAsSingleCharacter() {
+        TableGrid grid = TableGrid.parse("| a\\|b | c |\n|---|---|\n| 1 | 2 |", 0);
+        TableGrid.Cell cell = grid.cell(0, 0);
+        int afterPipe = cell.start() + 3;
+
+        assertThat(grid.previous(afterPipe)).isEqualTo(cell.start() + 1);
+        assertThat(grid.next(cell.start() + 1)).isEqualTo(afterPipe);
+    }
+
+    @Test
     void selectionCoversTextOfEachCell() {
         TableGrid grid = TableGrid.parse(TABLE, BASE);
         int one = BASE + TABLE.indexOf("one");

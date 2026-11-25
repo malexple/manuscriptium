@@ -34,6 +34,12 @@ public final class KeyBindingResolver {
     }
 
     public void install(EditorCanvas canvas, InputController input) {
+        // Tab принадлежит редактору (ячейки таблицы, отступ); смена фокуса остаётся на Ctrl+Tab.
+        canvas.setFocusTraversalKeys(java.awt.KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS,
+                java.util.Set.of(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, InputEvent.CTRL_DOWN_MASK)));
+        canvas.setFocusTraversalKeys(java.awt.KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS,
+                java.util.Set.of(KeyStroke.getKeyStroke(KeyEvent.VK_TAB,
+                        InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)));
         bindMovement(canvas, KeyEvent.VK_LEFT, () -> {
             if (!canvas.tableStep(-1)) {
                 input.moveLeft(false, false);

@@ -122,9 +122,10 @@ public final class TableGrid {
         return cells.get(cells.size() - 1);
     }
 
+    /** Допустимая позиция каретки в ячейке: от начала текста до конца области, включая хвостовые пробелы. */
     public int clamp(int offset) {
         Cell cell = cellAt(offset);
-        return Math.max(cell.start(), Math.min(cell.end(), offset));
+        return Math.max(cell.start(), Math.min(cell.rawEnd(), offset));
     }
 
     /** Шаг влево: внутри ячейки на символ, на границе — конец предыдущей ячейки (в начале таблицы без изменений). */
@@ -132,7 +133,7 @@ public final class TableGrid {
         Cell cell = cellAt(offset);
         int clamped = clamp(offset);
         if (clamped > cell.start()) {
-            return clamped - 1;
+            return skipEscape(clamped - 1, -1);
         }
         if (cell.column() > 0) {
             return cell(cell.row(), cell.column() - 1).end();
@@ -147,7 +148,7 @@ public final class TableGrid {
         Cell cell = cellAt(offset);
         int clamped = clamp(offset);
         if (clamped < cell.end()) {
-            return clamped + 1;
+            return skipEscape(clamped + 1, 1);
         }
         if (cell.column() + 1 < columns) {
             return cell(cell.row(), cell.column() + 1).start();
@@ -182,6 +183,9 @@ public final class TableGrid {
         int best = cell.start();
         int bestDistance = Integer.MAX_VALUE;
         for (int offset = cell.start(); offset <= cell.end(); offset++) {
+            if (insideEscape(offset)) {
+                continue;
+            }
             int distance = Math.abs(caretX(cell, offset, edges, layout) - point.x);
             if (distance < bestDistance) {
                 best = offset;
@@ -214,7 +218,7 @@ public final class TableGrid {
     }
 
     private int caretX(Cell cell, int offset, int[] edges, Layout layout) {
-        int clamped = Math.max(cell.start(), Math.min(cell.end(), offset));
+        int clamped = Math.max(cell.start(), Math.min(cell.rawEnd(), offset));
         return textX(cell, edges, layout)
                 + layout.metrics().width(display(text(cell.start(), clamped)), cell.row() == 0);
     }
@@ -241,6 +245,17 @@ public final class TableGrid {
                     : layout.x() + Math.round((float) layout.width() * (column + 1) / columns);
         }
         return edges;
+    }
+
+    /** Позиция между {@code \} и {@code |} экранированного разделителя не является позицией каретки. */
+    private boolean insideEscape(int offset) {
+        int index = offset - base;
+        return index > 0 && index < source.length() && source.charAt(index) == '|'
+                && source.charAt(index - 1) == '\\';
+    }
+
+    private int skipEscape(int offset, int direction) {
+        return insideEscape(offset) ? offset + direction : offset;
     }
 
     private String text(int start, int end) {

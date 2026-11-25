@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import ru.mcs.editor.model.DocumentModelImpl;
 import ru.mcs.editor.model.DocumentProperties;
 import ru.mcs.editor.model.LineEnding;
+import ru.mcs.editor.model.Replace;
 import ru.mcs.markdown.api.AstIndex;
 import ru.mcs.markdown.api.BlockKind;
 import ru.mcs.markdown.api.BlockSpan;
@@ -58,7 +59,7 @@ class EditorCanvasTableEditingTest {
     }
 
     @Test
-    void enterMovesDownAndAppendsRowAfterLastOne() throws Exception {
+    void enterMovesDownAndLeavesTableFromLastRow() throws Exception {
         withCanvas((canvas, document) -> {
             caret(canvas, MARKDOWN.indexOf("A"));
             assertThat(canvas.tableEnter()).isTrue();
@@ -67,10 +68,53 @@ class EditorCanvasTableEditingTest {
 
             caret(canvas, MARKDOWN.indexOf("one"));
             assertThat(canvas.tableEnter()).isTrue();
-            String changed = document.text().toString();
-            assertThat(changed.split("\n")).hasSize(4);
-            assertThat(canvas.caretOffset()).isEqualTo(changed.lastIndexOf('\n') + 1 + 2);
+            assertThat(document.text().toString()).isEqualTo(MARKDOWN + "\n\n");
+            assertThat(canvas.caretOffset()).isEqualTo(MARKDOWN.length() + 2);
         });
+    }
+
+    @Test
+    void typedPipesAreEscapedAndNewlinesFlattenedInsideCells() throws Exception {
+        withCanvas((canvas, document) -> {
+            caret(canvas, MARKDOWN.indexOf("one") + 1);
+
+            assertThat(canvas.prepareInsertedText("a|b")).isEqualTo("a\\|b");
+            assertThat(canvas.prepareInsertedText("x\ny")).isEqualTo("x y");
+            assertThat(canvas.prepareInsertedText("plain")).isEqualTo("plain");
+        });
+    }
+
+    @Test
+    void tripleClickSelectsOnlyCellText() throws Exception {
+        withCanvas((canvas, document) -> {
+            int one = MARKDOWN.indexOf("one");
+            caret(canvas, one + 1);
+
+            assertThat(canvas.selectTableCell()).isTrue();
+            assertThat(canvas.selectionRange().start()).isEqualTo(one);
+            assertThat(canvas.selectionRange().end()).isEqualTo(one + 3);
+        });
+    }
+
+    @Test
+    void backspaceRemovesEscapedPipeAsOneCharacter() throws Exception {
+        withCanvas((canvas, document) -> {
+            int end = MARKDOWN.indexOf("one") + 3;
+            document.apply(Replace.of(end, end, "\\|"));
+            refresh(canvas, document);
+            caret(canvas, end + 2);
+
+            assertThat(canvas.tableBoundary(-1)).isTrue();
+            assertThat(document.text().toString()).isEqualTo(MARKDOWN);
+            assertThat(canvas.caretOffset()).isEqualTo(end);
+        });
+    }
+
+    private static void refresh(MarkdownCanvas canvas, DocumentModelImpl document) {
+        List<BlockSpan> spans = new ArrayList<>();
+        spans.add(new BlockSpan(BlockKind.DOCUMENT, 0, document.length(), 0));
+        spans.add(new BlockSpan(BlockKind.TABLE, 0, document.length(), 1));
+        canvas.setAstIndex(new AstIndex(new Result(document.version(), spans, new ParseMetrics(1, 0, true))));
     }
 
     private static void caret(MarkdownCanvas canvas, int offset) {

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import ru.mcs.editor.model.DocumentModelImpl;
 import ru.mcs.editor.model.DocumentProperties;
 import ru.mcs.editor.model.LineEnding;
+import ru.mcs.editor.model.Replace;
 import ru.mcs.markdown.api.AstIndex;
 import ru.mcs.markdown.api.BlockKind;
 import ru.mcs.markdown.api.BlockSpan;
@@ -54,9 +55,43 @@ class ActiveTableLayoutTest {
         assertThat(offset).isBetween(MARKDOWN.indexOf("one"), MARKDOWN.indexOf("one") + 3);
     }
 
-    private static MarkdownLayoutEngine engine() {
+    @Test
+    void tableStaysRenderedWhileParserCatchesUpWithTyping() {
         DocumentModelImpl document = new DocumentModelImpl(MARKDOWN,
                 new DocumentProperties(StandardCharsets.UTF_8, LineEnding.LF, false, false));
+        MarkdownLayoutEngine engine = engine(document);
+        int caret = MARKDOWN.indexOf("two") + 1;
+        engine.setCaretOffset(caret);
+        engine.layout();
+
+        document.apply(Replace.of(caret, caret, "xyz"));
+        engine.setCaretOffset(caret + 3);
+        BlockBox table = engine.layout().blocks().stream()
+                .filter(block -> block.widget() instanceof TableWidget).findFirst().orElseThrow();
+
+        assertThat(table.source()).isFalse();
+        assertThat(table.span().end() - table.span().start())
+                .isEqualTo(MARKDOWN.indexOf("\n\nTail") - MARKDOWN.indexOf("| A |") + 3);
+    }
+
+    @Test
+    void caretBelowTableIsDrawnUnderTheGrid() {
+        MarkdownLayoutEngine engine = engine();
+        int below = MARKDOWN.indexOf("\n\nTail") + 1;
+        engine.setCaretOffset(below);
+        BlockBox table = engine.layout().blocks().stream()
+                .filter(block -> block.widget() instanceof TableWidget).findFirst().orElseThrow();
+
+        assertThat(table.source()).isFalse();
+        assertThat(engine.caretRect(below).y).isGreaterThanOrEqualTo(table.y() + table.height());
+    }
+
+    private static MarkdownLayoutEngine engine() {
+        return engine(new DocumentModelImpl(MARKDOWN,
+                new DocumentProperties(StandardCharsets.UTF_8, LineEnding.LF, false, false)));
+    }
+
+    private static MarkdownLayoutEngine engine(DocumentModelImpl document) {
         List<BlockSpan> blocks = new ArrayList<>();
         int table = MARKDOWN.indexOf("| A |");
         int tableEnd = MARKDOWN.indexOf("\n\nTail");

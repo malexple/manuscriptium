@@ -13,6 +13,7 @@ import ru.mcs.editor.model.DocumentModel;
 import ru.mcs.editor.model.Range;
 import ru.mcs.markdown.reference.CitationIndex;
 import ru.mcs.markdown.reference.CrossReferenceIndex;
+import ru.mcs.markdown.widget.TableWidget;
 import ru.mcs.markdown.widget.WidgetRegistry;
 import ru.mcs.markdown.api.AstIndex;
 import ru.mcs.markdown.api.BlockKind;
@@ -43,11 +44,15 @@ public final class MarkdownLayoutEngine {
     private int width = DEFAULT_WIDTH;
     private int caretOffset;
     private LayoutResult current;
+    private List<BlockSpan> lastSpans;
+    private int lastLength;
+    private boolean usingStale;
 
     public void setContext(DocumentModel document, AstIndex ast, EditorStyleService styles) {
         this.document = document;
         this.ast = ast;
         this.styles = styles;
+        lastSpans = null;
         cache.clear();
         current = null;
     }
@@ -91,6 +96,7 @@ public final class MarkdownLayoutEngine {
     public void clear() {
         document = null;
         ast = null;
+        lastSpans = null;
         cache.clear();
         current = null;
     }
@@ -99,7 +105,16 @@ public final class MarkdownLayoutEngine {
         if (document == null || styles == null) {
             return new LayoutResult(0, width, 0, width, 0, List.of());
         }
-        List<BlockSpan> spans = validAst() ? ast.topLevelBlocks() : List.of();
+        usingStale = false;
+        List<BlockSpan> spans;
+        if (validAst()) {
+            spans = ast.topLevelBlocks();
+            lastSpans = spans;
+            lastLength = document.length();
+        } else {
+            spans = staleTableSpans();
+            usingStale = !spans.isEmpty();
+        }
         if (spans.isEmpty()) {
             spans = List.of(new BlockSpan(BlockKind.PARAGRAPH, 0, document.length(), 1));
         }
@@ -174,6 +189,11 @@ public final class MarkdownLayoutEngine {
                 if (inWidget != null) {
                     return inWidget;
                 }
+            }
+            if (block.widget() != null && block.span().kind() == BlockKind.TABLE
+                    && offset > block.widget().sourceEnd()) {
+                // Каретка на строке под таблицей: рисуется сразу под сеткой.
+                return new Rectangle(block.contentX(), block.y() + block.height() + 2, 1, 20);
             }
             return new Rectangle(block.contentX(), block.y(), 1, 20);
         }
@@ -328,6 +348,9 @@ public final class MarkdownLayoutEngine {
             int referenceEnd = widgetReferenceEnd(raw, spans, index, contentEnd);
             BlockWidget widget = !source && widgets != null ? widgets.create(raw, span, contentEnd, referenceEnd,
                     innerWidth, dark, style, base.font(), baseDirectory, noteFile, references) : null;
+            if (widget instanceof TableWidget tableWidget) {
+                tableWidget.setStyles(tableStyles());
+            }
             List<LineBox> lines;
             int linesHeight;
             if (widget != null) {
@@ -504,7 +527,7 @@ public final class MarkdownLayoutEngine {
     }
 
     private boolean tableCaretActive(List<BlockSpan> spans, int activeStart) {
-        if (!validAst() || widgets == null) {
+        if (!(validAst() || usingStale) || widgets == null) {
             return false;
         }
         for (BlockSpan span : spans) {
@@ -515,17 +538,73 @@ public final class MarkdownLayoutEngine {
         return false;
     }
 
-    /** Каретка внутри строк таблицы; позиция на пустой строке после неё остаётся source-режимом блока. */
+    /** Активная таблица (каретка в ней или на строке под ней) всегда остаётся сеткой, а не исходником. */
     private boolean caretInTable(BlockSpan span) {
-        if (span.kind() != BlockKind.TABLE || caretOffset < span.start() || caretOffset > span.end()) {
-            return false;
+        return span.kind() == BlockKind.TABLE;
+    }
+
+    /**
+     * Пока парсер отстаёт от правки внутри таблицы, прежние блоки сдвигаются на длину правки:
+     * таблица не мигает исходным Markdown между нажатием клавиши и новым AST.
+     */
+    private List<BlockSpan> staleTableSpans() {
+        if (lastSpans == null || document == null) {
+            return List.of();
         }
-        return caretOffset < span.end() || span.end() == span.start()
-                || document.text().charAt(span.end() - 1) != '\n';
+        int delta = document.length() - lastLength;
+        int edited = -1;
+        for (int index = 0; index < lastSpans.size(); index++) {
+            BlockSpan span = lastSpans.get(index);
+            if (span.kind() == BlockKind.TABLE && caretOffset >= span.start()
+                    && caretOffset <= span.end() + Math.max(delta, 0)) {
+                edited = index;
+                break;
+            }
+        }
+        if (edited < 0) {
+            return List.of();
+        }
+        List<BlockSpan> result = new ArrayList<>(lastSpans.size());
+        for (int index = 0; index < lastSpans.size(); index++) {
+            BlockSpan span = lastSpans.get(index);
+            if (index < edited) {
+                result.add(span);
+                continue;
+            }
+            int start = index == edited ? span.start() : span.start() + delta;
+            int end = span.end() + delta;
+            if (start < 0 || end < start || end > document.length()) {
+                return List.of();
+            }
+            result.add(new BlockSpan(span.kind(), start, end, span.depth(), span.attributes()));
+        }
+        return result;
+    }
+
+    /** Цвета таблицы берутся из CSS темы: th, tr:nth-child(odd/even), td. */
+    private TableWidget.Styles tableStyles() {
+        StyleElement write = WRITE_ANCESTORS.get(0);
+        List<StyleElement> table = List.of(write, StyleElement.of("table"));
+        List<StyleElement> row = List.of(write, StyleElement.of("table"), StyleElement.of("tr"));
+        ComputedStyle header = styles.resolve(BlockKind.TABLE_CELL, List.of(),
+                new ElementState("th", "", false, 1, row));
+        ComputedStyle odd = styles.resolve(BlockKind.TABLE_ROW, List.of(),
+                new ElementState("tr", "", false, 1, table));
+        ComputedStyle even = styles.resolve(BlockKind.TABLE_ROW, List.of(),
+                new ElementState("tr", "", false, 2, table));
+        ComputedStyle cell = styles.resolve(BlockKind.TABLE_CELL, List.of(),
+                new ElementState("td", "", false, 1, row));
+        CssBorder border = cell.borders().bottom();
+        return new TableWidget.Styles(visibleColor(header.backgroundColor()), visibleColor(odd.backgroundColor()),
+                visibleColor(even.backgroundColor()), border.visible() ? border.color() : null);
+    }
+
+    private static Color visibleColor(Color color) {
+        return color == null || color.getAlpha() == 0 ? null : color;
     }
 
     private int activeBlockStart(List<BlockSpan> spans) {
-        if (!validAst()) {
+        if (!validAst() && !usingStale) {
             return spans.getFirst().start();
         }
         for (BlockSpan span : spans) {

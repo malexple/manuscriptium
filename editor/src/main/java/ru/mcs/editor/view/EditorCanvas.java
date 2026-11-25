@@ -227,6 +227,16 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         return false;
     }
 
+    /** Тройной клик: выделить текст текущей ячейки таблицы вместо строки исходника. */
+    public boolean selectTableCell() {
+        return false;
+    }
+
+    /** Подготовка вставляемого текста к месту каретки (например, экранирование {@code |} в ячейке таблицы). */
+    public String prepareInsertedText(String text) {
+        return text;
+    }
+
     public boolean addTableRow() {
         return false;
     }

@@ -46,7 +46,9 @@ public final class MouseController extends MouseAdapter {
         }
         int offset = canvas.hitTest(event.getPoint());
         if (event.getClickCount() >= 3) {
-            input.selectLine(offset);
+            if (!canvas.selectTableCell()) {
+                input.selectLine(offset);
+            }
             dragging = false;
         } else if (event.getClickCount() == 2) {
             input.selectWord(offset);

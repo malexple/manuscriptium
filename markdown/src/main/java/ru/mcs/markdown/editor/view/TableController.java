@@ -115,6 +115,13 @@ final class TableController {
         }
         int caret = canvas.caretOffset();
         TableGrid.Cell cell = grid.cellAt(caret);
+        int escaped = escapedStep(canvas, cell, caret, direction);
+        if (escaped >= 0) {
+            canvas.setCaretState(escaped, escaped);
+            canvas.ensureCaretVisible();
+            canvas.repaint();
+            return true;
+        }
         if (direction < 0 ? caret > cell.start() : caret < cell.end()) {
             return false;
         }
@@ -136,6 +143,18 @@ final class TableController {
         }
         int caret = canvas.caretOffset();
         TableGrid.Cell cell = grid.cellAt(caret);
+        CharSequence text = canvas.document().text();
+        if (direction < 0 && caret - 2 >= cell.start() && text.charAt(caret - 1) == '|'
+                && text.charAt(caret - 2) == '\\') {
+            canvas.document().apply(Replace.of(caret - 2, caret, ""));
+            canvas.setCaretState(caret - 2, caret - 2);
+            return true;
+        }
+        if (direction > 0 && caret + 2 <= cell.end() && text.charAt(caret) == '\\'
+                && text.charAt(caret + 1) == '|') {
+            canvas.document().apply(Replace.of(caret, caret + 2, ""));
+            return true;
+        }
         return direction < 0 ? caret <= cell.start() : caret >= cell.end();
     }
 
@@ -154,17 +173,82 @@ final class TableController {
             canvas.repaint();
             return true;
         }
-        TableModel changed = location.model().addRow(cell.row());
-        String replacement = changed.source();
-        canvas.document().apply(Replace.of(location.start(), location.end(), replacement));
-        TableGrid updated = TableGrid.parse(replacement, location.start());
-        int offset = location.start();
-        if (updated != null) {
-            offset = updated.cell(Math.min(updated.rowCount() - 1, cell.row() + 1),
-                    Math.min(updated.columnCount() - 1, cell.column())).start();
+        return exit(canvas, location.end());
+    }
+
+    /** Каретка уходит под таблицу на новый абзац; недостающие пустые строки-разделители добавляются. */
+    private static boolean exit(MarkdownCanvas canvas, int end) {
+        CharSequence text = canvas.document().text();
+        int newlines = 0;
+        while (end + newlines < text.length() && text.charAt(end + newlines) == '\n') {
+            newlines++;
         }
-        canvas.setCaretState(offset, offset);
+        boolean atEnd = end + newlines >= text.length();
+        if (newlines < 2) {
+            canvas.document().apply(Replace.of(end + newlines, end + newlines, "\n".repeat(2 - newlines)));
+        } else if (!atEnd) {
+            canvas.document().apply(Replace.of(end + 2, end + 2, "\n\n"));
+        }
+        canvas.setCaretState(end + 2, end + 2);
+        canvas.ensureCaretVisible();
+        canvas.repaint();
         return true;
+    }
+
+    /** Тройной клик: выделяется текст ячейки, а не строка исходника с разделителями. */
+    static boolean selectCell(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        if (location == null || canvas.caretOffset() > location.end()) {
+            return false;
+        }
+        TableGrid grid = TableGrid.parse(location.source(), location.start());
+        if (grid == null) {
+            return false;
+        }
+        TableGrid.Cell cell = grid.cellAt(canvas.caretOffset());
+        canvas.setCaretState(cell.end(), cell.start());
+        canvas.repaint();
+        return true;
+    }
+
+    /** В ячейке {@code |} вводится как обычный символ (в Markdown {@code \|}), переводы строк становятся пробелами. */
+    static String prepareText(MarkdownCanvas canvas, String text) {
+        Location location = location(canvas);
+        if (location == null || canvas.caretOffset() > location.end()) {
+            return text;
+        }
+        CharSequence document = canvas.document().text();
+        int caret = canvas.caretOffset();
+        boolean escaped = caret > 0 && document.charAt(caret - 1) == '\\';
+        StringBuilder result = new StringBuilder(text.length() + 2);
+        for (int index = 0; index < text.length(); index++) {
+            char character = text.charAt(index);
+            if (character == '\n' || character == '\r') {
+                result.append(' ');
+                escaped = false;
+            } else if (character == '|' && !escaped) {
+                result.append("\\|");
+                escaped = false;
+            } else {
+                result.append(character);
+                escaped = character == '\\' && !escaped;
+            }
+        }
+        return result.toString();
+    }
+
+    /** {@code \|} в исходнике — один видимый символ: стрелки перешагивают обе позиции сразу. */
+    private static int escapedStep(MarkdownCanvas canvas, TableGrid.Cell cell, int caret, int direction) {
+        CharSequence text = canvas.document().text();
+        if (direction < 0 && caret - 2 >= cell.start() && text.charAt(caret - 1) == '|'
+                && text.charAt(caret - 2) == '\\') {
+            return caret - 2;
+        }
+        if (direction > 0 && caret + 2 <= cell.end() && text.charAt(caret) == '\\'
+                && text.charAt(caret + 1) == '|') {
+            return caret + 2;
+        }
+        return -1;
     }
 
     private static TableGrid grid(MarkdownCanvas canvas) {

@@ -340,6 +340,16 @@ public final class MarkdownCanvas extends EditorCanvas {
     }
 
     @Override
+    public boolean selectTableCell() {
+        return TableController.selectCell(this);
+    }
+
+    @Override
+    public String prepareInsertedText(String text) {
+        return TableController.prepareText(this, text);
+    }
+
+    @Override
     public boolean addTableRow() {
         TableController.Location location = TableController.location(this);
         return location != null && TableController.edit(this, table -> table.addRow(location.row()));

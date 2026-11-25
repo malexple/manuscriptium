@@ -27,7 +27,7 @@ public final class InputController {
         if (document() == null || text == null || text.isEmpty()) {
             return;
         }
-        String normalized = normalizeLineEndings(text);
+        String normalized = canvas.prepareInsertedText(normalizeLineEndings(text));
         if (autoPairEnabled && normalized.length() == 1 && insertAutoPaired(normalized.charAt(0))) {
             return;
         }

@@ -16,6 +16,7 @@ public final class TableWidget extends AbstractBlockWidget {
     private final TableGrid grid;
     private final java.util.List<TableModel.Alignment> alignments;
     private final Font boldFont;
+    private Styles styles;
     private final ComputedStyle style;
     private final Font font;
     private final String caption;
@@ -50,7 +51,8 @@ public final class TableWidget extends AbstractBlockWidget {
                     bounds.y + 8 + WidgetText.baseline(font));
             return;
         }
-        Color border = new Color(style.color().getRed(), style.color().getGreen(), style.color().getBlue(), 70);
+        Color border = styles != null && styles.border() != null ? styles.border()
+                : new Color(style.color().getRed(), style.color().getGreen(), style.color().getBlue(), 70);
         int columns = table.columnCount();
         int[] edges = new int[columns + 1];
         edges[0] = bounds.x;
@@ -60,9 +62,9 @@ public final class TableWidget extends AbstractBlockWidget {
         }
         for (int row = 0; row < table.rowCount(); row++) {
             int y = bounds.y + row * ROW_HEIGHT;
-            if (row == 0) {
-                sink.fillRect(bounds.x, y, bounds.width, ROW_HEIGHT,
-                        style.backgroundColor() == null ? new Color(0xf6f8fa) : style.backgroundColor());
+            Color background = rowBackground(row);
+            if (background != null) {
+                sink.fillRect(bounds.x, y, bounds.width, ROW_HEIGHT, background);
             }
             sink.drawLine(bounds.x, y, bounds.x + bounds.width, y, 1, border);
             for (int column = 0; column < columns; column++) {
@@ -92,6 +94,24 @@ public final class TableWidget extends AbstractBlockWidget {
 
     public TableModel table() {
         return table;
+    }
+
+    /** Цвета из CSS темы: заголовок (th), нечётные/чётные строки тела (tr:nth-child), граница (td); null — по умолчанию. */
+    public record Styles(Color header, Color odd, Color even, Color border) {
+    }
+
+    public void setStyles(Styles styles) {
+        this.styles = styles;
+    }
+
+    private Color rowBackground(int row) {
+        if (styles == null) {
+            return row == 0 ? (style.backgroundColor() == null ? new Color(0xf6f8fa) : style.backgroundColor()) : null;
+        }
+        if (row == 0) {
+            return styles.header();
+        }
+        return row % 2 == 0 ? styles.even() : styles.odd();
     }
 
     @Override
