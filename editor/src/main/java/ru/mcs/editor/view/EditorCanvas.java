@@ -237,6 +237,11 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         return false;
     }
 
+    /** Вставка структурированного текста из буфера (например, таблицы из Excel); false — вставить как обычный текст. */
+    public boolean pasteStructured(String text) {
+        return false;
+    }
+
     /** Перетаскивание после {@link #pressOverlay(Point)} (например, ползунок прокрутки таблицы). */
     public boolean dragOverlay(Point point) {
         return false;

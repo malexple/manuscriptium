@@ -1,7 +1,7 @@
 package ru.mcs.markdown.editor;
 
 /** Где и с какими отступами вставить блок-таблицу: вокруг неё всегда ровно по одной пустой строке. */
-record TableInsertion(String replacement, int caretOffset) {
+public record TableInsertion(String replacement, int caretOffset) {
 
     /**
      * @param start начало заменяемого диапазона (выделение или каретка)
@@ -9,7 +9,7 @@ record TableInsertion(String replacement, int caretOffset) {
      * @param table исходный текст таблицы без отступов
      * @return текст замены и смещение каретки от {@code start}: первая ячейка заголовка
      */
-    static TableInsertion plan(String text, int start, int end, String table) {
+    public static TableInsertion plan(String text, int start, int end, String table) {
         int before = start == 0 ? 2 : Math.min(2, trailingNewlines(text, start));
         int after = Math.min(2, leadingNewlines(text, end));
         String prefix = "\n".repeat(2 - before);

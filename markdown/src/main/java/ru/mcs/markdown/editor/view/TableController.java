@@ -223,7 +223,7 @@ final class TableController {
         StringBuilder result = new StringBuilder(text.length() + 2);
         for (int index = 0; index < text.length(); index++) {
             char character = text.charAt(index);
-            if (character == '\n' || character == '\r') {
+            if (character == '\n' || character == '\r' || character == '\t') {
                 result.append(' ');
                 escaped = false;
             } else if (character == '|' && !escaped) {

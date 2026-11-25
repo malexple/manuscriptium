@@ -657,6 +657,27 @@ public final class MarkdownCanvas extends EditorCanvas {
         return false;
     }
 
+    /** Текст с табуляциями (Excel, Google Sheets, LibreOffice) вставляется как Markdown-таблица. */
+    @Override
+    public boolean pasteStructured(String text) {
+        if (!markdownMode() || document() == null || TableController.location(this) != null) {
+            return false;
+        }
+        ru.mcs.markdown.widget.TableModel table = ru.mcs.markdown.widget.TabularText.toTable(text);
+        if (table == null) {
+            return false;
+        }
+        var selection = selectionRange();
+        ru.mcs.markdown.editor.TableInsertion insertion = ru.mcs.markdown.editor.TableInsertion.plan(
+                document().text().toString(), selection.start(), selection.end(), table.source());
+        document().apply(Replace.of(selection.start(), selection.end(), insertion.replacement()));
+        int caret = selection.start() + insertion.replacement().length();
+        setCaretState(caret, caret);
+        ensureCaretVisible();
+        repaint();
+        return true;
+    }
+
     @Override
     public boolean dragOverlay(Point point) {
         if (scrollDrag == null) {

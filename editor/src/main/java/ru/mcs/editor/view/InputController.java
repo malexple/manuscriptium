@@ -260,6 +260,10 @@ public final class InputController {
     }
 
     public void paste() {
+        var structured = clipboard.paste();
+        if (structured.isPresent() && canvas.pasteStructured(structured.get())) {
+            return;
+        }
         var image = clipboard.image();
         if (image.isPresent()) {
             canvas.importImages(java.util.List.of(), image.get(), canvas.caretOffset());

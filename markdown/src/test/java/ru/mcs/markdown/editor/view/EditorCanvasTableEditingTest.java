@@ -160,6 +160,33 @@ class EditorCanvasTableEditingTest {
         });
     }
 
+    @Test
+    void pastedTabularTextBecomesTableOnlyOutsideTables() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            MarkdownCanvas canvas = new MarkdownCanvas();
+            try {
+                DocumentModelImpl document = new DocumentModelImpl("Intro",
+                        new DocumentProperties(StandardCharsets.UTF_8, LineEnding.LF, false, false));
+                canvas.setDocument(document);
+                canvas.setCaretSelection(5, 5);
+
+                assertThat(canvas.pasteStructured("plain text")).isFalse();
+                assertThat(canvas.pasteStructured("a\tb\n1\t2")).isTrue();
+                assertThat(document.text().toString())
+                        .isEqualTo("Intro\n\n| a | b |\n| ---: | ---: |\n| 1 | 2 |\n\n");
+                assertThat(canvas.caretOffset()).isEqualTo(document.length());
+            } finally {
+                canvas.dispose();
+            }
+        });
+        withCanvas((canvas, document) -> {
+            caret(canvas, MARKDOWN.indexOf("one") + 1);
+
+            assertThat(canvas.pasteStructured("a\tb\n1\t2")).isFalse();
+            assertThat(canvas.prepareInsertedText("x\ty")).isEqualTo("x y");
+        });
+    }
+
     private static void refresh(MarkdownCanvas canvas, DocumentModelImpl document) {
         List<BlockSpan> spans = new ArrayList<>();
         spans.add(new BlockSpan(BlockKind.DOCUMENT, 0, document.length(), 0));

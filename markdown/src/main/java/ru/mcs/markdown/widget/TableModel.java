@@ -71,6 +71,19 @@ public final class TableModel {
         return new TableModel(list, alignments);
     }
 
+    /** Таблица из готовых строк (первая — заголовок); {@code |} в ячейках экранируется. */
+    public static TableModel fromRows(List<List<String>> source, List<Alignment> columnAlignments) {
+        List<Row> list = new ArrayList<>();
+        for (List<String> line : source) {
+            List<Cell> cells = new ArrayList<>();
+            for (String text : line) {
+                cells.add(new Cell(text.replace("|", "\\|"), 0));
+            }
+            list.add(new Row(cells));
+        }
+        return new TableModel(list, new ArrayList<>(columnAlignments));
+    }
+
     public int rowCount() {
         return rows.size();
     }
