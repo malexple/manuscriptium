@@ -16,6 +16,7 @@ import ru.mcs.markdown.api.BlockKind;
 import ru.mcs.markdown.api.BlockSpan;
 import ru.mcs.markdown.api.MarkdownParser.ParseMetrics;
 import ru.mcs.markdown.api.MarkdownParser.ParseResult;
+import ru.mcs.markdown.widget.TableModel;
 
 class EditorCanvasTableEditingTest {
 
@@ -107,6 +108,55 @@ class EditorCanvasTableEditingTest {
             assertThat(canvas.tableBoundary(-1)).isTrue();
             assertThat(document.text().toString()).isEqualTo(MARKDOWN);
             assertThat(canvas.caretOffset()).isEqualTo(end);
+        });
+    }
+
+    @Test
+    void toolbarOperationsEditOnlyTheTable() throws Exception {
+        withCanvas((canvas, document) -> {
+            caret(canvas, MARKDOWN.indexOf("one") + 1);
+            assertThat(TableController.addRowBefore(canvas)).isTrue();
+            String[] lines = document.text().toString().split("\n");
+
+            assertThat(lines).hasSize(4);
+            assertThat(lines[2]).doesNotContain("one");
+            assertThat(lines[3]).contains("one");
+        });
+        withCanvas((canvas, document) -> {
+            caret(canvas, MARKDOWN.indexOf("one") + 1);
+            assertThat(TableController.addColumnBefore(canvas)).isTrue();
+            TableModel model = TableModel.parse(document.text().toString());
+
+            assertThat(model.columnCount()).isEqualTo(3);
+            assertThat(model.cell(1, 1)).isEqualTo("one");
+        });
+        withCanvas((canvas, document) -> {
+            caret(canvas, MARKDOWN.indexOf("one") + 1);
+            assertThat(TableController.resize(canvas, 3, 4)).isTrue();
+            TableModel model = TableModel.parse(document.text().toString());
+
+            assertThat(model.columnCount()).isEqualTo(3);
+            assertThat(model.rowCount()).isEqualTo(4);
+        });
+    }
+
+    @Test
+    void formatAndDeleteTable() throws Exception {
+        withCanvas((canvas, document) -> {
+            caret(canvas, MARKDOWN.indexOf("one") + 1);
+            assertThat(TableController.format(canvas)).isTrue();
+            String[] lines = document.text().toString().split("\n");
+
+            assertThat(lines).hasSize(3);
+            assertThat(lines[1]).hasSameSizeAs(lines[0]);
+            assertThat(lines[2]).hasSameSizeAs(lines[0]);
+        });
+        withCanvas((canvas, document) -> {
+            caret(canvas, MARKDOWN.indexOf("two"));
+            assertThat(TableController.deleteTable(canvas)).isTrue();
+
+            assertThat(document.text().toString()).isEmpty();
+            assertThat(canvas.caretOffset()).isZero();
         });
     }
 

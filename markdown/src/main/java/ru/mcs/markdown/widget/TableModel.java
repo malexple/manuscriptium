@@ -148,6 +148,70 @@ public final class TableModel {
         return new TableModel(rows(), columns);
     }
 
+    /** Новый размер: содержимое и выравнивание сохраняются, недостающие ячейки пустые, лишние отбрасываются. */
+    public TableModel resize(int columns, int rows) {
+        int columnCount = Math.max(1, Math.min(MAX_COLUMNS, columns));
+        int rowCount = Math.max(1, Math.min(MAX_ROWS, rows));
+        List<Row> copy = new ArrayList<>();
+        for (int row = 0; row < rowCount; row++) {
+            List<Cell> cells = new ArrayList<>();
+            for (int column = 0; column < columnCount; column++) {
+                boolean exists = row < this.rows.size() && column < alignments.size();
+                cells.add(exists ? this.rows.get(row).cells.get(column) : new Cell("", 0));
+            }
+            copy.add(new Row(cells));
+        }
+        List<Alignment> columnsAlignment = new ArrayList<>();
+        for (int column = 0; column < columnCount; column++) {
+            columnsAlignment.add(column < alignments.size() ? alignments.get(column) : Alignment.LEFT);
+        }
+        return new TableModel(copy, columnsAlignment);
+    }
+
+    /** Исходник с выровненными колонками: ширина колонки равна самой длинной ячейке. */
+    public String prettySource() {
+        int columns = columnCount();
+        int[] widths = new int[columns];
+        for (int column = 0; column < columns; column++) {
+            widths[column] = alignments.get(column) == Alignment.CENTER ? 5 : 4;
+            for (Row row : rows) {
+                widths[column] = Math.max(widths[column], row.cells.get(column).text().length());
+            }
+        }
+        StringBuilder result = new StringBuilder();
+        appendPadded(result, rows.getFirst().cells, widths, true);
+        result.append('\n');
+        List<Cell> separator = new ArrayList<>();
+        for (int column = 0; column < columns; column++) {
+            int width = widths[column];
+            separator.add(new Cell(switch (alignments.get(column)) {
+                case LEFT -> ":" + "-".repeat(width - 1);
+                case CENTER -> ":" + "-".repeat(width - 2) + ":";
+                case RIGHT -> "-".repeat(width - 1) + ":";
+            }, 0));
+        }
+        appendPadded(result, separator, widths, false);
+        for (int row = 1; row < rows.size(); row++) {
+            result.append('\n');
+            appendPadded(result, rows.get(row).cells, widths, true);
+        }
+        return result.toString();
+    }
+
+    private void appendPadded(StringBuilder result, List<Cell> cells, int[] widths, boolean pad) {
+        result.append('|');
+        for (int column = 0; column < cells.size(); column++) {
+            String text = cells.get(column).text();
+            int gap = pad ? Math.max(0, widths[column] - text.length()) : 0;
+            String aligned = switch (alignments.get(column)) {
+                case LEFT -> text + " ".repeat(gap);
+                case RIGHT -> " ".repeat(gap) + text;
+                case CENTER -> " ".repeat(gap / 2) + text + " ".repeat(gap - gap / 2);
+            };
+            result.append(' ').append(aligned).append(" |");
+        }
+    }
+
     public String source() {
         StringBuilder result = new StringBuilder();
         appendRow(result, rows.getFirst().cells);

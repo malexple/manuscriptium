@@ -251,6 +251,86 @@ final class TableController {
         return -1;
     }
 
+    /** Позиция каретки в таблице для панели: строка, колонка, размеры и выравнивание текущей колонки. */
+    record State(int row, int column, int rows, int columns, TableModel.Alignment alignment) {
+    }
+
+    static State state(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        if (location == null) {
+            return null;
+        }
+        TableModel model = location.model();
+        return new State(location.row(), location.column(), model.rowCount(), model.columnCount(),
+                model.alignment(Math.min(location.column(), model.columnCount() - 1)));
+    }
+
+    static boolean addRowBefore(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        return location != null && location.row() > 0
+                && edit(canvas, table -> table.addRow(location.row() - 1));
+    }
+
+    static boolean addColumnBefore(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        return location != null && edit(canvas, table -> table.addColumn(location.column() - 1));
+    }
+
+    static boolean resize(MarkdownCanvas canvas, int columns, int rows) {
+        return location(canvas) != null && edit(canvas, table -> table.resize(columns, rows));
+    }
+
+    /** «Приукрасить исходный код»: колонки таблицы выравниваются по ширине. */
+    static boolean format(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        if (location == null) {
+            return false;
+        }
+        String replacement = location.model().prettySource();
+        canvas.document().apply(Replace.of(location.start(), location.end(), replacement));
+        TableGrid updated = TableGrid.parse(replacement, location.start());
+        int offset = location.start();
+        if (updated != null) {
+            offset = updated.cell(Math.min(updated.rowCount() - 1, location.row()),
+                    Math.min(updated.columnCount() - 1, location.column())).start();
+        }
+        canvas.setCaretState(offset, offset);
+        return true;
+    }
+
+    /** Копирует Markdown-исходник таблицы в системный буфер обмена. */
+    static boolean copy(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        if (location == null) {
+            return false;
+        }
+        try {
+            java.awt.Toolkit.getDefaultToolkit().getSystemClipboard()
+                    .setContents(new java.awt.datatransfer.StringSelection(location.source()), null);
+            return true;
+        } catch (java.awt.HeadlessException | IllegalStateException e) {
+            return false;
+        }
+    }
+
+    /** Удаляет таблицу вместе с одной разделяющей пустой строкой после неё. */
+    static boolean deleteTable(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        if (location == null) {
+            return false;
+        }
+        CharSequence text = canvas.document().text();
+        int stop = location.end();
+        int newlines = 0;
+        while (stop < text.length() && text.charAt(stop) == '\n' && newlines < 2) {
+            stop++;
+            newlines++;
+        }
+        canvas.document().apply(Replace.of(location.start(), stop, ""));
+        canvas.setCaretState(location.start(), location.start());
+        return true;
+    }
+
     private static TableGrid grid(MarkdownCanvas canvas) {
         Location location = location(canvas);
         if (location == null || canvas.caretOffset() > location.end()

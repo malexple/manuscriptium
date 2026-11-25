@@ -14,15 +14,19 @@ import javax.swing.SpinnerNumberModel;
 import ru.mcs.markdown.widget.TableModel;
 
 /** Диалог размера таблицы: количество колонок и строк (строка заголовка входит в число строк), ОК и Отмена. */
-final class TableDialog {
+public final class TableDialog {
 
-    record Size(int columns, int rows) {
+    public record Size(int columns, int rows) {
     }
 
     private TableDialog() {
     }
 
-    static Optional<Size> show(Component owner, int columns, int rows) {
+    public static Optional<Size> show(Component owner, int columns, int rows) {
+        return show(owner, columns, rows, "table.dialog.title");
+    }
+
+    public static Optional<Size> show(Component owner, int columns, int rows, String titleKey) {
         JSpinner columnsSpinner = new JSpinner(new SpinnerNumberModel(
                 clamp(columns, TableModel.MAX_COLUMNS), 1, TableModel.MAX_COLUMNS, 1));
         JSpinner rowsSpinner = new JSpinner(new SpinnerNumberModel(
@@ -47,7 +51,7 @@ final class TableDialog {
 
         String ok = MarkdownMessages.get("table.dialog.ok");
         String cancel = MarkdownMessages.get("table.dialog.cancel");
-        int choice = JOptionPane.showOptionDialog(owner, form, MarkdownMessages.get("table.dialog.title"),
+        int choice = JOptionPane.showOptionDialog(owner, form, MarkdownMessages.get(titleKey),
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, new Object[]{ok, cancel}, ok);
         if (choice != 0) {
             return Optional.empty();

@@ -28,6 +28,7 @@ import ru.mcs.markdown.layout.MarkdownLayoutEngine;
 import ru.mcs.markdown.reference.CitationIndex;
 import ru.mcs.markdown.render.MarkdownRenderer;
 import ru.mcs.markdown.widget.ImageWidget;
+import ru.mcs.markdown.widget.TableWidget;
 import ru.mcs.markdown.widget.WidgetRegistry;
 import ru.mcs.markdown.api.AstIndex;
 import ru.mcs.markdown.api.BlockKind;
@@ -52,6 +53,7 @@ public final class MarkdownCanvas extends EditorCanvas {
     private JPopupMenu citationPopup;
     private EditorContextMenuBuilder contextMenuBuilder;
     private Supplier<EditorBlockContext> editorContext;
+    private TableToolbar tableToolbar;
 
     public MarkdownCanvas() {
         super();
@@ -579,11 +581,36 @@ public final class MarkdownCanvas extends EditorCanvas {
             }
             desired.add(component);
         }
+        TableToolbar toolbar = activeTableToolbar(padding);
+        if (toolbar != null) {
+            desired.add(toolbar);
+        }
         for (java.awt.Component child : getComponents()) {
             if (!desired.contains(child)) {
                 remove(child);
             }
         }
+    }
+
+    /** Панель управления таблицей над сеткой: показывается, пока каретка в таблице. */
+    private TableToolbar activeTableToolbar(int padding) {
+        int caret = caretOffset();
+        for (var block : markdownLayout.layout().blocks()) {
+            if (block.widget() instanceof TableWidget table
+                    && caret >= block.span().start() && caret <= table.sourceEnd()) {
+                if (tableToolbar == null) {
+                    tableToolbar = new TableToolbar(this);
+                }
+                tableToolbar.refresh();
+                tableToolbar.setBounds(block.contentX(), Math.max(0, block.y() + padding - TableToolbar.HEIGHT),
+                        block.contentWidth(), TableToolbar.HEIGHT);
+                if (tableToolbar.getParent() != this) {
+                    add(tableToolbar);
+                }
+                return tableToolbar;
+            }
+        }
+        return null;
     }
 
     @Override
