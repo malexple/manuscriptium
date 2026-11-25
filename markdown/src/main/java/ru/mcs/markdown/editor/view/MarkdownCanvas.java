@@ -325,6 +325,21 @@ public final class MarkdownCanvas extends EditorCanvas {
     }
 
     @Override
+    public boolean tableStep(int direction) {
+        return TableController.step(this, direction);
+    }
+
+    @Override
+    public boolean tableBoundary(int direction) {
+        return TableController.boundary(this, direction);
+    }
+
+    @Override
+    public boolean tableEnter() {
+        return TableController.enter(this);
+    }
+
+    @Override
     public boolean addTableRow() {
         TableController.Location location = TableController.location(this);
         return location != null && TableController.edit(this, table -> table.addRow(location.row()));

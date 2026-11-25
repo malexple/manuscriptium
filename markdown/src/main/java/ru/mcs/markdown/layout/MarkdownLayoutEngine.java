@@ -104,13 +104,14 @@ public final class MarkdownLayoutEngine {
             spans = List.of(new BlockSpan(BlockKind.PARAGRAPH, 0, document.length(), 1));
         }
         int activeStart = activeBlockStart(spans);
-        LayoutResult cached = cache.get(document.version(), width, activeStart);
+        int cacheKey = tableCaretActive(spans, activeStart) ? -activeStart - 2 : activeStart;
+        LayoutResult cached = cache.get(document.version(), width, cacheKey);
         if (cached != null) {
             current = cached;
             return cached;
         }
         current = rebuild(spans, activeStart);
-        cache.put(current, activeStart);
+        cache.put(current, cacheKey);
         return current;
     }
 
@@ -136,6 +137,13 @@ public final class MarkdownLayoutEngine {
             return 0;
         }
         if (block.lines().isEmpty()) {
+            if (block.widget() != null) {
+                int offset = block.widget().hitOffset(point, block.contentX(), block.contentY(),
+                        block.contentWidth());
+                if (offset >= 0) {
+                    return offset;
+                }
+            }
             return block.span().start();
         }
         LineBox line = lineAtY(block, point.y);
@@ -160,6 +168,13 @@ public final class MarkdownLayoutEngine {
         }
         BlockBox block = blockAtOffset(result, offset);
         if (block.lines().isEmpty()) {
+            if (block.widget() != null) {
+                Rectangle inWidget = block.widget().caretRect(offset, block.contentX(), block.contentY(),
+                        block.contentWidth());
+                if (inWidget != null) {
+                    return inWidget;
+                }
+            }
             return new Rectangle(block.contentX(), block.y(), 1, 20);
         }
         LineBox line = lineAtOffset(block, offset);
@@ -230,6 +245,10 @@ public final class MarkdownLayoutEngine {
     public List<Rectangle> selectionRects(Range selection, Rectangle clip) {
         List<Rectangle> rectangles = new ArrayList<>();
         for (BlockBox block : layout().blocks()) {
+            if (block.lines().isEmpty() && block.widget() != null) {
+                rectangles.addAll(block.widget().selectionRects(selection.start(), selection.end(),
+                        block.contentX(), block.contentY(), block.contentWidth()));
+            }
             for (LineBox line : block.lines()) {
                 if (line.y() > clip.y + clip.height || line.y() + line.height() < clip.y
                         || selection.end() < line.sourceStart() || selection.start() > line.sourceEnd()) {
@@ -273,7 +292,10 @@ public final class MarkdownLayoutEngine {
         List<BlockBox> boxes = new ArrayList<>(spans.size());
         for (int index = 0; index < spans.size(); index++) {
             BlockSpan astSpan = spans.get(index);
-            boolean source = astSpan.start() == activeStart;
+            boolean activeBlock = astSpan.start() == activeStart;
+            // Таблица с кареткой остаётся сеткой: каретка и клики отображаются в ячейки через виджет.
+            boolean tableActive = activeBlock && widgets != null && caretInTable(astSpan);
+            boolean source = activeBlock && !tableActive;
             // Flexmark не создаёт top-level блоки для пустых строк. Во время редактирования
             // эти physical lines принадлежат активному source-блоку, включая строку каретки.
             BlockSpan span = source ? editingSpan(raw, spans, index) : astSpan;
@@ -479,6 +501,27 @@ public final class MarkdownLayoutEngine {
 
     private boolean validAst() {
         return ast != null && document != null && ast.version() == document.version();
+    }
+
+    private boolean tableCaretActive(List<BlockSpan> spans, int activeStart) {
+        if (!validAst() || widgets == null) {
+            return false;
+        }
+        for (BlockSpan span : spans) {
+            if (span.start() == activeStart) {
+                return caretInTable(span);
+            }
+        }
+        return false;
+    }
+
+    /** Каретка внутри строк таблицы; позиция на пустой строке после неё остаётся source-режимом блока. */
+    private boolean caretInTable(BlockSpan span) {
+        if (span.kind() != BlockKind.TABLE || caretOffset < span.start() || caretOffset > span.end()) {
+            return false;
+        }
+        return caretOffset < span.end() || span.end() == span.start()
+                || document.text().charAt(span.end() - 1) != '\n';
     }
 
     private int activeBlockStart(List<BlockSpan> spans) {

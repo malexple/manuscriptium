@@ -34,9 +34,17 @@ public final class KeyBindingResolver {
     }
 
     public void install(EditorCanvas canvas, InputController input) {
-        bindMovement(canvas, KeyEvent.VK_LEFT, () -> input.moveLeft(false, false),
+        bindMovement(canvas, KeyEvent.VK_LEFT, () -> {
+            if (!canvas.tableStep(-1)) {
+                input.moveLeft(false, false);
+            }
+        },
                 () -> input.moveLeft(true, false), () -> input.moveLeft(false, true), () -> input.moveLeft(true, true));
-        bindMovement(canvas, KeyEvent.VK_RIGHT, () -> input.moveRight(false, false),
+        bindMovement(canvas, KeyEvent.VK_RIGHT, () -> {
+            if (!canvas.tableStep(1)) {
+                input.moveRight(false, false);
+            }
+        },
                 () -> input.moveRight(true, false), () -> input.moveRight(false, true), () -> input.moveRight(true, true));
         bind(canvas, key(KeyEvent.VK_UP, 0), "up", () -> input.moveVertical(-1, false));
         bind(canvas, key(KeyEvent.VK_UP, InputEvent.SHIFT_DOWN_MASK), "selectUp", () -> input.moveVertical(-1, true));
@@ -56,11 +64,23 @@ public final class KeyBindingResolver {
         bind(canvas, key(KeyEvent.VK_PAGE_UP, InputEvent.SHIFT_DOWN_MASK), "selectPageUp", () -> input.movePage(-1, true));
         bind(canvas, key(KeyEvent.VK_PAGE_DOWN, 0), "pageDown", () -> input.movePage(1, false));
         bind(canvas, key(KeyEvent.VK_PAGE_DOWN, InputEvent.SHIFT_DOWN_MASK), "selectPageDown", () -> input.movePage(1, true));
-        bind(canvas, key(KeyEvent.VK_BACK_SPACE, 0), "backspace", input::deleteBackward);
+        bind(canvas, key(KeyEvent.VK_BACK_SPACE, 0), "backspace", () -> {
+            if (!canvas.tableBoundary(-1)) {
+                input.deleteBackward();
+            }
+        });
         bind(canvas, key(KeyEvent.VK_BACK_SPACE, wordMask), "deletePreviousWord", input::deletePreviousWord);
-        bind(canvas, key(KeyEvent.VK_DELETE, 0), "delete", input::deleteForward);
+        bind(canvas, key(KeyEvent.VK_DELETE, 0), "delete", () -> {
+            if (!canvas.tableBoundary(1)) {
+                input.deleteForward();
+            }
+        });
         bind(canvas, key(KeyEvent.VK_DELETE, wordMask), "deleteNextWord", input::deleteNextWord);
-        bind(canvas, key(KeyEvent.VK_ENTER, 0), "newline", () -> input.insertText("\n"));
+        bind(canvas, key(KeyEvent.VK_ENTER, 0), "newline", () -> {
+            if (!canvas.tableEnter()) {
+                input.insertText("\n");
+            }
+        });
         bind(canvas, key(KeyEvent.VK_TAB, 0), "tab", () -> {
             if (!canvas.navigateTable(1)) {
                 input.insertText("\t");

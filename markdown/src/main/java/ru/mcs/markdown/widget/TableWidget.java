@@ -13,6 +13,9 @@ public final class TableWidget extends AbstractBlockWidget {
     private static final int ROW_HEIGHT = 30;
 
     private final TableModel table;
+    private final TableGrid grid;
+    private final java.util.List<TableModel.Alignment> alignments;
+    private final Font boldFont;
     private final ComputedStyle style;
     private final Font font;
     private final String caption;
@@ -20,8 +23,17 @@ public final class TableWidget extends AbstractBlockWidget {
     TableWidget(int start, int end, String source, ComputedStyle style, Font font, String caption) {
         super(start, end);
         this.table = TableModel.parse(source);
+        this.grid = TableGrid.parse(source, start);
+        java.util.List<TableModel.Alignment> columns = new java.util.ArrayList<>();
+        if (table != null) {
+            for (int column = 0; column < table.columnCount(); column++) {
+                columns.add(table.alignment(column));
+            }
+        }
+        this.alignments = columns;
         this.style = style;
         this.font = font.deriveFont(Math.max(13f, font.getSize2D()));
+        this.boldFont = this.font.deriveFont(Font.BOLD);
         this.caption = caption;
     }
 
@@ -58,7 +70,7 @@ public final class TableWidget extends AbstractBlockWidget {
                 int right = edges[column + 1];
                 sink.drawLine(left, y, left, y + ROW_HEIGHT, 1, border);
                 String value = table.cell(row, column).replace("\\|", "|");
-                int textWidth = WidgetText.width(value, font);
+                int textWidth = WidgetText.width(value, row == 0 ? boldFont : font);
                 int x = switch (table.alignment(column)) {
                     case LEFT -> left + 8;
                     case CENTER -> left + Math.max(8, (right - left - textWidth) / 2);
@@ -80,5 +92,28 @@ public final class TableWidget extends AbstractBlockWidget {
 
     public TableModel table() {
         return table;
+    }
+
+    @Override
+    public java.awt.Rectangle caretRect(int offset, int x, int y, int width) {
+        if (grid == null || offset < sourceStart() || offset > sourceEnd()) {
+            return null;
+        }
+        return grid.caretRect(offset, layout(x, y, width));
+    }
+
+    @Override
+    public int hitOffset(java.awt.Point point, int x, int y, int width) {
+        return grid == null ? -1 : grid.hitOffset(point, layout(x, y, width));
+    }
+
+    @Override
+    public java.util.List<java.awt.Rectangle> selectionRects(int start, int end, int x, int y, int width) {
+        return grid == null ? java.util.List.of() : grid.selectionRects(start, end, layout(x, y, width));
+    }
+
+    private TableGrid.Layout layout(int x, int y, int width) {
+        return new TableGrid.Layout(x, y, width, ROW_HEIGHT,
+                (text, header) -> WidgetText.width(text, header ? boldFont : font), alignments);
     }
 }

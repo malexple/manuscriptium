@@ -3,6 +3,7 @@ package ru.mcs.markdown.editor.view;
 import java.util.function.UnaryOperator;
 import ru.mcs.editor.model.DocumentModel;
 import ru.mcs.editor.model.Replace;
+import ru.mcs.markdown.widget.TableGrid;
 import ru.mcs.markdown.widget.TableModel;
 import ru.mcs.markdown.api.AstIndex;
 import ru.mcs.markdown.api.BlockKind;
@@ -104,6 +105,75 @@ final class TableController {
             }
         }
         return null;
+    }
+
+    /** Левая/правая стрелка на границе ячейки: каретка переходит к краю соседней ячейки, минуя разделитель. */
+    static boolean step(MarkdownCanvas canvas, int direction) {
+        TableGrid grid = grid(canvas);
+        if (grid == null) {
+            return false;
+        }
+        int caret = canvas.caretOffset();
+        TableGrid.Cell cell = grid.cellAt(caret);
+        if (direction < 0 ? caret > cell.start() : caret < cell.end()) {
+            return false;
+        }
+        int target = direction < 0 ? grid.previous(caret) : grid.next(caret);
+        if (target == caret) {
+            return false;
+        }
+        canvas.setCaretState(target, target);
+        canvas.ensureCaretVisible();
+        canvas.repaint();
+        return true;
+    }
+
+    /** Backspace/Delete на границе ячейки поглощаются, чтобы не повредить разметку таблицы. */
+    static boolean boundary(MarkdownCanvas canvas, int direction) {
+        TableGrid grid = grid(canvas);
+        if (grid == null) {
+            return false;
+        }
+        int caret = canvas.caretOffset();
+        TableGrid.Cell cell = grid.cellAt(caret);
+        return direction < 0 ? caret <= cell.start() : caret >= cell.end();
+    }
+
+    /** Enter: та же колонка строкой ниже; в последней строке добавляется новая строка таблицы. */
+    static boolean enter(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        TableGrid grid = grid(canvas);
+        if (location == null || grid == null) {
+            return false;
+        }
+        TableGrid.Cell cell = grid.cellAt(canvas.caretOffset());
+        if (cell.row() + 1 < grid.rowCount()) {
+            int offset = grid.cell(cell.row() + 1, cell.column()).start();
+            canvas.setCaretState(offset, offset);
+            canvas.ensureCaretVisible();
+            canvas.repaint();
+            return true;
+        }
+        TableModel changed = location.model().addRow(cell.row());
+        String replacement = changed.source();
+        canvas.document().apply(Replace.of(location.start(), location.end(), replacement));
+        TableGrid updated = TableGrid.parse(replacement, location.start());
+        int offset = location.start();
+        if (updated != null) {
+            offset = updated.cell(Math.min(updated.rowCount() - 1, cell.row() + 1),
+                    Math.min(updated.columnCount() - 1, cell.column())).start();
+        }
+        canvas.setCaretState(offset, offset);
+        return true;
+    }
+
+    private static TableGrid grid(MarkdownCanvas canvas) {
+        Location location = location(canvas);
+        if (location == null || canvas.caretOffset() > location.end()
+                || canvas.selectionRange().start() != canvas.selectionRange().end()) {
+            return null;
+        }
+        return TableGrid.parse(location.source(), location.start());
     }
 
     private static int cellOffset(Location location, int row, int column) {

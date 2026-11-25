@@ -212,6 +212,21 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         return false;
     }
 
+    /** Стрелка влево/вправо на границе ячейки таблицы: перешагивает разделитель {@code |}. */
+    public boolean tableStep(int direction) {
+        return false;
+    }
+
+    /** Backspace (-1) / Delete (+1) на границе ячейки: разделители таблицы не удаляются. */
+    public boolean tableBoundary(int direction) {
+        return false;
+    }
+
+    /** Enter внутри таблицы: ячейка строкой ниже, в последней строке — новая строка. */
+    public boolean tableEnter() {
+        return false;
+    }
+
     public boolean addTableRow() {
         return false;
     }
