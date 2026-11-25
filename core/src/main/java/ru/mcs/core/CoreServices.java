@@ -89,6 +89,7 @@ final class CoreServices {
                 metadata.settingsPage(GeneralSettingsProvider.ID));
         configurables.register(generalSettings);
         configurables.register(new AppearanceSettingsProvider(themes));
+        ru.mcs.core.settings.EditorSettingsGroups.register(configurables);
         services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
         services.register(ShellThemeService.class, themes);
         services.register(ProjectAccess.class, projectAccess);
