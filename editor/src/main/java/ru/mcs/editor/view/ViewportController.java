@@ -31,6 +31,10 @@ public final class ViewportController {
         if (canvas.document() == null) {
             return;
         }
+        if (canvas.wheelOverlay(event)) {
+            event.consume();
+            return;
+        }
         double amount = event.getPreciseWheelRotation() * event.getScrollAmount()
                 * canvas.textLayout().lineHeight();
         if (event.isShiftDown()) {

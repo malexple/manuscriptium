@@ -75,6 +75,13 @@ public final class WidgetRegistry implements BlockRendererExtensionRegistry {
                 CrossReferenceIndex.EMPTY);
     }
 
+    private final TableScrollState tableScroll = new TableScrollState();
+
+    /** Горизонтальная прокрутка таблиц живёт дольше виджетов, которые пересоздаются при каждой раскладке. */
+    public TableScrollState tableScroll() {
+        return tableScroll;
+    }
+
     public BlockWidget create(String raw, BlockSpan span, int end, int referenceEnd, int width, boolean dark,
                               ComputedStyle style, Font font, Path baseDirectory, Path noteFile,
                               CrossReferenceIndex references) {
@@ -83,7 +90,7 @@ public final class WidgetRegistry implements BlockRendererExtensionRegistry {
         return switch (span.kind()) {
             case MATH_BLOCK -> new MathWidget(span.start(), end, MathWidget.blockLatex(source),
                     true, font.getSize2D(), style.color(), this);
-            case TABLE -> new TableWidget(span.start(), end, tableSource(source), style, font, caption);
+            case TABLE -> new TableWidget(span.start(), end, tableSource(source), style, font, caption, tableScroll);
             case FRONT_MATTER -> new FrontMatterWidget(span.start(), end, source, style, font);
             case CALLOUT -> new CalloutWidget(span.start(), end, source, style, font);
             case FENCED_CODE -> {

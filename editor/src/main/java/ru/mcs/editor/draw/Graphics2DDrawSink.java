@@ -11,6 +11,7 @@ import java.awt.image.BufferedImage;
 public final class Graphics2DDrawSink implements DrawSink {
 
     private final Graphics2D graphics;
+    private final java.util.List<java.awt.Shape> clips = new java.util.ArrayList<>();
 
     public Graphics2DDrawSink(Graphics2D graphics) {
         this.graphics = graphics;
@@ -46,6 +47,19 @@ public final class Graphics2DDrawSink implements DrawSink {
         graphics.setFont(font);
         graphics.setColor(color);
         layout.draw(graphics, x, baseline);
+    }
+
+    @Override
+    public void clip(int x, int y, int width, int height) {
+        clips.add(graphics.getClip());
+        graphics.clipRect(x, y, width, height);
+    }
+
+    @Override
+    public void unclip() {
+        if (!clips.isEmpty()) {
+            graphics.setClip(clips.remove(clips.size() - 1));
+        }
     }
 
     @Override

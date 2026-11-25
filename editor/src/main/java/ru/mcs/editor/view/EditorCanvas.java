@@ -237,6 +237,19 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         return false;
     }
 
+    /** Перетаскивание после {@link #pressOverlay(Point)} (например, ползунок прокрутки таблицы). */
+    public boolean dragOverlay(Point point) {
+        return false;
+    }
+
+    public void releaseOverlay() {
+    }
+
+    /** Колесо мыши над содержимым с собственной прокруткой (широкая таблица); true — событие обработано. */
+    public boolean wheelOverlay(java.awt.event.MouseWheelEvent event) {
+        return false;
+    }
+
     /** Подготовка вставляемого текста к месту каретки (например, экранирование {@code |} в ячейке таблицы). */
     public String prepareInsertedText(String text) {
         return text;

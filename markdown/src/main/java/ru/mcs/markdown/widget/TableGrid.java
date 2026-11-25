@@ -57,6 +57,11 @@ public final class TableGrid {
             return tops[tops.length - 1];
         }
 
+        /** Полная ширина таблицы; больше доступной ширины, если таблица прокручивается по горизонтали. */
+        public int width() {
+            return edges[edges.length - 1];
+        }
+
         public List<Line> lines(int row, int column) {
             return lines.get(row).get(column);
         }
@@ -64,6 +69,8 @@ public final class TableGrid {
 
     public static final int PADDING = 8;
     public static final int VERTICAL_PADDING = 6;
+    /** Узкие колонки широкой таблицы не уже этого значения: ячейку можно увидеть и выбрать мышью. */
+    public static final int MIN_COLUMN = 64;
 
     private final String source;
     private final int base;
@@ -295,6 +302,21 @@ public final class TableGrid {
         return result;
     }
 
+    /** Новое смещение прокрутки, при котором каретка видна внутри области шириной {@code viewWidth}. */
+    public int revealScroll(int offset, int currentScroll, int viewWidth, Layout layout) {
+        Layout origin = new Layout(0, 0, layout.width(), layout.lineHeight(), layout.metrics(), layout.alignments());
+        int maxScroll = Math.max(0, geometry(origin).width() - viewWidth);
+        int x = caretRect(offset, origin).x;
+        int margin = 2 * PADDING;
+        if (x < currentScroll + margin) {
+            return Math.max(0, Math.min(maxScroll, x - margin));
+        }
+        if (x > currentScroll + viewWidth - margin) {
+            return Math.max(0, Math.min(maxScroll, x - viewWidth + margin));
+        }
+        return Math.max(0, Math.min(maxScroll, currentScroll));
+    }
+
     private int caretX(Cell cell, List<Line> lines, int offset, Layout layout) {
         int index = lineIndex(lines, offset);
         Line line = lines.get(index);
@@ -340,7 +362,8 @@ public final class TableGrid {
     /**
      * Правила как у CSS auto-table: если всё помещается в одну строку, лишняя ширина делится пропорционально
      * естественной ширине колонок; иначе колонки сжимаются между «самое длинное слово» и «весь текст»;
-     * когда нет места даже для слов, ширины пропорциональны словам, а слова переносятся по символам.
+     * когда нет места даже для слов, колонки получают ширину самого длинного слова (не меньше MIN_COLUMN),
+     * таблица становится шире области и прокручивается по горизонтали.
      */
     private int[] columnWidths(Layout layout) {
         int total = Math.max(columns, layout.width());
@@ -377,17 +400,19 @@ public final class TableGrid {
             if (sumMax <= total) {
                 widths[column] = (int) (max[column] + (total - sumMax) * max[column] / sumMax);
             } else if (sumMin >= total) {
-                widths[column] = (int) Math.max(1, total * min[column] / sumMin);
+                widths[column] = (int) Math.max(min[column], MIN_COLUMN);
             } else {
                 widths[column] = (int) (min[column] + (total - sumMin) * (max[column] - min[column])
                         / (sumMax - sumMin));
             }
         }
-        int sum = 0;
-        for (int width : widths) {
-            sum += width;
+        if (sumMin < total) {
+            int sum = 0;
+            for (int width : widths) {
+                sum += width;
+            }
+            widths[columns - 1] = Math.max(1, widths[columns - 1] + total - sum);
         }
-        widths[columns - 1] = Math.max(1, widths[columns - 1] + total - sum);
         return widths;
     }
 

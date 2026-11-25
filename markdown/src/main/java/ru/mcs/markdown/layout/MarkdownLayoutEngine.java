@@ -268,8 +268,15 @@ public final class MarkdownLayoutEngine {
         List<Rectangle> rectangles = new ArrayList<>();
         for (BlockBox block : layout().blocks()) {
             if (block.lines().isEmpty() && block.widget() != null) {
-                rectangles.addAll(block.widget().selectionRects(selection.start(), selection.end(),
-                        block.contentX(), block.contentY(), block.contentWidth()));
+                Rectangle bounds = new Rectangle(block.contentX(), block.contentY(), block.contentWidth(),
+                        block.height());
+                for (Rectangle rectangle : block.widget().selectionRects(selection.start(), selection.end(),
+                        block.contentX(), block.contentY(), block.contentWidth())) {
+                    Rectangle visible = rectangle.intersection(bounds);
+                    if (!visible.isEmpty()) {
+                        rectangles.add(visible);
+                    }
+                }
             }
             for (LineBox line : block.lines()) {
                 if (line.y() > clip.y + clip.height || line.y() + line.height() < clip.y

@@ -72,6 +72,10 @@ public final class MouseController extends MouseAdapter {
             event.consume();
             return;
         }
+        if (canvas.dragOverlay(event.getPoint())) {
+            event.consume();
+            return;
+        }
         if (!dragging || canvas.document() == null) {
             return;
         }
@@ -94,5 +98,6 @@ public final class MouseController extends MouseAdapter {
             canvas.showContextMenu(event);
         }
         dragging = false;
+        canvas.releaseOverlay();
     }
 }

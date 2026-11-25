@@ -133,10 +133,30 @@ class TableGridTest {
     }
 
     @Test
-    void wordLongerThanColumnIsBrokenByCharacters() {
+    void wideTableKeepsReadableColumnsAndOverflowsInsteadOfBreakingWords() {
         TableGrid grid = TableGrid.parse("| abcdefghijkl | x |\n|---|---|\n| 1 | 2 |", 0);
+        TableGrid.Geometry geometry = grid.geometry(NARROW);
 
-        assertThat(grid.geometry(NARROW).lines(0, 0).size()).isGreaterThan(1);
+        assertThat(geometry.lines(0, 0)).hasSize(1);
+        assertThat(geometry.edge(1)).isEqualTo(100);
+        assertThat(geometry.width()).isEqualTo(100 + TableGrid.MIN_COLUMN);
+    }
+
+    @Test
+    void revealScrollMovesViewToCaretAndBack() {
+        String source = "| aaaaaaaaaa | bbbbbbbbbb | cccccccccc | dddddddddd |\n|---|---|---|---|\n| 1 | 2 | 3 | 4 |";
+        TableGrid grid = TableGrid.parse(source, 0);
+        TableGrid.Layout layout = new TableGrid.Layout(0, 0, 100, 18, (text, header) -> text.length() * 7,
+                List.of(TableModel.Alignment.LEFT, TableModel.Alignment.LEFT, TableModel.Alignment.LEFT,
+                        TableModel.Alignment.LEFT));
+        int fourth = source.indexOf("dddddddddd");
+        int maxScroll = grid.geometry(layout).width() - 100;
+
+        int toEnd = grid.revealScroll(fourth + 5, 0, 100, layout);
+        int back = grid.revealScroll(source.indexOf("aaaaaaaaaa"), toEnd, 100, layout);
+
+        assertThat(toEnd).isGreaterThan(200).isLessThanOrEqualTo(maxScroll);
+        assertThat(back).isZero();
     }
 
     @Test

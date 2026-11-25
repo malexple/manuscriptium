@@ -615,7 +615,97 @@ public final class MarkdownCanvas extends EditorCanvas {
     @Override
     public boolean pressOverlay(Point point) {
         Rectangle area = tableToolbarArea();
-        return area != null && tableToolbar.press(area, contentPoint(point));
+        if (area != null && tableToolbar.press(area, contentPoint(point))) {
+            return true;
+        }
+        return pressTableScrollbar(contentPoint(point));
+    }
+
+    private record ScrollDrag(TableWidget table, int x, int width, int grab) {
+    }
+
+    private ScrollDrag scrollDrag;
+
+    private boolean pressTableScrollbar(Point content) {
+        if (!markdownMode()) {
+            return false;
+        }
+        for (var block : markdownLayout.layout().blocks()) {
+            if (!(block.widget() instanceof TableWidget table)) {
+                continue;
+            }
+            Rectangle track = table.scrollbarTrack(block.contentX(), block.contentY(), block.contentWidth());
+            if (track == null) {
+                continue;
+            }
+            Rectangle hit = new Rectangle(track);
+            hit.grow(0, 4);
+            if (!hit.contains(content)) {
+                continue;
+            }
+            Rectangle thumb = table.scrollbarThumb(block.contentX(), block.contentY(), block.contentWidth());
+            int grab = thumb.width / 2;
+            if (content.x >= thumb.x && content.x < thumb.x + thumb.width) {
+                grab = content.x - thumb.x;
+            } else {
+                table.dragScrollbar(content.x, grab, block.contentX(), block.contentWidth());
+            }
+            scrollDrag = new ScrollDrag(table, block.contentX(), block.contentWidth(), grab);
+            repaint();
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean dragOverlay(Point point) {
+        if (scrollDrag == null) {
+            return false;
+        }
+        scrollDrag.table().dragScrollbar(contentPoint(point).x, scrollDrag.grab(), scrollDrag.x(), scrollDrag.width());
+        repaint();
+        return true;
+    }
+
+    @Override
+    public void releaseOverlay() {
+        scrollDrag = null;
+    }
+
+    /** Shift+колесо над широкой таблицей прокручивает её по горизонтали, остальные случаи — обычная прокрутка. */
+    @Override
+    public boolean wheelOverlay(java.awt.event.MouseWheelEvent event) {
+        if (!markdownMode() || !event.isShiftDown()) {
+            return false;
+        }
+        Point content = contentPoint(event.getPoint());
+        for (var block : markdownLayout.layout().blocks()) {
+            if (block.widget() instanceof TableWidget table && table.overflows(block.contentWidth())
+                    && content.y >= block.y() && content.y <= block.y() + block.height()) {
+                table.scrollBy((int) Math.round(event.getPreciseWheelRotation() * 48), block.contentWidth());
+                repaint();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Каретка в широкой таблице всегда остаётся в видимой части: таблица прокручивается вслед за ней. */
+    @Override
+    public void ensureCaretVisible() {
+        if (markdownMode() && document() != null) {
+            int caret = caretOffset();
+            for (var block : markdownLayout.layout().blocks()) {
+                if (block.widget() instanceof TableWidget table
+                        && caret >= block.span().start() && caret <= table.sourceEnd()) {
+                    if (table.reveal(caret, block.contentWidth())) {
+                        repaint();
+                    }
+                    break;
+                }
+            }
+        }
+        super.ensureCaretVisible();
     }
 
     /** Координаты содержимого в координаты компонента (учитывает отступ режима пишущей машинки). */

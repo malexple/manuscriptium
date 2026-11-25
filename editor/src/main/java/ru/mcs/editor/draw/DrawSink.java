@@ -16,6 +16,13 @@ public interface DrawSink {
 
     void drawText(TextLayout layout, String text, float x, float baseline, Font font, Color color);
 
+    /** Ограничивает рисование прямоугольником до {@link #unclip()}; recording-sinks могут игнорировать. */
+    default void clip(int x, int y, int width, int height) {
+    }
+
+    default void unclip() {
+    }
+
     default void drawImage(BufferedImage image, int x, int y, int width, int height) {
         // Recording-sinks старых текстовых тестов могут не учитывать растровые команды.
     }
