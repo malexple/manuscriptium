@@ -30,6 +30,8 @@ import ru.mcs.spi.editor.style.StyleElement;
 public final class MarkdownLayoutEngine {
 
     private static final int DEFAULT_WIDTH = 800;
+    /** Высота строки под активной таблицей, в которой стоит каретка после выхода из таблицы. */
+    private static final int GAP_LINE = 24;
     private static final List<StyleElement> WRITE_ANCESTORS =
             List.of(new StyleElement("div", "write", List.of(), 0));
 
@@ -374,7 +376,8 @@ public final class MarkdownLayoutEngine {
             }
             box.place(blockX, y + marginTop, blockWidth, Math.max(1, height), innerX, innerY, innerWidth);
             boxes.add(box);
-            y += marginTop + height + marginBottom;
+            boolean caretBelowTable = tableActive && widget != null && caretOffset > tableContentEnd(astSpan);
+            y += marginTop + height + marginBottom + (caretBelowTable ? GAP_LINE : 0);
         }
         List<String> bibliography = citations.bibliography(raw);
         if (!bibliography.isEmpty()) {
@@ -532,7 +535,7 @@ public final class MarkdownLayoutEngine {
         }
         for (BlockSpan span : spans) {
             if (span.start() == activeStart) {
-                return caretInTable(span);
+                return caretInTable(span) && caretOffset > tableContentEnd(span);
             }
         }
         return false;
@@ -541,6 +544,16 @@ public final class MarkdownLayoutEngine {
     /** Активная таблица (каретка в ней или на строке под ней) всегда остаётся сеткой, а не исходником. */
     private boolean caretInTable(BlockSpan span) {
         return span.kind() == BlockKind.TABLE;
+    }
+
+    /** Конец последней строки таблицы без завершающих переводов строк. */
+    private int tableContentEnd(BlockSpan span) {
+        CharSequence text = document.text();
+        int end = Math.min(span.end(), text.length());
+        while (end > span.start() && (text.charAt(end - 1) == '\n' || text.charAt(end - 1) == '\r')) {
+            end--;
+        }
+        return end;
     }
 
     /**

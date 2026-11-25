@@ -83,7 +83,11 @@ class ActiveTableLayoutTest {
                 .filter(block -> block.widget() instanceof TableWidget).findFirst().orElseThrow();
 
         assertThat(table.source()).isFalse();
-        assertThat(engine.caretRect(below).y).isGreaterThanOrEqualTo(table.y() + table.height());
+        Rectangle rect = engine.caretRect(below);
+        BlockBox next = engine.layout().blocks().get(engine.layout().blocks().indexOf(table) + 1);
+
+        assertThat(rect.y).isGreaterThanOrEqualTo(table.y() + table.height());
+        assertThat(rect.y + rect.height).isLessThanOrEqualTo(next.y());
     }
 
     private static MarkdownLayoutEngine engine() {
