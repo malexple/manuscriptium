@@ -660,7 +660,7 @@ public final class MarkdownCanvas extends EditorCanvas {
     /** Текст с табуляциями (Excel, Google Sheets, LibreOffice) вставляется как Markdown-таблица. */
     @Override
     public boolean pasteStructured(String text) {
-        if (!markdownMode() || document() == null || TableController.location(this) != null) {
+        if (document() == null || TableController.location(this) != null) {
             return false;
         }
         ru.mcs.markdown.widget.TableModel table = ru.mcs.markdown.widget.TabularText.toTable(text);
