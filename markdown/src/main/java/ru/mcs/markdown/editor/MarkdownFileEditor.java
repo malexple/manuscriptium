@@ -114,6 +114,8 @@ final class MarkdownFileEditor implements FileEditor {
             source.setWidgets(widgets, this.file.getParent(), this.file);
         }
         source.setName("markdown.editor.source");
+        source.setSyntaxHighlighting(new ru.mcs.markdown.render.MarkdownSyntaxHighlighter(),
+                new ru.mcs.markdown.render.MarkdownTokenColors());
         source.setStatus(i18n.get("source.loading"));
         canvas.setStatus(i18n.get("canvas.loading"));
         if (actions != null) {

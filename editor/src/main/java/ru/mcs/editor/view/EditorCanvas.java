@@ -400,6 +400,93 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         return getForeground();
     }
 
+    private SyntaxHighlighter highlighter;
+    private TokenColors tokenColors;
+    private List<HighlightSpan> highlightSpans = List.of();
+    private long highlightVersion = -1;
+
+    /** Включает цветовую подсветку текста; {@code null} отключает её. Меняет только цвет, не шрифт и не раскладку. */
+    public void setSyntaxHighlighting(SyntaxHighlighter highlighter, TokenColors colors) {
+        this.highlighter = highlighter;
+        this.tokenColors = colors;
+        highlightSpans = List.of();
+        highlightVersion = -1;
+        repaint();
+    }
+
+    private List<HighlightSpan> currentHighlightSpans() {
+        long version = document.version();
+        if (version != highlightVersion) {
+            try {
+                highlightSpans = highlighter.highlight(document.text());
+            } catch (RuntimeException failure) {
+                highlightSpans = List.of();
+            }
+            highlightVersion = version;
+        }
+        return highlightSpans;
+    }
+
+    private boolean darkBackground() {
+        Color background = getBackground();
+        return 0.299 * background.getRed() + 0.587 * background.getGreen() + 0.114 * background.getBlue() < 128;
+    }
+
+    private void paintHighlighted(Graphics2D graphics, TextLayoutEngine.VisualLine line) {
+        List<HighlightSpan> spans = currentHighlightSpans();
+        Color base = getForeground();
+        boolean dark = darkBackground();
+        int low = 0;
+        int high = spans.size();
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (spans.get(middle).end() <= line.start()) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        java.awt.Shape saved = graphics.getClip();
+        int cursor = line.start();
+        try {
+            for (int index = low; index < spans.size(); index++) {
+                HighlightSpan span = spans.get(index);
+                if (span.start() >= line.end()) {
+                    break;
+                }
+                int from = Math.max(span.start(), line.start());
+                int to = Math.min(span.end(), line.end());
+                if (to <= from) {
+                    continue;
+                }
+                if (from > cursor) {
+                    paintSegment(graphics, saved, line, cursor, from, base);
+                }
+                Color color = tokenColors == null ? null : tokenColors.color(span.token(), dark);
+                paintSegment(graphics, saved, line, from, to, color == null ? base : color);
+                cursor = to;
+            }
+            if (cursor < line.end()) {
+                paintSegment(graphics, saved, line, cursor, line.end(), base);
+            }
+        } finally {
+            graphics.setClip(saved);
+        }
+    }
+
+    private void paintSegment(Graphics2D graphics, java.awt.Shape saved, TextLayoutEngine.VisualLine line,
+                              int from, int to, Color color) {
+        float left = TextLayoutEngine.HORIZONTAL_PADDING + textLayout.caretX(line, from)
+                - (from == line.start() ? 2 : 0);
+        float right = TextLayoutEngine.HORIZONTAL_PADDING + textLayout.caretX(line, to)
+                + (to == line.end() ? 2 : 0);
+        graphics.setClip(saved);
+        graphics.clip(new java.awt.geom.Rectangle2D.Float(left, line.y(), Math.max(1f, right - left),
+                textLayout.lineHeight()));
+        graphics.setColor(color);
+        line.text().draw(graphics, TextLayoutEngine.HORIZONTAL_PADDING, line.y() + textLayout.ascent());
+    }
+
     /** Номер физической строки и положение её первой визуальной строки (координаты компонента). */
     public record LineMark(int number, int y, int baseline) {
     }
@@ -713,8 +800,12 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         graphics.setColor(getForeground());
         for (TextLayoutEngine.VisualLine line : lines) {
             if (line.text() != null) {
-                line.text().draw(graphics, TextLayoutEngine.HORIZONTAL_PADDING,
-                        line.y() + textLayout.ascent());
+                if (highlighter == null) {
+                    line.text().draw(graphics, TextLayoutEngine.HORIZONTAL_PADDING,
+                            line.y() + textLayout.ascent());
+                } else {
+                    paintHighlighted(graphics, line);
+                }
             }
         }
     }
