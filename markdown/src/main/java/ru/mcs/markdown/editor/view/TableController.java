@@ -265,6 +265,12 @@ final class TableController {
                 model.alignment(Math.min(location.column(), model.columnCount() - 1)));
     }
 
+    /** Сортирует строки тела по колонке с кареткой; в документе остаётся отсортированный Markdown. */
+    static boolean sort(MarkdownCanvas canvas, boolean ascending) {
+        Location location = location(canvas);
+        return location != null && edit(canvas, table -> table.sortBy(location.column(), ascending));
+    }
+
     static boolean addRowBefore(MarkdownCanvas canvas) {
         Location location = location(canvas);
         return location != null && location.row() > 0

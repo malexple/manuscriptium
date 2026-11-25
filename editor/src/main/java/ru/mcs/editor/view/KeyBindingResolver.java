@@ -95,6 +95,9 @@ public final class KeyBindingResolver {
         bind(canvas, key(KeyEvent.VK_TAB, InputEvent.SHIFT_DOWN_MASK), "previousTableCell",
                 () -> canvas.navigateTable(-1));
         bind(canvas, key(KeyEvent.VK_A, shortcutMask), "selectAll", input::selectAll);
+        bind(canvas, key(KeyEvent.VK_INSERT, InputEvent.SHIFT_DOWN_MASK), "pasteShiftInsert", input::paste);
+        bind(canvas, key(KeyEvent.VK_INSERT, InputEvent.CTRL_DOWN_MASK), "copyCtrlInsert", input::copy);
+        bind(canvas, key(KeyEvent.VK_DELETE, InputEvent.SHIFT_DOWN_MASK), "cutShiftDelete", input::cut);
         installMetadataKeymap(canvas, input);
     }
 

@@ -84,6 +84,54 @@ public final class TableModel {
         return new TableModel(list, new ArrayList<>(columnAlignments));
     }
 
+    /**
+     * Строки тела, отсортированные по колонке (заголовок остаётся первым). Числа сравниваются как числа и идут
+     * раньше текста, текст — без учёта регистра, пустые ячейки всегда в конце; сортировка стабильна.
+     */
+    public TableModel sortBy(int column, boolean ascending) {
+        if (column < 0 || column >= columnCount() || rows.size() < 3) {
+            return this;
+        }
+        java.text.Collator collator = java.text.Collator.getInstance(Locale.getDefault());
+        collator.setStrength(java.text.Collator.SECONDARY);
+        List<Integer> order = new ArrayList<>();
+        for (int index = 1; index < rows.size(); index++) {
+            order.add(index);
+        }
+        order.sort((first, second) -> {
+            String left = cell(first, column).strip();
+            String right = cell(second, column).strip();
+            if (left.isEmpty() || right.isEmpty()) {
+                return left.isEmpty() == right.isEmpty() ? 0 : left.isEmpty() ? 1 : -1;
+            }
+            Double leftNumber = number(left);
+            Double rightNumber = number(right);
+            int result;
+            if (leftNumber != null && rightNumber != null) {
+                result = Double.compare(leftNumber, rightNumber);
+            } else if (leftNumber != null || rightNumber != null) {
+                result = leftNumber != null ? -1 : 1;
+            } else {
+                result = collator.compare(left, right);
+            }
+            return ascending ? result : -result;
+        });
+        List<Row> sorted = new ArrayList<>();
+        sorted.add(rows.get(0));
+        for (int index : order) {
+            sorted.add(rows.get(index));
+        }
+        return new TableModel(sorted, new ArrayList<>(alignments));
+    }
+
+    private static Double number(String text) {
+        String value = text.replaceAll("[\\s\\u00a0]", "").replace(',', '.');
+        if (value.endsWith("%")) {
+            value = value.substring(0, value.length() - 1);
+        }
+        return value.matches("[-+]?\\d+(\\.\\d+)?") ? Double.valueOf(value) : null;
+    }
+
     public int rowCount() {
         return rows.size();
     }

@@ -142,6 +142,10 @@ final class TableToolbar {
         item(menu, "table.menu.deleteRow", bodyRow && state.rows() > 1, canvas::removeTableRow);
         item(menu, "table.menu.deleteColumn", state != null && state.columns() > 1, canvas::removeTableColumn);
         menu.addSeparator();
+        boolean sortable = state != null && state.rows() > 2;
+        item(menu, "table.menu.sortAsc", sortable, () -> TableController.sort(canvas, true));
+        item(menu, "table.menu.sortDesc", sortable, () -> TableController.sort(canvas, false));
+        menu.addSeparator();
         item(menu, "table.menu.copy", state != null, () -> TableController.copy(canvas));
         item(menu, "table.menu.format", state != null, () -> TableController.format(canvas));
         menu.addSeparator();
