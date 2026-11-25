@@ -11,7 +11,7 @@ class TableGridTest {
 
     private static final int BASE = 10;
     private static final String TABLE = "| A | B |\n|:---|---:|\n| one | two |";
-    private static final TableGrid.Layout LAYOUT = new TableGrid.Layout(0, 0, 200, 30,
+    private static final TableGrid.Layout LAYOUT = new TableGrid.Layout(0, 0, 200, 18,
             (text, header) -> text.length() * 7, List.of(TableModel.Alignment.LEFT, TableModel.Alignment.RIGHT));
 
     @Test
@@ -58,8 +58,8 @@ class TableGridTest {
         int one = BASE + TABLE.indexOf("one");
         int two = BASE + TABLE.indexOf("two");
 
-        assertThat(grid.caretRect(one + 2, LAYOUT)).isEqualTo(new Rectangle(8 + 14, 34, 1, 22));
-        assertThat(grid.caretRect(two, LAYOUT)).isEqualTo(new Rectangle(200 - 21 - 8, 34, 1, 22));
+        assertThat(grid.caretRect(one + 2, LAYOUT)).isEqualTo(new Rectangle(8 + 14, 36, 1, 18));
+        assertThat(grid.caretRect(two, LAYOUT)).isEqualTo(new Rectangle(200 - 21 - 8, 36, 1, 18));
     }
 
     @Test
@@ -104,12 +104,47 @@ class TableGridTest {
         assertThat(grid.next(cell.start() + 1)).isEqualTo(afterPipe);
     }
 
+    private static final TableGrid.Layout NARROW = new TableGrid.Layout(0, 0, 100, 18,
+            (text, header) -> text.length() * 7, List.of(TableModel.Alignment.LEFT, TableModel.Alignment.LEFT));
+    private static final String WRAPPED = "| aaaa bbbb cccc | b |\n|---|---|\n| x | y |";
+
+    @Test
+    void columnsShareWidthByContentLikeAutoTableLayout() {
+        TableGrid grid = TableGrid.parse(WRAPPED, 0);
+        TableGrid.Geometry wide = grid.geometry(new TableGrid.Layout(0, 0, 200, 18,
+                (text, header) -> text.length() * 7, List.of(TableModel.Alignment.LEFT, TableModel.Alignment.LEFT)));
+
+        assertThat(wide.edge(1)).isBetween(160, 170);
+        assertThat(wide.edge(2)).isEqualTo(200);
+        assertThat(wide.top(1)).isEqualTo(30);
+    }
+
+    @Test
+    void longTextWrapsAtWordsWhenColumnCannotShrinkAnyMore() {
+        TableGrid grid = TableGrid.parse(WRAPPED, 0);
+        TableGrid.Geometry geometry = grid.geometry(NARROW);
+        TableGrid.Cell cell = grid.cell(0, 0);
+        int bbbb = cell.start() + "aaaa ".length();
+
+        assertThat(geometry.lines(0, 0)).hasSize(3);
+        assertThat(geometry.top(1)).isEqualTo(3 * 18 + 12);
+        assertThat(grid.caretRect(bbbb, NARROW)).isEqualTo(new Rectangle(8, 24, 1, 18));
+        assertThat(grid.hitOffset(new Point(8 + 14, 29), NARROW)).isEqualTo(bbbb + 2);
+    }
+
+    @Test
+    void wordLongerThanColumnIsBrokenByCharacters() {
+        TableGrid grid = TableGrid.parse("| abcdefghijkl | x |\n|---|---|\n| 1 | 2 |", 0);
+
+        assertThat(grid.geometry(NARROW).lines(0, 0).size()).isGreaterThan(1);
+    }
+
     @Test
     void selectionCoversTextOfEachCell() {
         TableGrid grid = TableGrid.parse(TABLE, BASE);
         int one = BASE + TABLE.indexOf("one");
 
-        assertThat(grid.selectionRects(one, one + 3, LAYOUT)).containsExactly(new Rectangle(8, 30, 21, 30));
+        assertThat(grid.selectionRects(one, one + 3, LAYOUT)).containsExactly(new Rectangle(8, 36, 21, 18));
         assertThat(grid.selectionRects(one, one, LAYOUT)).isEmpty();
     }
 }

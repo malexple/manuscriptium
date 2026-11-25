@@ -53,7 +53,7 @@ public final class MarkdownCanvas extends EditorCanvas {
     private JPopupMenu citationPopup;
     private EditorContextMenuBuilder contextMenuBuilder;
     private Supplier<EditorBlockContext> editorContext;
-    private TableToolbar tableToolbar;
+    private final TableToolbar tableToolbar = new TableToolbar(this);
 
     public MarkdownCanvas() {
         super();
@@ -554,6 +554,7 @@ public final class MarkdownCanvas extends EditorCanvas {
     protected void paintContent(Graphics2D graphics, Rectangle clip) {
         if (markdownMode()) {
             markdownRenderer.paint(graphics, clip, selectionRange());
+            paintTableToolbar(graphics);
             return;
         }
         super.paintContent(graphics, clip);
@@ -581,10 +582,6 @@ public final class MarkdownCanvas extends EditorCanvas {
             }
             desired.add(component);
         }
-        TableToolbar toolbar = activeTableToolbar(padding);
-        if (toolbar != null) {
-            desired.add(toolbar);
-        }
         for (java.awt.Component child : getComponents()) {
             if (!desired.contains(child)) {
                 remove(child);
@@ -592,25 +589,39 @@ public final class MarkdownCanvas extends EditorCanvas {
         }
     }
 
-    /** Панель управления таблицей над сеткой: показывается, пока каретка в таблице. */
-    private TableToolbar activeTableToolbar(int padding) {
+    /** Область панели над таблицей с кареткой в координатах содержимого; null, если каретка вне таблицы. */
+    private Rectangle tableToolbarArea() {
+        if (!markdownMode()) {
+            return null;
+        }
         int caret = caretOffset();
         for (var block : markdownLayout.layout().blocks()) {
             if (block.widget() instanceof TableWidget table
                     && caret >= block.span().start() && caret <= table.sourceEnd()) {
-                if (tableToolbar == null) {
-                    tableToolbar = new TableToolbar(this);
-                }
-                tableToolbar.refresh();
-                tableToolbar.setBounds(block.contentX(), Math.max(0, block.y() + padding - TableToolbar.HEIGHT),
+                return new Rectangle(block.contentX(), Math.max(0, block.y() - TableToolbar.HEIGHT - 2),
                         block.contentWidth(), TableToolbar.HEIGHT);
-                if (tableToolbar.getParent() != this) {
-                    add(tableToolbar);
-                }
-                return tableToolbar;
             }
         }
         return null;
+    }
+
+    private void paintTableToolbar(Graphics2D graphics) {
+        Rectangle area = tableToolbarArea();
+        if (area != null) {
+            tableToolbar.paint(graphics, area, getForeground());
+        }
+    }
+
+    @Override
+    public boolean pressOverlay(Point point) {
+        Rectangle area = tableToolbarArea();
+        return area != null && tableToolbar.press(area, contentPoint(point));
+    }
+
+    /** Координаты содержимого в координаты компонента (учитывает отступ режима пишущей машинки). */
+    Point toComponent(Point content) {
+        Point origin = contentPoint(new Point(0, 0));
+        return new Point(content.x - origin.x, content.y - origin.y);
     }
 
     @Override

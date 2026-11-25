@@ -1,79 +1,122 @@
 package ru.mcs.markdown.editor.view;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BooleanSupplier;
-import javax.swing.Box;
-import javax.swing.JButton;
 import javax.swing.JMenuItem;
-import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import ru.mcs.markdown.editor.MarkdownMessages;
 import ru.mcs.markdown.editor.TableDialog;
 import ru.mcs.markdown.widget.TableModel;
 
-/** Панель над таблицей, пока в ней каретка: размер, выравнивание, More Actions, удаление. */
-final class TableToolbar extends JPanel {
+/**
+ * Панель над таблицей с кареткой: размер, выравнивание, More Actions, удаление.
+ * Рисуется Canvas-ом в координатах содержимого вместе с таблицей и принимает клики через {@code pressOverlay}.
+ */
+final class TableToolbar {
 
-    static final int HEIGHT = 20;
+    static final int HEIGHT = 22;
+    private static final int BUTTON = 26;
+    private static final int GROUP_GAP = 6;
 
-    private final MarkdownCanvas canvas;
-    private final ToolbarButton left;
-    private final ToolbarButton center;
-    private final ToolbarButton right;
-    private TableModel.Alignment shown;
+    enum Action {
+        RESIZE(TableToolbarIcon.Kind.GRID),
+        ALIGN_LEFT(TableToolbarIcon.Kind.ALIGN_LEFT),
+        ALIGN_CENTER(TableToolbarIcon.Kind.ALIGN_CENTER),
+        ALIGN_RIGHT(TableToolbarIcon.Kind.ALIGN_RIGHT),
+        MORE(TableToolbarIcon.Kind.MORE),
+        DELETE(TableToolbarIcon.Kind.DELETE);
 
-    TableToolbar(MarkdownCanvas canvas) {
-        super(new BorderLayout());
-        this.canvas = canvas;
-        setName("markdown.table.toolbar");
-        setOpaque(false);
-        ToolbarButton resize = button(TableToolbarIcon.Kind.GRID, "table.toolbar.resize",
-                "markdown.table.resize", this::resize);
-        left = button(TableToolbarIcon.Kind.ALIGN_LEFT, "table.toolbar.alignLeft", "markdown.table.alignLeft",
-                () -> canvas.alignTableColumn(TableModel.Alignment.LEFT));
-        center = button(TableToolbarIcon.Kind.ALIGN_CENTER, "table.toolbar.alignCenter",
-                "markdown.table.alignCenter", () -> canvas.alignTableColumn(TableModel.Alignment.CENTER));
-        right = button(TableToolbarIcon.Kind.ALIGN_RIGHT, "table.toolbar.alignRight",
-                "markdown.table.alignRight", () -> canvas.alignTableColumn(TableModel.Alignment.RIGHT));
-        ToolbarButton more = button(TableToolbarIcon.Kind.MORE, "table.toolbar.more", "markdown.table.more", null);
-        more.addActionListener(event -> {
-            showMenu(more);
-            canvas.requestFocusInWindow();
-        });
-        ToolbarButton delete = button(TableToolbarIcon.Kind.DELETE, "table.toolbar.delete",
-                "markdown.table.delete", () -> TableController.deleteTable(canvas));
+        private final TableToolbarIcon.Kind kind;
 
-        JPanel west = group();
-        west.add(resize);
-        west.add(Box.createHorizontalStrut(6));
-        west.add(left);
-        west.add(center);
-        west.add(right);
-        JPanel east = group();
-        east.add(more);
-        east.add(delete);
-        add(west, BorderLayout.WEST);
-        add(east, BorderLayout.EAST);
+        Action(TableToolbarIcon.Kind kind) {
+            this.kind = kind;
+        }
     }
 
-    /** Подсвечивает выравнивание колонки под кареткой; без изменений не перерисовывает кнопки. */
-    void refresh() {
-        TableController.State state = TableController.state(canvas);
-        if (state == null || state.alignment() == shown) {
-            return;
+    record Slot(Action action, Rectangle bounds) {
+    }
+
+    private final MarkdownCanvas canvas;
+    private TableModel.Alignment shown = TableModel.Alignment.LEFT;
+
+    TableToolbar(MarkdownCanvas canvas) {
+        this.canvas = canvas;
+    }
+
+    /** Кнопки в области панели: слева размер и выравнивание, справа More Actions и корзина. */
+    static List<Slot> slots(Rectangle area) {
+        List<Slot> result = new ArrayList<>();
+        int x = area.x;
+        result.add(slot(Action.RESIZE, x, area));
+        x += BUTTON + GROUP_GAP;
+        for (Action action : new Action[]{Action.ALIGN_LEFT, Action.ALIGN_CENTER, Action.ALIGN_RIGHT}) {
+            result.add(slot(action, x, area));
+            x += BUTTON;
         }
-        shown = state.alignment();
-        left.setActive(shown == TableModel.Alignment.LEFT);
-        center.setActive(shown == TableModel.Alignment.CENTER);
-        right.setActive(shown == TableModel.Alignment.RIGHT);
+        int right = area.x + area.width - BUTTON;
+        result.add(slot(Action.MORE, right - BUTTON, area));
+        result.add(slot(Action.DELETE, right, area));
+        return result;
+    }
+
+    private static Slot slot(Action action, int x, Rectangle area) {
+        return new Slot(action, new Rectangle(x, area.y, BUTTON, area.height));
+    }
+
+    void paint(Graphics2D graphics, Rectangle area, Color foreground) {
+        TableController.State state = TableController.state(canvas);
+        if (state != null) {
+            shown = state.alignment();
+        }
+        Action current = switch (shown) {
+            case LEFT -> Action.ALIGN_LEFT;
+            case CENTER -> Action.ALIGN_CENTER;
+            case RIGHT -> Action.ALIGN_RIGHT;
+        };
+        Graphics2D g = (Graphics2D) graphics.create();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            for (Slot slot : slots(area)) {
+                Rectangle bounds = slot.bounds();
+                if (slot.action() == current) {
+                    g.setColor(new Color(128, 128, 128, 70));
+                    g.fillRoundRect(bounds.x + 1, bounds.y + 1, bounds.width - 2, bounds.height - 2, 6, 6);
+                }
+                new TableToolbarIcon(slot.action().kind, () -> foreground).paintIcon(canvas, g,
+                        bounds.x + (bounds.width - 14) / 2, bounds.y + (bounds.height - 14) / 2);
+            }
+        } finally {
+            g.dispose();
+        }
+    }
+
+    boolean press(Rectangle area, Point contentPoint) {
+        for (Slot slot : slots(area)) {
+            if (slot.bounds().contains(contentPoint)) {
+                run(slot);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void run(Slot slot) {
+        switch (slot.action()) {
+            case RESIZE -> resize();
+            case ALIGN_LEFT -> canvas.alignTableColumn(TableModel.Alignment.LEFT);
+            case ALIGN_CENTER -> canvas.alignTableColumn(TableModel.Alignment.CENTER);
+            case ALIGN_RIGHT -> canvas.alignTableColumn(TableModel.Alignment.RIGHT);
+            case MORE -> showMenu(slot.bounds());
+            case DELETE -> TableController.deleteTable(canvas);
+        }
+        canvas.requestFocusInWindow();
+        canvas.repaint();
     }
 
     private void resize() {
@@ -85,7 +128,7 @@ final class TableToolbar extends JPanel {
                 .ifPresent(size -> TableController.resize(canvas, size.columns(), size.rows()));
     }
 
-    private void showMenu(Component anchor) {
+    private void showMenu(Rectangle buttonBounds) {
         TableController.State state = TableController.state(canvas);
         boolean bodyRow = state != null && state.row() > 0;
         JPopupMenu menu = new JPopupMenu();
@@ -103,7 +146,9 @@ final class TableToolbar extends JPanel {
         item(menu, "table.menu.format", state != null, () -> TableController.format(canvas));
         menu.addSeparator();
         item(menu, "table.menu.delete", state != null, () -> TableController.deleteTable(canvas));
-        menu.show(anchor, anchor.getWidth() - menu.getPreferredSize().width, anchor.getHeight());
+        Point anchor = canvas.toComponent(new Point(buttonBounds.x + buttonBounds.width,
+                buttonBounds.y + buttonBounds.height));
+        menu.show(canvas, anchor.x - menu.getPreferredSize().width, anchor.y);
     }
 
     private void item(JPopupMenu menu, String key, boolean enabled, BooleanSupplier action) {
@@ -115,62 +160,5 @@ final class TableToolbar extends JPanel {
             canvas.requestFocusInWindow();
         });
         menu.add(item);
-    }
-
-    private ToolbarButton button(TableToolbarIcon.Kind kind, String tooltipKey, String name, Runnable action) {
-        ToolbarButton button = new ToolbarButton(new TableToolbarIcon(kind, canvas::getForeground));
-        button.setName(name);
-        button.setToolTipText(MarkdownMessages.get(tooltipKey));
-        if (action != null) {
-            button.addActionListener(event -> {
-                action.run();
-                canvas.requestFocusInWindow();
-            });
-        }
-        return button;
-    }
-
-    private static JPanel group() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
-        panel.setOpaque(false);
-        return panel;
-    }
-
-    /** Плоская кнопка без фокуса: каретка остаётся в таблице; фон только при наведении и для текущего выравнивания. */
-    private static final class ToolbarButton extends JButton {
-
-        private boolean active;
-
-        ToolbarButton(TableToolbarIcon icon) {
-            super(icon);
-            setFocusable(false);
-            setBorderPainted(false);
-            setContentAreaFilled(false);
-            setRolloverEnabled(true);
-            setMargin(new Insets(1, 3, 1, 3));
-            setPreferredSize(new Dimension(24, HEIGHT));
-        }
-
-        void setActive(boolean active) {
-            if (this.active != active) {
-                this.active = active;
-                repaint();
-            }
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            if (active || getModel().isRollover()) {
-                Graphics2D g = (Graphics2D) graphics.create();
-                try {
-                    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g.setColor(new Color(128, 128, 128, active ? 70 : 40));
-                    g.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
-                } finally {
-                    g.dispose();
-                }
-            }
-            super.paintComponent(graphics);
-        }
     }
 }

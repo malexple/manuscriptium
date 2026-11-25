@@ -5,7 +5,10 @@ import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Source-координаты ячеек Markdown-таблицы и их экранная геометрия: каретка, клик, выделение. */
+/**
+ * Source-координаты ячеек Markdown-таблицы и их экранная геометрия: ширина колонок как у CSS auto-table,
+ * перенос длинного текста по словам, каретка, клик и выделение внутри ячеек.
+ */
 public final class TableGrid {
 
     /**
@@ -21,18 +24,58 @@ public final class TableGrid {
         int width(String text, boolean header);
     }
 
-    public record Layout(int x, int y, int width, int rowHeight, Metrics metrics,
+    /** @param lineHeight высота одной строки текста в ячейке; высота строки таблицы = строки * lineHeight + отступы */
+    public record Layout(int x, int y, int width, int lineHeight, Metrics metrics,
                          List<TableModel.Alignment> alignments) {
     }
 
-    private static final int PADDING = 8;
-    private static final int CARET_INSET = 4;
+    /** Строка текста внутри ячейки: диапазон исходника, позиция и ширина в пикселях относительно таблицы. */
+    public record Line(int start, int end, int x, int width, String text) {
+    }
+
+    /** Размеры таблицы относительно её левого верхнего угла. */
+    public static final class Geometry {
+        private final int[] edges;
+        private final int[] tops;
+        private final List<List<List<Line>>> lines;
+
+        private Geometry(int[] edges, int[] tops, List<List<List<Line>>> lines) {
+            this.edges = edges;
+            this.tops = tops;
+            this.lines = lines;
+        }
+
+        public int edge(int column) {
+            return edges[column];
+        }
+
+        public int top(int row) {
+            return tops[row];
+        }
+
+        public int height() {
+            return tops[tops.length - 1];
+        }
+
+        public List<Line> lines(int row, int column) {
+            return lines.get(row).get(column);
+        }
+    }
+
+    public static final int PADDING = 8;
+    public static final int VERTICAL_PADDING = 6;
 
     private final String source;
     private final int base;
     private final List<List<Cell>> rows;
     private final int[] lineStarts;
     private final int columns;
+
+    private Geometry cached;
+    private int cachedWidth = -1;
+    private int cachedLineHeight;
+    private Metrics cachedMetrics;
+    private List<TableModel.Alignment> cachedAlignments;
 
     private TableGrid(String source, int base, List<List<Cell>> rows, int[] lineStarts, int columns) {
         this.source = source;
@@ -159,34 +202,64 @@ public final class TableGrid {
         return offset;
     }
 
+    /** Высота таблицы при заданной ширине; результат кешируется для тех же параметров раскладки. */
+    public int height(Layout layout) {
+        return geometry(layout).height();
+    }
+
+    public Geometry geometry(Layout layout) {
+        if (cached == null || cachedWidth != layout.width() || cachedLineHeight != layout.lineHeight()
+                || cachedMetrics != layout.metrics() || cachedAlignments != layout.alignments()) {
+            cached = compute(layout);
+            cachedWidth = layout.width();
+            cachedLineHeight = layout.lineHeight();
+            cachedMetrics = layout.metrics();
+            cachedAlignments = layout.alignments();
+        }
+        return cached;
+    }
+
     public Rectangle caretRect(int offset, Layout layout) {
-        int[] edges = edges(layout);
+        Geometry geometry = geometry(layout);
         Cell cell = cellAt(offset);
-        return new Rectangle(caretX(cell, offset, edges, layout),
-                layout.y() + cell.row() * layout.rowHeight() + CARET_INSET, 1,
-                layout.rowHeight() - 2 * CARET_INSET);
+        List<Line> lines = geometry.lines(cell.row(), cell.column());
+        int index = lineIndex(lines, offset);
+        return new Rectangle(caretX(cell, lines, offset, layout),
+                layout.y() + geometry.top(cell.row()) + VERTICAL_PADDING + index * layout.lineHeight(),
+                1, layout.lineHeight());
     }
 
     /** Ближайшая к точке позиция каретки; точки за пределами таблицы прижимаются к ближайшей ячейке. */
     public int hitOffset(Point point, Layout layout) {
-        int row = Math.max(0, Math.min(rows.size() - 1,
-                Math.floorDiv(point.y - layout.y(), layout.rowHeight())));
-        int[] edges = edges(layout);
+        Geometry geometry = geometry(layout);
+        int y = point.y - layout.y();
+        int x = point.x - layout.x();
+        int row = rows.size() - 1;
+        for (int index = 0; index < rows.size(); index++) {
+            if (y < geometry.top(index + 1)) {
+                row = index;
+                break;
+            }
+        }
         int column = columns - 1;
         for (int index = 0; index < columns; index++) {
-            if (point.x < edges[index + 1]) {
+            if (x < geometry.edge(index + 1)) {
                 column = index;
                 break;
             }
         }
         Cell cell = cell(row, column);
-        int best = cell.start();
+        List<Line> lines = geometry.lines(row, column);
+        int lineIndex = Math.max(0, Math.min(lines.size() - 1,
+                Math.floorDiv(y - geometry.top(row) - VERTICAL_PADDING, layout.lineHeight())));
+        Line line = lines.get(lineIndex);
+        int best = line.start();
         int bestDistance = Integer.MAX_VALUE;
-        for (int offset = cell.start(); offset <= cell.end(); offset++) {
+        for (int offset = line.start(); offset <= line.end(); offset++) {
             if (insideEscape(offset)) {
                 continue;
             }
-            int distance = Math.abs(caretX(cell, offset, edges, layout) - point.x);
+            int distance = Math.abs(caretX(cell, lines, offset, layout) - point.x);
             if (distance < bestDistance) {
                 best = offset;
                 bestDistance = distance;
@@ -200,51 +273,198 @@ public final class TableGrid {
         if (start >= end) {
             return result;
         }
-        int[] edges = edges(layout);
+        Geometry geometry = geometry(layout);
         for (List<Cell> row : rows) {
             for (Cell cell : row) {
-                int from = Math.max(start, cell.start());
-                int to = Math.min(end, cell.end());
-                if (from >= to) {
-                    continue;
+                List<Line> lines = geometry.lines(cell.row(), cell.column());
+                for (int index = 0; index < lines.size(); index++) {
+                    Line line = lines.get(index);
+                    int from = Math.max(start, line.start());
+                    int to = Math.min(end, line.end());
+                    if (from >= to) {
+                        continue;
+                    }
+                    int x1 = caretX(cell, lines, from, layout);
+                    int x2 = caretX(cell, lines, to, layout);
+                    result.add(new Rectangle(x1,
+                            layout.y() + geometry.top(cell.row()) + VERTICAL_PADDING + index * layout.lineHeight(),
+                            Math.max(1, x2 - x1), layout.lineHeight()));
                 }
-                int x1 = caretX(cell, from, edges, layout);
-                int x2 = caretX(cell, to, edges, layout);
-                result.add(new Rectangle(x1, layout.y() + cell.row() * layout.rowHeight(),
-                        Math.max(1, x2 - x1), layout.rowHeight()));
             }
         }
         return result;
     }
 
-    private int caretX(Cell cell, int offset, int[] edges, Layout layout) {
-        int clamped = Math.max(cell.start(), Math.min(cell.rawEnd(), offset));
-        return textX(cell, edges, layout)
-                + layout.metrics().width(display(text(cell.start(), clamped)), cell.row() == 0);
+    private int caretX(Cell cell, List<Line> lines, int offset, Layout layout) {
+        int index = lineIndex(lines, offset);
+        Line line = lines.get(index);
+        int limit = index == lines.size() - 1 ? cell.rawEnd() : line.end();
+        int clamped = Math.max(line.start(), Math.min(limit, offset));
+        return layout.x() + line.x() + layout.metrics().width(display(text(line.start(), clamped)), cell.row() == 0);
     }
 
-    private int textX(Cell cell, int[] edges, Layout layout) {
-        int left = edges[cell.column()];
-        int right = edges[cell.column() + 1];
-        int textWidth = layout.metrics().width(display(text(cell.start(), cell.end())), cell.row() == 0);
+    private static int lineIndex(List<Line> lines, int offset) {
+        int index = 0;
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines.get(i).start() <= offset) {
+                index = i;
+            } else {
+                break;
+            }
+        }
+        return index;
+    }
+
+    private Geometry compute(Layout layout) {
+        int[] widths = columnWidths(layout);
+        int[] edges = new int[columns + 1];
+        for (int column = 0; column < columns; column++) {
+            edges[column + 1] = edges[column] + widths[column];
+        }
+        List<List<List<Line>>> all = new ArrayList<>();
+        int[] tops = new int[rows.size() + 1];
+        for (int row = 0; row < rows.size(); row++) {
+            List<List<Line>> rowLines = new ArrayList<>();
+            int maxLines = 1;
+            for (int column = 0; column < columns; column++) {
+                List<Line> lines = wrap(rows.get(row).get(column), widths[column], edges[column], layout);
+                rowLines.add(lines);
+                maxLines = Math.max(maxLines, lines.size());
+            }
+            all.add(rowLines);
+            tops[row + 1] = tops[row] + maxLines * layout.lineHeight() + 2 * VERTICAL_PADDING;
+        }
+        return new Geometry(edges, tops, all);
+    }
+
+    /**
+     * Правила как у CSS auto-table: если всё помещается в одну строку, лишняя ширина делится пропорционально
+     * естественной ширине колонок; иначе колонки сжимаются между «самое длинное слово» и «весь текст»;
+     * когда нет места даже для слов, ширины пропорциональны словам, а слова переносятся по символам.
+     */
+    private int[] columnWidths(Layout layout) {
+        int total = Math.max(columns, layout.width());
+        long[] min = new long[columns];
+        long[] max = new long[columns];
+        for (int column = 0; column < columns; column++) {
+            min[column] = 2L * PADDING;
+            max[column] = 2L * PADDING;
+        }
+        for (List<Cell> row : rows) {
+            for (Cell cell : row) {
+                boolean header = cell.row() == 0;
+                String text = display(text(cell.start(), cell.end()));
+                long full = layout.metrics().width(text, header) + 2L * PADDING;
+                long longest = 0;
+                for (String word : text.split(" ")) {
+                    if (!word.isEmpty()) {
+                        longest = Math.max(longest, layout.metrics().width(word, header));
+                    }
+                }
+                longest += 2L * PADDING;
+                max[cell.column()] = Math.max(max[cell.column()], full);
+                min[cell.column()] = Math.max(min[cell.column()], Math.min(longest, full));
+            }
+        }
+        long sumMax = 0;
+        long sumMin = 0;
+        for (int column = 0; column < columns; column++) {
+            sumMax += max[column];
+            sumMin += min[column];
+        }
+        int[] widths = new int[columns];
+        for (int column = 0; column < columns; column++) {
+            if (sumMax <= total) {
+                widths[column] = (int) (max[column] + (total - sumMax) * max[column] / sumMax);
+            } else if (sumMin >= total) {
+                widths[column] = (int) Math.max(1, total * min[column] / sumMin);
+            } else {
+                widths[column] = (int) (min[column] + (total - sumMin) * (max[column] - min[column])
+                        / (sumMax - sumMin));
+            }
+        }
+        int sum = 0;
+        for (int width : widths) {
+            sum += width;
+        }
+        widths[columns - 1] = Math.max(1, widths[columns - 1] + total - sum);
+        return widths;
+    }
+
+    private List<Line> wrap(Cell cell, int columnWidth, int left, Layout layout) {
+        boolean header = cell.row() == 0;
+        String text = text(cell.start(), cell.end());
+        int maxWidth = Math.max(1, columnWidth - 2 * PADDING);
+        Metrics metrics = layout.metrics();
+        int space = metrics.width(" ", header);
+        List<int[]> ranges = new ArrayList<>();
+        int length = text.length();
+        int lineStart = -1;
+        int lineEnd = -1;
+        int lineWidth = 0;
+        int index = 0;
+        while (index < length) {
+            int gapStart = index;
+            while (index < length && text.charAt(index) == ' ') {
+                index++;
+            }
+            int gap = index - gapStart;
+            if (index >= length) {
+                break;
+            }
+            int wordStart = index;
+            while (index < length && text.charAt(index) != ' ') {
+                index++;
+            }
+            int wordWidth = metrics.width(display(text.substring(wordStart, index)), header);
+            if (lineStart >= 0 && lineWidth + gap * space + wordWidth <= maxWidth) {
+                lineEnd = index;
+                lineWidth += gap * space + wordWidth;
+                continue;
+            }
+            if (lineStart >= 0) {
+                ranges.add(new int[]{lineStart, lineEnd});
+            }
+            lineStart = wordStart;
+            lineEnd = index;
+            lineWidth = wordWidth;
+            if (wordWidth > maxWidth) {
+                int segmentStart = wordStart;
+                int segmentWidth = 0;
+                for (int position = wordStart; position < index; position++) {
+                    int charWidth = metrics.width(display(text.substring(position, position + 1)), header);
+                    if (segmentWidth + charWidth > maxWidth && position > segmentStart) {
+                        ranges.add(new int[]{segmentStart, position});
+                        segmentStart = position;
+                        segmentWidth = 0;
+                    }
+                    segmentWidth += charWidth;
+                }
+                lineStart = segmentStart;
+                lineEnd = index;
+                lineWidth = segmentWidth;
+            }
+        }
+        if (lineStart >= 0) {
+            ranges.add(new int[]{lineStart, lineEnd});
+        }
+        if (ranges.isEmpty()) {
+            ranges.add(new int[]{0, 0});
+        }
         TableModel.Alignment alignment = cell.column() < layout.alignments().size()
                 ? layout.alignments().get(cell.column()) : TableModel.Alignment.LEFT;
-        return switch (alignment) {
-            case LEFT -> left + PADDING;
-            case CENTER -> left + Math.max(PADDING, (right - left - textWidth) / 2);
-            case RIGHT -> Math.max(left + PADDING, right - textWidth - PADDING);
-        };
-    }
-
-    /** Те же границы колонок, что при рисовании TableWidget. */
-    private int[] edges(Layout layout) {
-        int[] edges = new int[columns + 1];
-        edges[0] = layout.x();
-        for (int column = 0; column < columns; column++) {
-            edges[column + 1] = column == columns - 1 ? layout.x() + layout.width()
-                    : layout.x() + Math.round((float) layout.width() * (column + 1) / columns);
+        List<Line> result = new ArrayList<>();
+        for (int[] range : ranges) {
+            String shown = display(text.substring(range[0], range[1]));
+            int width = metrics.width(shown, header);
+            int x = switch (alignment) {
+                case LEFT -> left + PADDING;
+                case CENTER -> left + Math.max(PADDING, (columnWidth - width) / 2);
+                case RIGHT -> Math.max(left + PADDING, left + columnWidth - PADDING - width);
+            };
+            result.add(new Line(cell.start() + range[0], cell.start() + range[1], x, width, shown));
         }
-        return edges;
+        return result;
     }
 
     /** Позиция между {@code \} и {@code |} экранированного разделителя не является позицией каретки. */

@@ -29,6 +29,11 @@ public final class MouseController extends MouseAdapter {
         }
         canvas.requestFocusInWindow();
         canvas.clearComposition();
+        if (event.getClickCount() == 1 && canvas.pressOverlay(event.getPoint())) {
+            dragging = false;
+            event.consume();
+            return;
+        }
         if (event.getClickCount() == 1 && canvas.beginImageResize(event.getPoint())) {
             resizingImage = true;
             dragging = false;

@@ -2,30 +2,34 @@ package ru.mcs.markdown.widget;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Point;
 import java.awt.Rectangle;
-import ru.mcs.editor.draw.BlockWidget;
+import java.util.ArrayList;
+import java.util.List;
 import ru.mcs.editor.draw.DrawSink;
 import ru.mcs.spi.swing.editor.style.ComputedStyle;
 
-/** Read-only grid для неактивной таблицы; редактирование выполняется над исходным Markdown-span. */
+/** Сетка таблицы: ширина колонок по тексту, перенос длинных ячеек; редактирование идёт в исходном Markdown. */
 public final class TableWidget extends AbstractBlockWidget {
 
-    private static final int ROW_HEIGHT = 30;
+    private static final int MIN_LINE_HEIGHT = 18;
 
     private final TableModel table;
     private final TableGrid grid;
-    private final java.util.List<TableModel.Alignment> alignments;
-    private final Font boldFont;
-    private Styles styles;
+    private final List<TableModel.Alignment> alignments;
     private final ComputedStyle style;
     private final Font font;
+    private final Font boldFont;
+    private final TableGrid.Metrics metrics;
+    private final int lineHeight;
     private final String caption;
+    private Styles styles;
 
     TableWidget(int start, int end, String source, ComputedStyle style, Font font, String caption) {
         super(start, end);
         this.table = TableModel.parse(source);
         this.grid = TableGrid.parse(source, start);
-        java.util.List<TableModel.Alignment> columns = new java.util.ArrayList<>();
+        List<TableModel.Alignment> columns = new ArrayList<>();
         if (table != null) {
             for (int column = 0; column < table.columnCount(); column++) {
                 columns.add(table.alignment(column));
@@ -33,67 +37,13 @@ public final class TableWidget extends AbstractBlockWidget {
         }
         this.alignments = columns;
         this.style = style;
-        this.font = font.deriveFont(Math.max(13f, font.getSize2D()));
-        this.boldFont = this.font.deriveFont(Font.BOLD);
+        Font regular = font.deriveFont(Math.max(13f, font.getSize2D()));
+        Font bold = regular.deriveFont(Font.BOLD);
+        this.font = regular;
+        this.boldFont = bold;
+        this.metrics = (text, header) -> WidgetText.width(text, header ? bold : regular);
+        this.lineHeight = Math.max(MIN_LINE_HEIGHT, WidgetText.lineHeight(regular));
         this.caption = caption;
-    }
-
-    @Override
-    public int height(int width) {
-        int content = table == null ? WidgetText.lineHeight(font) + 16 : table.rowCount() * ROW_HEIGHT;
-        return content + (caption == null ? 0 : WidgetText.lineHeight(font) + 4);
-    }
-
-    @Override
-    protected void paintWidget(DrawSink sink, Rectangle bounds) {
-        if (table == null) {
-            WidgetText.draw(sink, "Invalid Markdown table", font, style.color(), bounds.x + 8,
-                    bounds.y + 8 + WidgetText.baseline(font));
-            return;
-        }
-        Color border = styles != null && styles.border() != null ? styles.border()
-                : new Color(style.color().getRed(), style.color().getGreen(), style.color().getBlue(), 70);
-        int columns = table.columnCount();
-        int[] edges = new int[columns + 1];
-        edges[0] = bounds.x;
-        for (int column = 0; column < columns; column++) {
-            edges[column + 1] = column == columns - 1 ? bounds.x + bounds.width
-                    : bounds.x + Math.round((float) bounds.width * (column + 1) / columns);
-        }
-        for (int row = 0; row < table.rowCount(); row++) {
-            int y = bounds.y + row * ROW_HEIGHT;
-            Color background = rowBackground(row);
-            if (background != null) {
-                sink.fillRect(bounds.x, y, bounds.width, ROW_HEIGHT, background);
-            }
-            sink.drawLine(bounds.x, y, bounds.x + bounds.width, y, 1, border);
-            for (int column = 0; column < columns; column++) {
-                int left = edges[column];
-                int right = edges[column + 1];
-                sink.drawLine(left, y, left, y + ROW_HEIGHT, 1, border);
-                String value = table.cell(row, column).replace("\\|", "|");
-                int textWidth = WidgetText.width(value, row == 0 ? boldFont : font);
-                int x = switch (table.alignment(column)) {
-                    case LEFT -> left + 8;
-                    case CENTER -> left + Math.max(8, (right - left - textWidth) / 2);
-                    case RIGHT -> Math.max(left + 8, right - textWidth - 8);
-                };
-                WidgetText.draw(sink, value, row == 0 ? font.deriveFont(Font.BOLD) : font, style.color(),
-                        x, y + (ROW_HEIGHT + WidgetText.baseline(font)) / 2 - 2);
-            }
-            sink.drawLine(bounds.x + bounds.width, y, bounds.x + bounds.width, y + ROW_HEIGHT, 1, border);
-        }
-        int tableHeight = table.rowCount() * ROW_HEIGHT;
-        sink.drawLine(bounds.x, bounds.y + tableHeight, bounds.x + bounds.width,
-                bounds.y + tableHeight, 1, border);
-        if (caption != null) {
-            WidgetText.draw(sink, caption, font, style.color(), bounds.x,
-                    bounds.y + bounds.height - WidgetText.lineHeight(font) + WidgetText.baseline(font));
-        }
-    }
-
-    public TableModel table() {
-        return table;
     }
 
     /** Цвета из CSS темы: заголовок (th), нечётные/чётные строки тела (tr:nth-child), граница (td); null — по умолчанию. */
@@ -102,6 +52,54 @@ public final class TableWidget extends AbstractBlockWidget {
 
     public void setStyles(Styles styles) {
         this.styles = styles;
+    }
+
+    @Override
+    public int height(int width) {
+        int content = grid == null || table == null ? WidgetText.lineHeight(font) + 16
+                : grid.height(layout(0, 0, width));
+        return content + (caption == null ? 0 : WidgetText.lineHeight(font) + 4);
+    }
+
+    @Override
+    protected void paintWidget(DrawSink sink, Rectangle bounds) {
+        if (table == null || grid == null) {
+            WidgetText.draw(sink, "Invalid Markdown table", font, style.color(), bounds.x + 8,
+                    bounds.y + 8 + WidgetText.baseline(font));
+            return;
+        }
+        Color border = styles != null && styles.border() != null ? styles.border()
+                : new Color(style.color().getRed(), style.color().getGreen(), style.color().getBlue(), 70);
+        TableGrid.Geometry geometry = grid.geometry(layout(bounds.x, bounds.y, bounds.width));
+        int right = bounds.x + bounds.width;
+        for (int row = 0; row < grid.rowCount(); row++) {
+            int top = bounds.y + geometry.top(row);
+            int height = geometry.top(row + 1) - geometry.top(row);
+            Color background = rowBackground(row);
+            if (background != null) {
+                sink.fillRect(bounds.x, top, bounds.width, height, background);
+            }
+            sink.drawLine(bounds.x, top, right, top, 1, border);
+            Font cellFont = row == 0 ? boldFont : font;
+            for (int column = 0; column < grid.columnCount(); column++) {
+                int left = bounds.x + geometry.edge(column);
+                sink.drawLine(left, top, left, top + height, 1, border);
+                List<TableGrid.Line> lines = geometry.lines(row, column);
+                for (int index = 0; index < lines.size(); index++) {
+                    TableGrid.Line line = lines.get(index);
+                    int lineTop = top + TableGrid.VERTICAL_PADDING + index * lineHeight;
+                    int baseline = lineTop + (lineHeight + WidgetText.baseline(cellFont)) / 2 - 2;
+                    WidgetText.draw(sink, line.text(), cellFont, style.color(), bounds.x + line.x(), baseline);
+                }
+            }
+            sink.drawLine(right, top, right, top + height, 1, border);
+        }
+        int tableHeight = geometry.height();
+        sink.drawLine(bounds.x, bounds.y + tableHeight, right, bounds.y + tableHeight, 1, border);
+        if (caption != null) {
+            WidgetText.draw(sink, caption, font, style.color(), bounds.x,
+                    bounds.y + bounds.height - WidgetText.lineHeight(font) + WidgetText.baseline(font));
+        }
     }
 
     private Color rowBackground(int row) {
@@ -114,8 +112,12 @@ public final class TableWidget extends AbstractBlockWidget {
         return row % 2 == 0 ? styles.even() : styles.odd();
     }
 
+    public TableModel table() {
+        return table;
+    }
+
     @Override
-    public java.awt.Rectangle caretRect(int offset, int x, int y, int width) {
+    public Rectangle caretRect(int offset, int x, int y, int width) {
         if (grid == null || offset < sourceStart() || offset > sourceEnd()) {
             return null;
         }
@@ -123,17 +125,16 @@ public final class TableWidget extends AbstractBlockWidget {
     }
 
     @Override
-    public int hitOffset(java.awt.Point point, int x, int y, int width) {
+    public int hitOffset(Point point, int x, int y, int width) {
         return grid == null ? -1 : grid.hitOffset(point, layout(x, y, width));
     }
 
     @Override
-    public java.util.List<java.awt.Rectangle> selectionRects(int start, int end, int x, int y, int width) {
-        return grid == null ? java.util.List.of() : grid.selectionRects(start, end, layout(x, y, width));
+    public List<Rectangle> selectionRects(int start, int end, int x, int y, int width) {
+        return grid == null ? List.of() : grid.selectionRects(start, end, layout(x, y, width));
     }
 
     private TableGrid.Layout layout(int x, int y, int width) {
-        return new TableGrid.Layout(x, y, width, ROW_HEIGHT,
-                (text, header) -> WidgetText.width(text, header ? boldFont : font), alignments);
+        return new TableGrid.Layout(x, y, width, lineHeight, metrics, alignments);
     }
 }

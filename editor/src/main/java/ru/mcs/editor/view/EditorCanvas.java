@@ -232,6 +232,11 @@ public class EditorCanvas extends JComponent implements Scrollable, EditorContex
         return false;
     }
 
+    /** Нажатие мыши по нарисованной поверх содержимого панели (например, управление таблицей). */
+    public boolean pressOverlay(Point point) {
+        return false;
+    }
+
     /** Подготовка вставляемого текста к месту каретки (например, экранирование {@code |} в ячейке таблицы). */
     public String prepareInsertedText(String text) {
         return text;
