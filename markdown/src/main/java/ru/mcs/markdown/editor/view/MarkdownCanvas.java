@@ -598,7 +598,7 @@ public final class MarkdownCanvas extends EditorCanvas {
         for (var block : markdownLayout.layout().blocks()) {
             if (block.widget() instanceof TableWidget table
                     && caret >= block.span().start() && caret <= table.sourceEnd()) {
-                return new Rectangle(block.contentX(), Math.max(0, block.y() - TableToolbar.HEIGHT - 2),
+                return new Rectangle(block.contentX(), Math.max(0, block.y() - TableToolbar.HEIGHT - 4),
                         block.contentWidth(), TableToolbar.HEIGHT);
             }
         }

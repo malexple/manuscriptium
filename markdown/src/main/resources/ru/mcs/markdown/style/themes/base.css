@@ -63,7 +63,7 @@ em { font-style: italic; }
 del { color: var(--control-text-color); text-decoration: line-through; }
 ul, ol { margin: 0 0 16px; padding-left: 32px; }
 li { margin-bottom: 4px; }
-table { width: 100%; margin-bottom: 16px; border: 1px solid var(--border-color); }
+table { width: 100%; margin: 12px 0 20px; border: 1px solid var(--border-color); }
 th, td { padding: 6px 12px; border-bottom: 1px solid var(--border-color); text-align: left; }
 th { font-weight: 600; background-color: var(--side-bar-bg-color); }
 tr:nth-child(even) { background-color: var(--side-bar-bg-color); }
