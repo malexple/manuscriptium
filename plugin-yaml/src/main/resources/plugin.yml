@@ -1,0 +1,9 @@
+id: ru.mcs.plugin.yaml
+name: YAML Support
+version: 0.1.0
+sdk-version: "0.10"
+module: ru.mcs.plugin.yaml
+depends-on: []
+permissions: []
+activation: onStartup
+i18n: ru/mcs/yaml/messages/messages

@@ -1,0 +1,54 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'ru.mcs.plugin'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+dependencies {
+    // SDK, редактор и SnakeYAML предоставляет Manuscriptium во время выполнения: в JAR они не упаковываются.
+    compileOnly 'ru.mcs:spi-swing:0.1.0-SNAPSHOT'
+    compileOnly 'ru.mcs:editor:0.1.0-SNAPSHOT'
+    compileOnly 'org.yaml:snakeyaml:2.4'
+
+    testImplementation 'ru.mcs:spi-swing:0.1.0-SNAPSHOT'
+    testImplementation 'ru.mcs:editor:0.1.0-SNAPSHOT'
+    testImplementation 'org.yaml:snakeyaml:2.4'
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.assertj:assertj-core:3.27.3'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+tasks.named('jar') {
+    archiveBaseName = 'manuscriptium-plugin-yaml'
+}
+
+// Для разработки: ставит плагин в каталог, который читает :app:run (manuscriptium.home = app/build/dev-home).
+tasks.register('installToDevHome', Copy) {
+    group = 'build'
+    description = 'Copies the plugin JAR and plugin.yml into app/build/dev-home/plugins/ru.mcs.plugin.yaml.'
+    dependsOn 'jar'
+    from(tasks.named('jar'))
+    from('src/main/resources/plugin.yml')
+    into layout.projectDirectory.dir('../app/build/dev-home/plugins/ru.mcs.plugin.yaml')
+}

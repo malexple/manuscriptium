@@ -1,0 +1,5 @@
+rootProject.name = 'manuscriptium-plugin-yaml'
+
+// SDK и модули платформы подключаются напрямую из исходников Manuscriptium.
+// После переноса проекта измените путь на каталог с settings.gradle Manuscriptium.
+includeBuild('..')
