@@ -17,6 +17,11 @@ public interface KeymapService {
 
     List<ShortcutScope> scopes(String languageId);
 
+    /** Области всех языков (язык → области): нужны странице настроек, чтобы находить пересечения областей. */
+    default Map<String, List<ShortcutScope>> scopesByLanguage() {
+        return Map.of();
+    }
+
     /** Итоговое сочетание в записи {@link Shortcuts}; пустая строка — действие без сочетания. */
     String shortcut(String scopeId, String actionId);
 

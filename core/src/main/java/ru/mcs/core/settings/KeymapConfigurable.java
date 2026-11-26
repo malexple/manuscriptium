@@ -44,8 +44,11 @@ import ru.mcs.spi.swing.settings.Configurable;
  */
 final class KeymapConfigurable implements Configurable {
 
+    private static final String COMMON_LANGUAGE = "editor";
+
     private final KeymapService service;
     private final List<ShortcutScope> scopes;
+    private final String languageId;
     private final Map<String, String> draft = new HashMap<>();
     private final Map<String, String> defaults = new HashMap<>();
     private final List<ScopeModel> models = new ArrayList<>();
@@ -58,6 +61,7 @@ final class KeymapConfigurable implements Configurable {
     KeymapConfigurable(KeymapService service, String languageId) {
         this.service = service;
         this.scopes = service.scopes(languageId);
+        this.languageId = languageId;
         load();
     }
 
@@ -280,12 +284,11 @@ final class KeymapConfigurable implements Configurable {
                 KeyStroke stroke = KeyStroke.getKeyStroke(code, event.getModifiersEx());
                 captured[0] = Shortcuts.format(stroke, mask);
                 field.setText(Shortcuts.display(stroke));
-                String other = conflict(scope.id(), binding.actionId(), captured[0]);
-                warning.setText(other == null ? " " : Messages.get("settings.keys.conflict") + " " + other);
-                ok.setEnabled(other == null);
+                updateWarning(warning, ok, scope, binding, captured[0]);
                 event.consume();
             }
         });
+        updateWarning(warning, ok, scope, binding, captured[0]);
         ok.addActionListener(event -> {
             result[0] = captured[0];
             dialog.dispose();
@@ -317,6 +320,47 @@ final class KeymapConfigurable implements Configurable {
         SwingUtilities.invokeLater(field::requestFocusInWindow);
         dialog.setVisible(true);
         return result[0];
+    }
+
+    /**
+     * Описание действия в пересекающейся области с тем же сочетанием либо null. Общая область («editor») действует
+     * во всех редакторах и пересекается с областями любого языка; области разных языков не пересекаются.
+     */
+    String sharedConflict(String scopeId, String actionId, String shortcut) {
+        KeyStroke wanted = parse(shortcut);
+        if (wanted == null) {
+            return null;
+        }
+        boolean common = COMMON_LANGUAGE.equals(languageId);
+        for (Map.Entry<String, List<ShortcutScope>> entry : service.scopesByLanguage().entrySet()) {
+            if (entry.getKey().equals(languageId) || !(common || COMMON_LANGUAGE.equals(entry.getKey()))) {
+                continue;
+            }
+            for (ShortcutScope other : entry.getValue()) {
+                for (ShortcutBinding binding : other.bindings()) {
+                    if (wanted.equals(parse(service.shortcut(other.id(), binding.actionId())))) {
+                        return other.displayName() + " — " + binding.name();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private void updateWarning(JLabel warning, JButton ok, ShortcutScope scope, ShortcutBinding binding,
+                               String shortcut) {
+        String same = conflict(scope.id(), binding.actionId(), shortcut);
+        if (same != null) {
+            warning.setForeground(Color.RED);
+            warning.setText(Messages.get("settings.keys.conflict") + " " + same);
+            ok.setEnabled(false);
+            return;
+        }
+        String shared = sharedConflict(scope.id(), binding.actionId(), shortcut);
+        warning.setForeground(new Color(0xB36B00));
+        warning.setText(shared == null ? " " : Messages.get("settings.keys.shared") + " " + shared
+                + " (" + Messages.get("settings.keys.priority") + ")");
+        ok.setEnabled(true);
     }
 
     private final class ScopeModel extends AbstractTableModel {

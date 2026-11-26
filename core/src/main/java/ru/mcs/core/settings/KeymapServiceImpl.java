@@ -50,6 +50,13 @@ public final class KeymapServiceImpl implements KeymapService, PersistentStateCo
     }
 
     @Override
+    public synchronized Map<String, List<ShortcutScope>> scopesByLanguage() {
+        Map<String, List<ShortcutScope>> copy = new LinkedHashMap<>();
+        byLanguage.forEach((language, scopes) -> copy.put(language, List.copyOf(scopes)));
+        return copy;
+    }
+
+    @Override
     public String shortcut(String scopeId, String actionId) {
         String key = KeymapService.key(scopeId, actionId);
         String override = overrides.get(key);
