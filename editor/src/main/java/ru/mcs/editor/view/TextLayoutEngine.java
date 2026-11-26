@@ -78,6 +78,15 @@ final class TextLayoutEngine {
         }
         logicalLines.subList(changed.firstLine(), changed.oldLastLine() + 1).clear();
         logicalLines.addAll(changed.firstLine(), replacement);
+        int delta = change.newLen() - change.oldLen();
+        if (delta != 0) {
+            // Строки после правки не перерасставлялись: сдвигаем их смещения, как индекс строк.
+            for (int line = changed.newLastLine() + 1; line < logicalLines.size(); line++) {
+                for (VisualLine visual : logicalLines.get(line).visuals) {
+                    visual.shift(delta);
+                }
+            }
+        }
         updateVerticalPositions();
     }
 
@@ -309,8 +318,8 @@ final class TextLayoutEngine {
     }
 
     static final class VisualLine {
-        private final int start;
-        private final int end;
+        private int start;
+        private int end;
         private final TextLayout text;
         private int y;
 
@@ -318,6 +327,11 @@ final class TextLayoutEngine {
             this.start = start;
             this.end = end;
             this.text = text;
+        }
+
+        private void shift(int delta) {
+            start += delta;
+            end += delta;
         }
 
         int start() {
