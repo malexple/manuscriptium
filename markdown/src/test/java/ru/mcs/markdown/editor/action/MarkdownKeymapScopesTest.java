@@ -33,6 +33,9 @@ class MarkdownKeymapScopesTest {
         for (String scopeId : List.of(MarkdownKeymapScopes.CANVAS, MarkdownKeymapScopes.SOURCE)) {
             Set<KeyStroke> seen = new HashSet<>();
             for (ShortcutBinding binding : MarkdownKeymapScopes.defaults(scopeId)) {
+                if (binding.defaultShortcut().isEmpty()) {
+                    continue;
+                }
                 KeyStroke stroke = Shortcuts.parse(binding.defaultShortcut(), InputEvent.CTRL_DOWN_MASK);
                 assertThat(stroke).as("%s %s", scopeId, binding.actionId()).isNotNull();
                 assertThat(seen.add(stroke)).as("duplicate %s in %s", binding.defaultShortcut(), scopeId).isTrue();

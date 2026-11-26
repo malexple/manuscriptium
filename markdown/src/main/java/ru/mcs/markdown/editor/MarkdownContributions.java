@@ -40,7 +40,7 @@ public final class MarkdownContributions {
 
         ctx.editors().registerProvider(editor.createFileEditorProvider());
         MarkdownSettingsPages.register(ctx.settings(), key -> ctx.i18n().get(key),
-                editor::createSmartKeysConfigurable);
+                editor::createSmartKeysConfigurable, editor::createCodeStyleConfigurable);
         ctx.settings().register(MarkdownSettingsPages.general(key -> ctx.i18n().get(key),
                 editor::createGeneralConfigurable));
         ctx.settings().register(new ConfigurableProvider() {

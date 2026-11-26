@@ -30,6 +30,14 @@
       ]
     },
     {
+      "id": "markdown.editor.reformat",
+      "textKey": "action.reformat",
+      "descriptionKey": "description.reformat",
+      "parents": [
+        "MainMenu.Tools"
+      ]
+    },
+    {
       "id": "markdown.editor.wordCount",
       "textKey": "action.wordCount",
       "descriptionKey": "description.wordCount",

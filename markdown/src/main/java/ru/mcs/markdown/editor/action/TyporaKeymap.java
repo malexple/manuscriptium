@@ -51,16 +51,15 @@ public final class TyporaKeymap {
         for (ShortcutBinding binding : MarkdownKeymapScopes.defaults(scopeId)) {
             String shortcut = keymap == null ? binding.defaultShortcut()
                     : keymap.shortcut(scopeId, binding.actionId());
-            KeyStroke key = parse(shortcut);
-            if (key != null) {
-                bind(component, key, binding.actionId());
-            }
+            bind(component, parse(shortcut), binding.actionId());
         }
     }
 
     public void uninstall() {
         for (Installed entry : installed) {
-            entry.component().getInputMap(JComponent.WHEN_FOCUSED).remove(entry.key());
+            if (entry.key() != null) {
+                entry.component().getInputMap(JComponent.WHEN_FOCUSED).remove(entry.key());
+            }
             entry.component().getActionMap().remove(entry.actionId());
         }
         installed.clear();
@@ -75,7 +74,9 @@ public final class TyporaKeymap {
     }
 
     private void bind(JComponent component, KeyStroke key, String actionId) {
-        component.getInputMap(JComponent.WHEN_FOCUSED).put(key, actionId);
+        if (key != null) {
+            component.getInputMap(JComponent.WHEN_FOCUSED).put(key, actionId);
+        }
         component.getActionMap().put(actionId, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent event) {

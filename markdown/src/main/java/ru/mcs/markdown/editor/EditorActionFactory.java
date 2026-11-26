@@ -16,10 +16,16 @@ final class EditorActionFactory {
 
     private final I18n i18n;
     private final Supplier<Optional<MarkdownFileEditor>> selectedEditor;
+    private Supplier<ru.mcs.markdown.format.CodeStyle> codeStyle = ru.mcs.markdown.format.CodeStyle::defaults;
 
     EditorActionFactory(I18n i18n, Supplier<Optional<MarkdownFileEditor>> selectedEditor) {
         this.i18n = i18n;
         this.selectedEditor = selectedEditor;
+    }
+
+    /** Параметры форматирования для команды Reformat. */
+    void useCodeStyle(Supplier<ru.mcs.markdown.format.CodeStyle> codeStyle) {
+        this.codeStyle = codeStyle;
     }
 
     AnAction create(String id) {
@@ -79,6 +85,7 @@ final class EditorActionFactory {
                     ru.mcs.markdown.widget.TableModel.Alignment.RIGHT));
             case EditorActionIds.TABLE_COPY_CELL -> command(id, editor -> editor.activeCanvas().input().copyTableCell());
             case EditorActionIds.TABLE_CLEAR_CELL -> command(id, editor -> editor.activeCanvas().input().clearTableCell());
+            case EditorActionIds.REFORMAT -> command(id, editor -> EditorCommands.reformat(editor, codeStyle.get()));
             default -> null;
         };
     }

@@ -224,6 +224,29 @@ final class EditorCommands {
         canvas.setCaretSelection(range.start(), range.start() + replacement.length());
     }
 
+    /** Форматирует выделенные строки или весь документ одной правкой (один шаг отмены). */
+    static void reformat(MarkdownFileEditor editor, ru.mcs.markdown.format.CodeStyle style) {
+        MarkdownCanvas canvas = editor.activeCanvas();
+        DocumentModel document = editor.document();
+        String text = document.text().toString();
+        Range selection = canvas.selectionRange();
+        boolean partial = selection.length() > 0;
+        Range range = partial ? lineRange(text, selection) : new Range(0, text.length());
+        String original = text.substring(range.start(), range.end());
+        String formatted = ru.mcs.markdown.format.MarkdownReformatter.format(original, style);
+        if (formatted.equals(original)) {
+            return;
+        }
+        int caret = canvas.caretOffset();
+        document.apply(Replace.of(range.start(), range.end(), formatted));
+        if (partial) {
+            canvas.setCaretSelection(range.start(), range.start() + formatted.length());
+        } else {
+            int restored = Math.min(caret, document.length());
+            canvas.setCaretSelection(restored, restored);
+        }
+    }
+
     static void duplicateLine(MarkdownFileEditor editor) {
         MarkdownCanvas canvas = editor.activeCanvas();
         DocumentModel document = editor.document();

@@ -75,6 +75,7 @@ public final class MarkdownKeymapScopes {
         add(all, EditorActionIds.MATH_BLOCK, "shortcut shift M");
         add(all, EditorActionIds.HORIZONTAL_RULE, "shortcut shift H");
         add(all, EditorActionIds.IMAGE, "shortcut shift I");
+        add(all, EditorActionIds.REFORMAT, CANVAS.equals(scopeId) ? "" : "shortcut alt L");
 
         add(all, EditorActionIds.TABLE_ADD_ROW, "shortcut alt DOWN");
         add(all, EditorActionIds.TABLE_REMOVE_ROW, "shortcut alt UP");

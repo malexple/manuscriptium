@@ -56,6 +56,7 @@ public final class EditorActionIds {
     public static final String TABLE_ALIGN_RIGHT = PREFIX + "tableAlignRight";
     public static final String TABLE_COPY_CELL = PREFIX + "tableCopyCell";
     public static final String TABLE_CLEAR_CELL = PREFIX + "tableClearCell";
+    public static final String REFORMAT = PREFIX + "reformat";
 
     public static final List<String> ALL = List.of(
             TOGGLE_MODE, FOCUS_MODE, TYPEWRITER_MODE, AUTO_PAIR, WORD_COUNT,
@@ -66,7 +67,8 @@ public final class EditorActionIds {
             BLOCK_QUOTE, BULLET_LIST, ORDERED_LIST, TASK_LIST, CODE_BLOCK, TABLE, MATH_BLOCK,
             HORIZONTAL_RULE, IMAGE,
             TABLE_ADD_ROW, TABLE_REMOVE_ROW, TABLE_ADD_COLUMN, TABLE_REMOVE_COLUMN,
-            TABLE_ALIGN_LEFT, TABLE_ALIGN_CENTER, TABLE_ALIGN_RIGHT, TABLE_COPY_CELL, TABLE_CLEAR_CELL);
+            TABLE_ALIGN_LEFT, TABLE_ALIGN_CENTER, TABLE_ALIGN_RIGHT, TABLE_COPY_CELL, TABLE_CLEAR_CELL,
+            REFORMAT);
 
     private EditorActionIds() {
     }

@@ -29,7 +29,13 @@ public final class MarkdownSettingsPages {
     /** {@code smartKeys} может быть null или вернуть null — тогда страница остаётся заглушкой. */
     public static void register(SettingsManager settings, UnaryOperator<String> text,
                                 Supplier<Configurable> smartKeys) {
-        settings.register(page(CODE_STYLE_ID, SettingsGroups.CODE_STYLE, text, null));
+        register(settings, text, smartKeys, null);
+    }
+
+    /** {@code codeStyle} — страница Code Style → Markdown; null оставляет заглушку. */
+    public static void register(SettingsManager settings, UnaryOperator<String> text,
+                                Supplier<Configurable> smartKeys, Supplier<Configurable> codeStyle) {
+        settings.register(page(CODE_STYLE_ID, SettingsGroups.CODE_STYLE, text, codeStyle));
         settings.register(page(SMART_KEYS_ID, SettingsGroups.SMART_KEYS, text, smartKeys));
     }
 

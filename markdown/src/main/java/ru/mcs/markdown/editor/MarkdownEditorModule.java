@@ -25,6 +25,7 @@ public final class MarkdownEditorModule {
     private final MarkdownEditorState state = new MarkdownEditorState();
     private final MarkdownEditorRegistry registry = new MarkdownEditorRegistry();
     private final MarkdownSourceViewState sourceView = new MarkdownSourceViewState();
+    private final MarkdownCodeStyleState codeStyle = new MarkdownCodeStyleState();
     private PluginContext ctx;
     private AtomicFileStore fileStore;
     private MarkdownParser parser;
@@ -60,6 +61,7 @@ public final class MarkdownEditorModule {
         context.services().register(BlockRendererExtensionRegistry.class, widgets);
         ctx.state().register("editor", Scope.APPLICATION, state);
         ctx.state().register("sourceView", Scope.APPLICATION, sourceView);
+        ctx.state().register("codeStyle", Scope.APPLICATION, codeStyle);
         colorScheme = ctx.services().find(ru.mcs.spi.swing.editor.style.ColorSchemeService.class).orElse(null);
         if (colorScheme != null) {
             colorScheme.registerGroup(ru.mcs.markdown.render.MarkdownColorScheme.group(key -> ctx.i18n().get(key)));
@@ -74,6 +76,7 @@ public final class MarkdownEditorModule {
             keymap.addChangeListener(keymapListener);
         }
         actionFactory = new EditorActionFactory(ctx.i18n(), this::selectedEditor);
+        actionFactory.useCodeStyle(codeStyle::style);
     }
 
     public void stop() {
@@ -91,6 +94,11 @@ public final class MarkdownEditorModule {
         if (widgetExecutor != null) {
             widgetExecutor.shutdownNow();
         }
+    }
+
+    /** Страница Editor → Code Style → Markdown. */
+    ru.mcs.spi.swing.settings.Configurable createCodeStyleConfigurable() {
+        return new MarkdownCodeStyleConfigurable(codeStyle, key -> ctx.i18n().get(key));
     }
 
     /** Страница Editor → General → Smart Keys → Markdown; null, если сервис сочетаний недоступен. */

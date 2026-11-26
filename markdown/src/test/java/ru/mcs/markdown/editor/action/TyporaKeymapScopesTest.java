@@ -33,7 +33,7 @@ class TyporaKeymapScopesTest {
 
                 KeyStroke ctrlAltL = KeyStroke.getKeyStroke(KeyEvent.VK_L, CTRL | InputEvent.ALT_DOWN_MASK);
                 assertThat(binding(canvas, ctrlAltL)).isEqualTo(EditorActionIds.TABLE_ALIGN_LEFT);
-                assertThat(binding(source, ctrlAltL)).isNull();
+                assertThat(binding(source, ctrlAltL)).isEqualTo(EditorActionIds.REFORMAT);
                 assertThat(binding(source, KeyStroke.getKeyStroke(KeyEvent.VK_Z, CTRL)))
                         .isEqualTo(EditorActionIds.UNDO);
             } finally {
@@ -59,7 +59,7 @@ class TyporaKeymapScopesTest {
                 assertThat(binding(source, KeyStroke.getKeyStroke(KeyEvent.VK_B, InputEvent.ALT_DOWN_MASK)))
                         .isEqualTo(EditorActionIds.BOLD);
                 assertThat(binding(source, KeyStroke.getKeyStroke(KeyEvent.VK_I, CTRL))).isNull();
-                assertThat(source.getActionMap().get(EditorActionIds.ITALIC)).isNull();
+                assertThat(source.getActionMap().get(EditorActionIds.ITALIC)).isNotNull();
 
                 keymap.uninstall();
                 assertThat(binding(source, KeyStroke.getKeyStroke(KeyEvent.VK_B, InputEvent.ALT_DOWN_MASK))).isNull();
