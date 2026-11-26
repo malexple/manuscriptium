@@ -119,9 +119,11 @@ final class MarkdownFileEditor implements FileEditor {
         source.setStatus(i18n.get("source.loading"));
         canvas.setStatus(i18n.get("canvas.loading"));
         if (actions != null) {
-            TyporaKeymap keymap = new TyporaKeymap(actions);
-            keymap.install(canvas);
-            keymap.install(source);
+            actionManager = actions;
+            canvasKeymap = new TyporaKeymap(actions, null, ru.mcs.markdown.editor.action.MarkdownKeymapScopes.CANVAS);
+            canvasKeymap.install(canvas);
+            sourceKeymap = new TyporaKeymap(actions, null, ru.mcs.markdown.editor.action.MarkdownKeymapScopes.SOURCE);
+            sourceKeymap.install(source);
             EditorContextMenuBuilder contextMenus = new EditorContextMenuBuilder(actions);
             canvas.installContextMenu(contextMenus, this::editorContext);
             source.installContextMenu(contextMenus, this::editorContext);
@@ -177,6 +179,25 @@ final class MarkdownFileEditor implements FileEditor {
         setMode(initialMode);
         loader = createLoader();
         loader.execute();
+    }
+
+    private ru.mcs.spi.swing.action.ActionManager actionManager;
+    private TyporaKeymap canvasKeymap;
+    private TyporaKeymap sourceKeymap;
+
+    /** Ставит настраиваемые сочетания: свои для Canvas и для «Исходника»; вызывается и при их изменении. */
+    void useKeymap(ru.mcs.spi.swing.editor.keymap.KeymapService service) {
+        if (actionManager == null || service == null) {
+            return;
+        }
+        canvasKeymap.uninstall();
+        sourceKeymap.uninstall();
+        canvasKeymap = new TyporaKeymap(actionManager, service,
+                ru.mcs.markdown.editor.action.MarkdownKeymapScopes.CANVAS);
+        canvasKeymap.install(canvas);
+        sourceKeymap = new TyporaKeymap(actionManager, service,
+                ru.mcs.markdown.editor.action.MarkdownKeymapScopes.SOURCE);
+        sourceKeymap.install(source);
     }
 
     /** Подсветка синтаксиса вкладки «Исходник»: включение и цвета из цветовой схемы. */

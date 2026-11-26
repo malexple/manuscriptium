@@ -72,6 +72,13 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
         this.tokenColors = tokenColors;
     }
 
+    private ru.mcs.spi.swing.editor.keymap.KeymapService keymap;
+
+    /** Настраиваемые сочетания клавиш областей Canvas и «Исходник». */
+    void useKeymap(ru.mcs.spi.swing.editor.keymap.KeymapService keymap) {
+        this.keymap = keymap;
+    }
+
     @Override
     public String getId() {
         return "markdown.editor";
@@ -95,6 +102,9 @@ final class MarkdownFileEditorProvider implements FileEditorProvider {
         if (sourceView != null) {
             editor.setLineNumbersVisible(sourceView.showLineNumbers());
             editor.setSyntaxHighlighting(sourceView.showSyntaxHighlighting(), tokenColors);
+        }
+        if (keymap != null) {
+            editor.useKeymap(keymap);
         }
         return editor;
     }

@@ -36,6 +36,8 @@ public final class MarkdownEditorModule {
     private ru.mcs.spi.swing.editor.style.ColorSchemeService colorScheme;
     private ru.mcs.editor.view.TokenColors tokenColors = new ru.mcs.markdown.render.MarkdownTokenColors();
     private Runnable colorSchemeListener;
+    private ru.mcs.spi.swing.editor.keymap.KeymapService keymap;
+    private Runnable keymapListener;
 
     public void start(PluginContext context) {
         ctx = context;
@@ -65,10 +67,20 @@ public final class MarkdownEditorModule {
             colorSchemeListener = () -> javax.swing.SwingUtilities.invokeLater(this::refreshSourceViews);
             colorScheme.addChangeListener(colorSchemeListener);
         }
+        keymap = ctx.services().find(ru.mcs.spi.swing.editor.keymap.KeymapService.class).orElse(null);
+        if (keymap != null) {
+            ru.mcs.markdown.editor.action.MarkdownKeymapScopes.register(keymap, key -> ctx.i18n().get(key));
+            keymapListener = () -> javax.swing.SwingUtilities.invokeLater(this::refreshKeymaps);
+            keymap.addChangeListener(keymapListener);
+        }
         actionFactory = new EditorActionFactory(ctx.i18n(), this::selectedEditor);
     }
 
     public void stop() {
+        if (keymap != null) {
+            keymap.removeChangeListener(keymapListener);
+            keymap.unregisterScopes(ru.mcs.markdown.editor.action.MarkdownKeymapScopes.LANGUAGE_ID);
+        }
         if (colorScheme != null) {
             colorScheme.removeChangeListener(colorSchemeListener);
             colorScheme.unregisterGroup(ru.mcs.markdown.render.MarkdownColorScheme.GROUP_ID);
@@ -79,6 +91,16 @@ public final class MarkdownEditorModule {
         if (widgetExecutor != null) {
             widgetExecutor.shutdownNow();
         }
+    }
+
+    /** Страница Editor → General → Smart Keys → Markdown; null, если сервис сочетаний недоступен. */
+    ru.mcs.spi.swing.settings.Configurable createSmartKeysConfigurable() {
+        return keymap == null ? null
+                : keymap.createSettings(ru.mcs.markdown.editor.action.MarkdownKeymapScopes.LANGUAGE_ID);
+    }
+
+    private void refreshKeymaps() {
+        registry.forEach(editor -> editor.useKeymap(keymap));
     }
 
     private void refreshSourceViews() {
@@ -94,6 +116,7 @@ public final class MarkdownEditorModule {
                 parser, parserExecutor, styles, ctx.actions(), widgets);
         provider.useSourceView(sourceView);
         provider.useColorScheme(tokenColors);
+        provider.useKeymap(keymap);
         return provider;
     }
 

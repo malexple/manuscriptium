@@ -23,8 +23,14 @@ public final class MarkdownSettingsPages {
     }
 
     public static void register(SettingsManager settings, UnaryOperator<String> text) {
-        settings.register(page(CODE_STYLE_ID, SettingsGroups.CODE_STYLE, text));
-        settings.register(page(SMART_KEYS_ID, SettingsGroups.SMART_KEYS, text));
+        register(settings, text, null);
+    }
+
+    /** {@code smartKeys} может быть null или вернуть null — тогда страница остаётся заглушкой. */
+    public static void register(SettingsManager settings, UnaryOperator<String> text,
+                                Supplier<Configurable> smartKeys) {
+        settings.register(page(CODE_STYLE_ID, SettingsGroups.CODE_STYLE, text, null));
+        settings.register(page(SMART_KEYS_ID, SettingsGroups.SMART_KEYS, text, smartKeys));
     }
 
     /** Editor → General → Markdown: общие параметры, у которых есть настоящая страница. */
@@ -52,7 +58,8 @@ public final class MarkdownSettingsPages {
         };
     }
 
-    private static ConfigurableProvider page(String id, String parent, UnaryOperator<String> text) {
+    private static ConfigurableProvider page(String id, String parent, UnaryOperator<String> text,
+                                             Supplier<Configurable> custom) {
         return new ConfigurableProvider() {
             @Override
             public String getId() {
@@ -71,7 +78,8 @@ public final class MarkdownSettingsPages {
 
             @Override
             public Configurable createConfigurable() {
-                return new PendingPage(text.apply("settings.pending"));
+                Configurable page = custom == null ? null : custom.get();
+                return page != null ? page : new PendingPage(text.apply("settings.pending"));
             }
         };
     }

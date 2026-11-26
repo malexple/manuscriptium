@@ -94,6 +94,9 @@ final class CoreServices {
         configurables.register(new ru.mcs.core.settings.ColorSchemeSettingsProvider(colorScheme));
         services.register(ru.mcs.spi.swing.editor.style.ColorSchemeService.class, colorScheme);
         state.register("core", "core.colors", Scope.APPLICATION, colorScheme);
+        ru.mcs.core.settings.KeymapServiceImpl keymap = new ru.mcs.core.settings.KeymapServiceImpl();
+        services.register(ru.mcs.spi.swing.editor.keymap.KeymapService.class, keymap);
+        state.register("core", "core.keymap", Scope.APPLICATION, keymap);
         services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
         services.register(ShellThemeService.class, themes);
         services.register(ProjectAccess.class, projectAccess);
