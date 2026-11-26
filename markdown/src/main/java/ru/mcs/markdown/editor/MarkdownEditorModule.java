@@ -72,6 +72,7 @@ public final class MarkdownEditorModule {
         keymap = ctx.services().find(ru.mcs.spi.swing.editor.keymap.KeymapService.class).orElse(null);
         if (keymap != null) {
             ru.mcs.markdown.editor.action.MarkdownKeymapScopes.register(keymap, key -> ctx.i18n().get(key));
+            ru.mcs.editor.view.CommonKeymap.register(keymap, key -> ctx.i18n().get(key));
             keymapListener = () -> javax.swing.SwingUtilities.invokeLater(this::refreshKeymaps);
             keymap.addChangeListener(keymapListener);
         }

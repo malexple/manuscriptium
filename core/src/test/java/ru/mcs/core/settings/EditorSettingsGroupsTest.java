@@ -19,6 +19,8 @@ class EditorSettingsGroupsTest {
         SettingsManagerImpl manager = new SettingsManagerImpl();
         EditorSettingsGroups.register(manager);
         manager.register(new ColorSchemeSettingsProvider(new ColorSchemeServiceImpl()));
+        manager.register(new KeymapSettingsProvider(new KeymapServiceImpl(), "editor",
+                SettingsGroups.SMART_KEYS, "settings.editor.smartkeys", SettingsGroups.GENERAL));
         manager.register(page("yaml.codestyle", SettingsGroups.CODE_STYLE));
         manager.register(page("yaml.smartkeys", SettingsGroups.SMART_KEYS));
 
@@ -39,6 +41,8 @@ class EditorSettingsGroupsTest {
         SettingsManagerImpl manager = new SettingsManagerImpl();
         EditorSettingsGroups.register(manager);
         manager.register(new ColorSchemeSettingsProvider(new ColorSchemeServiceImpl()));
+        manager.register(new KeymapSettingsProvider(new KeymapServiceImpl(), "editor",
+                SettingsGroups.SMART_KEYS, "settings.editor.smartkeys", SettingsGroups.GENERAL));
 
         for (ConfigurableProvider provider : manager.getProviders()) {
             assertThat(provider.getDisplayName()).isNotBlank();

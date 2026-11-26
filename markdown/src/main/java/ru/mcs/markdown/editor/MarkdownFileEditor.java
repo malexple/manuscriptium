@@ -190,6 +190,8 @@ final class MarkdownFileEditor implements FileEditor {
         if (actionManager == null || service == null) {
             return;
         }
+        ru.mcs.editor.view.CommonKeymap.apply(canvas, service);
+        ru.mcs.editor.view.CommonKeymap.apply(source, service);
         canvasKeymap.uninstall();
         sourceKeymap.uninstall();
         canvasKeymap = new TyporaKeymap(actionManager, service,

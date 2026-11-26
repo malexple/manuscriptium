@@ -97,6 +97,10 @@ final class CoreServices {
         ru.mcs.core.settings.KeymapServiceImpl keymap = new ru.mcs.core.settings.KeymapServiceImpl();
         services.register(ru.mcs.spi.swing.editor.keymap.KeymapService.class, keymap);
         state.register("core", "core.keymap", Scope.APPLICATION, keymap);
+        configurables.register(new ru.mcs.core.settings.KeymapSettingsProvider(keymap,
+                "editor",
+                ru.mcs.spi.swing.settings.SettingsGroups.SMART_KEYS, "settings.editor.smartkeys",
+                ru.mcs.spi.swing.settings.SettingsGroups.GENERAL));
         services.register(AtomicFileStore.class, new AtomicFileStoreImpl());
         services.register(ShellThemeService.class, themes);
         services.register(ProjectAccess.class, projectAccess);

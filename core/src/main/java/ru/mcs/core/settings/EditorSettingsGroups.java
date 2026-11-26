@@ -13,8 +13,6 @@ public final class EditorSettingsGroups {
         settings.register(new GroupSettingsProvider(SettingsGroups.EDITOR, "settings.editor", null));
         settings.register(new GroupSettingsProvider(SettingsGroups.GENERAL, "settings.editor.general",
                 SettingsGroups.EDITOR));
-        settings.register(new GroupSettingsProvider(SettingsGroups.SMART_KEYS, "settings.editor.smartkeys",
-                SettingsGroups.GENERAL));
         settings.register(new GroupSettingsProvider(SettingsGroups.CODE_STYLE, "settings.editor.codestyle",
                 SettingsGroups.EDITOR));
     }
